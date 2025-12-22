@@ -4,9 +4,17 @@
 #include <wrl/client.h>
 #include "Shader.h"
 #include "Mesh.h"
+#include "Camera.h"
+#include "ConstantBuffer.h"
 #include <memory>
 
 using Microsoft::WRL::ComPtr;
+
+struct MatrixBuffer {
+    DirectX::XMMATRIX world;
+    DirectX::XMMATRIX view;
+    DirectX::XMMATRIX projection;
+};
 
 class Renderer {
 public:
@@ -27,4 +35,7 @@ private:
 
     Shader m_basicShader;
     std::unique_ptr<Mesh> m_stageMesh;
+
+    Camera m_camera;
+    ConstantBuffer<MatrixBuffer> m_matrixBuffer;
 };

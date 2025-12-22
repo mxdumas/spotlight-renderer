@@ -79,6 +79,15 @@ bool Renderer::Initialize(HWND hwnd) {
         return false;
     }
 
+    // Initialize Camera
+    m_camera.SetLookAt({ 0.0f, 5.0f, -15.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
+    m_camera.SetPerspective(DirectX::XM_PIDIV4, 1280.0f / 720.0f, 0.1f, 1000.0f);
+
+    // Initialize Constant Buffer
+    if (!m_matrixBuffer.Initialize(m_device.Get())) {
+        return false;
+    }
+
     return true;
 }
 
@@ -93,6 +102,15 @@ void Renderer::Shutdown() {
 void Renderer::BeginFrame() {
     float clearColor[] = { 0.1f, 0.2f, 0.4f, 1.0f };
     m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
+
+    // Update matrices
+    MatrixBuffer mb;
+    mb.world = DirectX::XMMatrixIdentity();
+    mb.view = m_camera.GetViewMatrix();
+    mb.projection = m_camera.GetProjectionMatrix();
+    m_matrixBuffer.Update(m_context.Get(), mb);
+
+    m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
 
     m_basicShader.Bind(m_context.Get());
     if (m_stageMesh) {
