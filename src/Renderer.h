@@ -2,6 +2,7 @@
 
 #include <d3d11.h>
 #include <wrl/client.h>
+#include "Shader.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -21,4 +22,7 @@ private:
     ComPtr<ID3D11DeviceContext> m_context;
     ComPtr<IDXGISwapChain> m_swapChain;
     ComPtr<ID3D11RenderTargetView> m_renderTargetView;
+
+    Shader m_basicShader;
+    ComPtr<ID3D11Buffer> m_vertexBuffer;
 };

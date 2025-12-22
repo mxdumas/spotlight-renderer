@@ -63,10 +63,42 @@ bool Renderer::Initialize(HWND hwnd) {
     viewport.TopLeftY = 0;
     m_context->RSSetViewports(1, &viewport);
 
+    // Initialize shader
+    std::vector<D3D11_INPUT_ELEMENT_DESC> layout = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    if (!m_basicShader.LoadVertexShader(m_device.Get(), L"shaders/basic.hlsl", "VS", layout)) return false;
+    if (!m_basicShader.LoadPixelShader(m_device.Get(), L"shaders/basic.hlsl", "PS")) return false;
+
+    // Create vertex buffer for a triangle
+    struct Vertex {
+        float x, y, z;
+        float r, g, b;
+    };
+    Vertex vertices[] = {
+        {  0.0f,  0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
+        {  0.45f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f },
+        { -0.45f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f }
+    };
+
+    D3D11_BUFFER_DESC bd = {};
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.ByteWidth = sizeof(vertices);
+    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = vertices;
+
+    hr = m_device->CreateBuffer(&bd, &initData, &m_vertexBuffer);
+    if (FAILED(hr)) return false;
+
     return true;
 }
 
 void Renderer::Shutdown() {
+    m_vertexBuffer.Reset();
     m_renderTargetView.Reset();
     m_swapChain.Reset();
     m_context.Reset();
@@ -76,6 +108,14 @@ void Renderer::Shutdown() {
 void Renderer::BeginFrame() {
     float clearColor[] = { 0.1f, 0.2f, 0.4f, 1.0f };
     m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
+
+    UINT stride = 24; // 6 floats * 4 bytes
+    UINT offset = 0;
+    m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
+    m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    m_basicShader.Bind(m_context.Get());
+    m_context->Draw(3, 0);
 }
 
 void Renderer::EndFrame() {
