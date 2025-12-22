@@ -1,0 +1,34 @@
+# Build directories
+build/
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.sln
+*.vcxproj
+*.filters
+*.aps
+*.ncb
+*.suo
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.ilk
+*.log
+*.pdb
+*.idb
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install/
+Makefile
+
+# Temporary files
+*.tmp
+*.log

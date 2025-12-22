@@ -22,5 +22,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dxguid
 )
 
-# Include directories placeholder
-target_include_directories(${PROJECT_NAME} PRIVATE src)
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    src
+    external
+)

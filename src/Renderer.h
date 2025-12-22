@@ -3,6 +3,8 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 #include "Shader.h"
+#include "Mesh.h"
+#include <memory>
 
 using Microsoft::WRL::ComPtr;
 
@@ -24,5 +26,5 @@ private:
     ComPtr<ID3D11RenderTargetView> m_renderTargetView;
 
     Shader m_basicShader;
-    ComPtr<ID3D11Buffer> m_vertexBuffer;
+    std::unique_ptr<Mesh> m_stageMesh;
 };
