@@ -28,6 +28,7 @@ public:
     void Draw(ID3D11DeviceContext* context);
 
     const std::vector<ShapeInfo>& GetShapes() const { return m_shapes; }
+    float GetMinY() const { return m_minY; }
 
 private:
     ComPtr<ID3D11Buffer> m_vertexBuffer;
@@ -35,4 +36,5 @@ private:
     UINT m_indexCount;
 
     std::vector<ShapeInfo> m_shapes;
+    float m_minY;
 };

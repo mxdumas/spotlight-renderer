@@ -17,6 +17,7 @@ cbuffer SpotlightBuffer : register(b1) {
 
 cbuffer MaterialBuffer : register(b2) {
     float4 matColor;
+    float4 specParams; // x: intensity, y: shininess
 };
 
 struct PointLight {
@@ -60,6 +61,8 @@ PS_INPUT VS(VS_INPUT input) {
 
 float4 PS(PS_INPUT input) : SV_Target {
     float3 normal = normalize(input.normal);
+    float3 viewDir = normalize(cameraPos.xyz - input.worldPos);
+    
     float3 toLight = posRange.xyz - input.worldPos;
     float dist = length(toLight);
     toLight /= dist; 
@@ -106,7 +109,10 @@ float4 PS(PS_INPUT input) : SV_Target {
     }
 
     float diff = max(dot(normal, toLight), 0.0f);
-    float3 lighting = diff * colorInt.xyz * attenuation * spotEffect * goboColor * shadowFactor;
+    float3 halfWay = normalize(toLight + viewDir);
+    float spec = pow(max(dot(normal, halfWay), 0.0f), specParams.y) * specParams.x;
+    
+    float3 lighting = (diff + spec) * colorInt.xyz * attenuation * spotEffect * goboColor * shadowFactor;
     
     // Add Ceiling Lights
     float3 ceilingLighting = float3(0,0,0);
@@ -118,7 +124,10 @@ float4 PS(PS_INPUT input) : SV_Target {
         if (dPL > lights[i].pos.w) attPL = 0;
         
         float diffPL = max(dot(normal, toPL), 0.0f);
-        ceilingLighting += diffPL * lights[i].color.rgb * attPL;
+        float3 halfWayPL = normalize(toPL + viewDir);
+        float specPL = pow(max(dot(normal, halfWayPL), 0.0f), specParams.y) * specParams.x;
+        
+        ceilingLighting += (diffPL + specPL) * lights[i].color.rgb * attPL;
     }
 
     float3 ambient = float3(0.001, 0.001, 0.001) + ambientColor.rgb; // Minimal base ambient + controllable fill

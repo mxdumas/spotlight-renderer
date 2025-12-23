@@ -35,6 +35,7 @@ __declspec(align(16)) struct VolumetricBuffer {
 
 __declspec(align(16)) struct MaterialBuffer {
     DirectX::XMFLOAT4 color;
+    DirectX::XMFLOAT4 specParams; // x: intensity, y: shininess, zw: unused
 };
 
 struct PointLight {
@@ -98,6 +99,7 @@ private:
     UINT m_sphereIndexCount;
     ComPtr<ID3D11Buffer> m_fullScreenVB;
     DirectX::XMFLOAT3 m_fixturePos;
+    float m_stageOffset;
 
     SpotlightBuffer m_spotlightData;
     VolumetricBuffer m_volumetricData;
@@ -107,6 +109,8 @@ private:
     
     float m_ceilingLightIntensity;
     float m_ambientFill;
+    float m_roomSpecular;
+    float m_roomShininess;
 
     float m_time;
     Camera m_camera;

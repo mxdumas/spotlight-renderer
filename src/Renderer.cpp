@@ -145,6 +145,20 @@ bool Renderer::Initialize(HWND hwnd) {
     }
     Log("Mesh Loaded Successfully");
 
+    float stageMinY = m_stageMesh->GetMinY();
+    float floorY = -0.05f;
+    m_stageOffset = floorY - stageMinY;
+
+    m_fixturePos = { 0.0f, 15.0f, 0.0f };
+    for (const auto& shape : m_stageMesh->GetShapes()) {
+        if (shape.name == "Cylinder.000") {
+            m_fixturePos = shape.center;
+            break;
+        }
+    }
+    // Apply offset to fixture position as well
+    m_fixturePos.y += m_stageOffset;
+
     m_goboTexture = std::make_unique<Texture>();
     const char* goboPath = "data/models/gobo.jpg";
     if (!m_goboTexture->LoadFromFile(m_device.Get(), goboPath)) {
@@ -212,14 +226,6 @@ bool Renderer::Initialize(HWND hwnd) {
     Log("Loading shadow.hlsl...");
     if (!m_shadowShader.LoadVertexShader(m_device.Get(), L"shaders/shadow.hlsl", "VS", layout)) return false;
     if (!m_shadowShader.LoadPixelShader(m_device.Get(), L"shaders/shadow.hlsl", "PS")) return false;
-
-    m_fixturePos = { 0.0f, 15.0f, 0.0f };
-    for (const auto& shape : m_stageMesh->GetShapes()) {
-        if (shape.name == "Cylinder.000") {
-            m_fixturePos = shape.center;
-            break;
-        }
-    }
 
     // Create debug cube
     float vertices[] = {
@@ -295,63 +301,59 @@ bool Renderer::Initialize(HWND hwnd) {
         Log("Cone Proxy Created");
     }
 
-    // Create Room Cube (500x500 width, floor at -0.05)
+    // Create Room Cube (100x100 width, floor at -0.05)
     {
-        float r = 250.0f;
+        float r = 50.0f;
         float floorY = -0.05f;
-        float ceilY = 500.0f;
+        float ceilY = 100.0f;
         
         float roomVerts[] = {
             // Back (-Z)
-            -r, floorY, -r,  0,0,-1,  0,1,
-             r, floorY, -r,  0,0,-1,  1,1,
-             r, ceilY,  -r,  0,0,-1,  1,0,
-            -r, ceilY,  -r,  0,0,-1,  0,0,
+            -r, floorY, -r,  0,0, 1,  0,1, // Inverted normals to face inward
+             r, floorY, -r,  0,0, 1,  1,1,
+             r, ceilY,  -r,  0,0, 1,  1,0,
+            -r, ceilY,  -r,  0,0, 1,  0,0,
             // Front (+Z)
-            -r, floorY,  r,  0,0, 1,  0,1,
-             r, floorY,  r,  0,0, 1,  1,1,
-             r, ceilY,   r,  0,0, 1,  1,0,
-            -r, ceilY,   r,  0,0, 1,  0,0,
+            -r, floorY,  r,  0,0,-1,  0,1,
+             r, floorY,  r,  0,0,-1,  1,1,
+             r, ceilY,   r,  0,0,-1,  1,0,
+            -r, ceilY,   r,  0,0,-1,  0,0,
             // Left (-X)
-            -r, floorY,  r, -1,0,0,   0,1,
-            -r, floorY, -r, -1,0,0,   1,1,
-            -r, ceilY,  -r, -1,0,0,   1,0,
-            -r, ceilY,   r, -1,0,0,   0,0,
+            -r, floorY,  r,  1,0,0,   0,1,
+            -r, floorY, -r,  1,0,0,   1,1,
+            -r, ceilY,  -r,  1,0,0,   1,0,
+            -r, ceilY,   r,  1,0,0,   0,0,
             // Right (+X)
-             r, floorY,  r,  1,0,0,   0,1,
-             r, floorY, -r,  1,0,0,   1,1,
-             r, ceilY,  -r,  1,0,0,   1,0,
-             r, ceilY,   r,  1,0,0,   0,0,
+             r, floorY,  r, -1,0,0,   0,1,
+             r, floorY, -r, -1,0,0,   1,1,
+             r, ceilY,  -r, -1,0,0,   1,0,
+             r, ceilY,   r, -1,0,0,   0,0,
             // Bottom (-Y)
-            -r, floorY,  r,  0,-1,0,  0,1,
-            -r, floorY, -r,  0,-1,0,  1,1,
-             r, floorY, -r,  0,-1,0,  1,0,
-             r, floorY,  r,  0,-1,0,  0,0,
+            -r, floorY,  r,  0,1,0,  0,1,
+            -r, floorY, -r,  0,1,0,  1,1,
+             r, floorY, -r,  0,1,0,  1,0,
+             r, floorY,  r,  0,1,0,  0,0,
             // Top (+Y)
-            -r, ceilY,   r,  0,1,0,   0,1,
-            -r, ceilY,  -r,  0,1,0,   1,1,
-             r, ceilY,  -r,  0,1,0,   1,0,
-             r, ceilY,   r,  0,1,0,   0,0,
+            -r, ceilY,   r,  0,-1,0,   0,1,
+            -r, ceilY,  -r,  0,-1,0,   1,1,
+             r, ceilY,  -r,  0,-1,0,   1,0,
+             r, ceilY,   r,  0,-1,0,   0,0,
         };
 
-        // Inverted indices (CW for inside view if culling back)
-        // Or just use CCW and disable culling? Standard is Back Face Culling.
-        // If we serve standard Front Face logic, we need to order indices carefully.
-        // Let's just draw double sided or disable cull for room.
-        
+        // Standard CCW indices for inward facing normals
         uint32_t roomInds[] = {
             // Bottom
-            16,18,17, 16,19,18,
+            16,17,18, 16,18,19,
             // Top
-            20,21,22, 20,22,23,
+            20,22,21, 20,23,22,
             // Back
-            0,2,1, 0,3,2,
+            0,1,2, 0,2,3,
             // Front
-            4,5,6, 4,6,7,
+            4,6,5, 4,7,6,
             // Left
-            8,10,9, 8,11,10,
+            8,9,10, 8,10,11,
             // Right
-            12,13,14, 12,14,15
+            12,14,13, 12,15,14
         };
 
         D3D11_BUFFER_DESC rvbd = {};
@@ -478,8 +480,10 @@ bool Renderer::Initialize(HWND hwnd) {
     m_goboShakeAmount = 0.0f;
     m_useCMY = false;
     m_cmy = { 0.0f, 0.0f, 0.0f };
-    m_ceilingLightIntensity = 200000.0f;
-    m_ambientFill = 5.0f;
+    m_ceilingLightIntensity = 40.0f;
+    m_ambientFill = 2.0f;
+    m_roomSpecular = 0.8f;
+    m_roomShininess = 64.0f;
 
     // Initialize Camera
     m_camDistance = 40.0f;
@@ -607,7 +611,7 @@ void Renderer::RenderShadowMap() {
     DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_spotlightData.posRange.w);
 
     MatrixBuffer mb;
-    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
+    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(0.0f, m_stageOffset, 0.0f));
     mb.view = DirectX::XMMatrixTranspose(lView);
     mb.projection = DirectX::XMMatrixTranspose(lProj);
     mb.invViewProj = DirectX::XMMatrixIdentity();
@@ -697,21 +701,17 @@ void Renderer::BeginFrame() {
 
     // Update Ceiling Lights
     CeilingLightsBuffer clb;
-    float startX = -150.0f;
-    float startZ = -150.0f;
-    float spacing = 300.0f / 3.0f; // 4 rows? "2x4 grid". 2 rows of 4 lights.
-    
     // Grid 4 in X, 2 in Z.
-    // X range: -150 to 150. Spacing = 300 / 3 = 100. (-150, -50, 50, 150)
-    // Z range: -50 to 50. Spacing = 100.
+    // X range: -40 to 40. Spacing = 80 / 3 = 26.
+    // Z range: -20 to 20. Spacing = 40.
     
     int idx = 0;
     for (int z = 0; z < 2; ++z) {
         for (int x = 0; x < 4; ++x) {
-            float posX = -150.0f + x * 100.0f;
-            float posZ = -50.0f + z * 100.0f;
-            clb.lights[idx].pos = { posX, 490.0f, posZ, 1000.0f }; // Range 1000
-            clb.lights[idx].color = { 1.0f, 1.0f, 1.0f, m_ceilingLightIntensity };
+            float posX = -40.0f + x * 26.6f;
+            float posZ = -20.0f + z * 40.0f;
+            clb.lights[idx].pos = { posX, 95.0f, posZ, 200.0f }; // Range 200
+            clb.lights[idx].color = { 1.0f, 1.0f, 1.0f, m_ceilingLightIntensity * 500.0f };
             idx++;
         }
     }
@@ -741,6 +741,7 @@ void Renderer::BeginFrame() {
         // Dark Gray Material
         MaterialBuffer mb = {};
         mb.color = { 0.2f, 0.2f, 0.2f, 1.0f };
+        mb.specParams = { m_roomSpecular, m_roomShininess, 0.0f, 0.0f };
         m_materialBuffer.Update(m_context.Get(), mb);
 
         D3D11_RASTERIZER_DESC rd = {};
@@ -762,9 +763,15 @@ void Renderer::BeginFrame() {
 
     if (m_stageMesh) {
         // White Material
-        MaterialBuffer mb = {};
-        mb.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        m_materialBuffer.Update(m_context.Get(), mb);
+        MaterialBuffer mbMat = {};
+        mbMat.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        mbMat.specParams = { 0.1f, 16.0f, 0.0f, 0.0f }; // Subtle spec for stage
+        m_materialBuffer.Update(m_context.Get(), mbMat);
+
+        // Update world matrix for stage
+        MatrixBuffer mbStage = mb;
+        mbStage.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(0.0f, m_stageOffset, 0.0f));
+        m_matrixBuffer.Update(m_context.Get(), mbStage);
 
         m_stageMesh->Draw(m_context.Get());
     }
@@ -831,8 +838,10 @@ void Renderer::RenderUI() {
 
     if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Text("Environment");
-        ImGui::DragFloat("Ceiling Light Intensity", &m_ceilingLightIntensity, 100.0f, 0.0f, 500000.0f);
+        ImGui::SliderFloat("Ceiling Light Intensity", &m_ceilingLightIntensity, 1.0f, 100.0f);
         ImGui::SliderFloat("Ambient Fill", &m_ambientFill, 0.0f, 100.0f);
+        ImGui::SliderFloat("Room Specular", &m_roomSpecular, 0.0f, 1.0f);
+        ImGui::SliderFloat("Room Shininess", &m_roomShininess, 1.0f, 128.0f);
         ImGui::Separator();
 
         ImGui::Text("Transform");

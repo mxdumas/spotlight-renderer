@@ -3,7 +3,7 @@
 #include "Mesh.h"
 #include <iostream>
 
-Mesh::Mesh() : m_indexCount(0) {}
+Mesh::Mesh() : m_indexCount(0), m_minY(0.0f) {}
 Mesh::~Mesh() {}
 
 bool Mesh::LoadFromOBJ(ID3D11Device* device, const std::string& fileName) {
@@ -18,6 +18,8 @@ bool Mesh::LoadFromOBJ(ID3D11Device* device, const std::string& fileName) {
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
+
+    float globalMinY = FLT_MAX;
 
     for (const auto& shape : shapes) {
         ShapeInfo info;
@@ -35,6 +37,8 @@ bool Mesh::LoadFromOBJ(ID3D11Device* device, const std::string& fileName) {
 
             minX = (std::min)(minX, vx); minY = (std::min)(minY, vy); minZ = (std::min)(minZ, vz);
             maxX = (std::max)(maxX, vx); maxY = (std::max)(maxY, vy); maxZ = (std::max)(maxZ, vz);
+
+            globalMinY = (std::min)(globalMinY, vy);
 
             vertex.position = { vx, vy, vz };
 
@@ -61,6 +65,7 @@ bool Mesh::LoadFromOBJ(ID3D11Device* device, const std::string& fileName) {
         m_shapes.push_back(info);
     }
 
+    m_minY = globalMinY;
     m_indexCount = (UINT)indices.size();
 
     // Create vertex buffer
