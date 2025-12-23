@@ -5,6 +5,7 @@
 #include "Core/Config.h"
 #include "Core/GraphicsDevice.h"
 #include "Rendering/RenderTarget.h"
+#include "Geometry/GeometryGenerator.h"
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"

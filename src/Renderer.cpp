@@ -163,225 +163,37 @@ bool Renderer::Initialize(HWND hwnd) {
     if (!m_shadowShader.LoadVertexShader(m_device.Get(), L"shaders/shadow.hlsl", "VS", layout)) return false;
     if (!m_shadowShader.LoadPixelShader(m_device.Get(), L"shaders/shadow.hlsl", "PS")) return false;
 
-    // Create debug cube
-    float vertices[] = {
-        -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f,
-    };
-    uint32_t indices[] = {
-        0,2,1, 0,3,2, 1,6,5, 1,2,6, 5,7,4, 5,6,7, 4,3,0, 4,7,3, 3,6,2, 3,7,6, 4,1,5, 4,0,1
-    };
+    // Create geometry using GeometryGenerator
+    Log("Creating geometry...");
 
-    D3D11_BUFFER_DESC vbd = {};
-    vbd.Usage = D3D11_USAGE_DEFAULT;
-    vbd.ByteWidth = sizeof(vertices);
-    vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit = { vertices };
-    hr = m_device->CreateBuffer(&vbd, &vinit, &m_debugBoxVB);
-    if (FAILED(hr)) { Log("Failed to create debugBoxVB: " + std::to_string(hr)); return false; }
-
-    D3D11_BUFFER_DESC ibd = {};
-    ibd.Usage = D3D11_USAGE_DEFAULT;
-    ibd.ByteWidth = sizeof(indices);
-    ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA iinit = { indices };
-    hr = m_device->CreateBuffer(&ibd, &iinit, &m_debugBoxIB);
-    if (FAILED(hr)) { Log("Failed to create debugBoxIB: " + std::to_string(hr)); return false; }
-    Log("Debug Buffers Created");
-
-    // Create Spotlight Cone Proxy
-    {
-        std::vector<float> coneVertices;
-        std::vector<uint32_t> coneIndices;
-
-        // Tip
-        coneVertices.push_back(0.0f); coneVertices.push_back(0.0f); coneVertices.push_back(0.0f);
-
-        constexpr int segments = Config::Geometry::CONE_SEGMENTS;
-        constexpr float radius = Config::Geometry::CONE_RADIUS;
-        constexpr float height = Config::Geometry::CONE_HEIGHT;
-
-        for (int i = 0; i < segments; ++i) {
-            float angle = static_cast<float>(i) / segments * 2.0f * 3.14159f;
-            coneVertices.push_back(cosf(angle) * radius);
-            coneVertices.push_back(sinf(angle) * radius);
-            coneVertices.push_back(height);
-        }
-
-        for (int i = 0; i < segments; ++i) {
-            // Lines from tip
-            coneIndices.push_back(0);
-            coneIndices.push_back(i + 1);
-
-            // Lines for base circle
-            coneIndices.push_back(i + 1);
-            coneIndices.push_back(((i + 1) % segments) + 1);
-        }
-
-        D3D11_BUFFER_DESC cvbd = {};
-        cvbd.Usage = D3D11_USAGE_DEFAULT;
-        cvbd.ByteWidth = (UINT)(coneVertices.size() * sizeof(float));
-        cvbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA cvinit = { coneVertices.data() };
-        hr = m_device->CreateBuffer(&cvbd, &cvinit, &m_coneVB);
-        if (FAILED(hr)) { Log("Failed to create coneVB: " + std::to_string(hr)); return false; }
-
-        D3D11_BUFFER_DESC cibd = {};
-        cibd.Usage = D3D11_USAGE_DEFAULT;
-        cibd.ByteWidth = (UINT)(coneIndices.size() * sizeof(uint32_t));
-        cibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA ciinit = { coneIndices.data() };
-        hr = m_device->CreateBuffer(&cibd, &ciinit, &m_coneIB);
-        if (FAILED(hr)) { Log("Failed to create coneIB: " + std::to_string(hr)); return false; }
-        m_coneIndexCount = (UINT)coneIndices.size();
-        Log("Cone Proxy Created");
+    if (!GeometryGenerator::CreateDebugCube(m_device.Get(), m_debugBoxVB, m_debugBoxIB)) {
+        Log("Failed to create debug cube");
+        return false;
     }
+    Log("Debug Cube Created");
 
-    // Create Room Cube
-    {
-        constexpr float r = Config::Room::HALF_WIDTH;
-        constexpr float floorY = Config::Room::FLOOR_Y;
-        constexpr float ceilY = Config::Room::CEILING_Y;
-        
-        float roomVerts[] = {
-            // Back (-Z)
-            -r, floorY, -r,  0,0, 1,  0,1, // Inverted normals to face inward
-             r, floorY, -r,  0,0, 1,  1,1,
-             r, ceilY,  -r,  0,0, 1,  1,0,
-            -r, ceilY,  -r,  0,0, 1,  0,0,
-            // Front (+Z)
-            -r, floorY,  r,  0,0,-1,  0,1,
-             r, floorY,  r,  0,0,-1,  1,1,
-             r, ceilY,   r,  0,0,-1,  1,0,
-            -r, ceilY,   r,  0,0,-1,  0,0,
-            // Left (-X)
-            -r, floorY,  r,  1,0,0,   0,1,
-            -r, floorY, -r,  1,0,0,   1,1,
-            -r, ceilY,  -r,  1,0,0,   1,0,
-            -r, ceilY,   r,  1,0,0,   0,0,
-            // Right (+X)
-             r, floorY,  r, -1,0,0,   0,1,
-             r, floorY, -r, -1,0,0,   1,1,
-             r, ceilY,  -r, -1,0,0,   1,0,
-             r, ceilY,   r, -1,0,0,   0,0,
-            // Bottom (-Y)
-            -r, floorY,  r,  0,1,0,  0,1,
-            -r, floorY, -r,  0,1,0,  1,1,
-             r, floorY, -r,  0,1,0,  1,0,
-             r, floorY,  r,  0,1,0,  0,0,
-            // Top (+Y)
-            -r, ceilY,   r,  0,-1,0,   0,1,
-            -r, ceilY,  -r,  0,-1,0,   1,1,
-             r, ceilY,  -r,  0,-1,0,   1,0,
-             r, ceilY,   r,  0,-1,0,   0,0,
-        };
-
-        // Standard CCW indices for inward facing normals
-        uint32_t roomInds[] = {
-            // Bottom
-            16,17,18, 16,18,19,
-            // Top
-            20,22,21, 20,23,22,
-            // Back
-            0,1,2, 0,2,3,
-            // Front
-            4,6,5, 4,7,6,
-            // Left
-            8,9,10, 8,10,11,
-            // Right
-            12,14,13, 12,15,14
-        };
-
-        D3D11_BUFFER_DESC rvbd = {};
-        rvbd.Usage = D3D11_USAGE_DEFAULT;
-        rvbd.ByteWidth = sizeof(roomVerts);
-        rvbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA rvinit = { roomVerts };
-        hr = m_device->CreateBuffer(&rvbd, &rvinit, &m_roomVB);
-        if (FAILED(hr)) { Log("Failed to create roomVB: " + std::to_string(hr)); return false; }
-
-        D3D11_BUFFER_DESC ribd = {};
-        ribd.Usage = D3D11_USAGE_DEFAULT;
-        ribd.ByteWidth = sizeof(roomInds);
-        ribd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA riinit = { roomInds };
-        hr = m_device->CreateBuffer(&ribd, &riinit, &m_roomIB);
-        if (FAILED(hr)) { Log("Failed to create roomIB: " + std::to_string(hr)); return false; }
-        // Store index count if needed or just use 6
-        Log("Room Cube Created");
+    if (!GeometryGenerator::CreateConeProxy(m_device.Get(), m_coneVB, m_coneIB, m_coneIndexCount)) {
+        Log("Failed to create cone proxy");
+        return false;
     }
+    Log("Cone Proxy Created");
 
-    // Create Debug Sphere
-    {
-        std::vector<float> verts;
-        std::vector<uint32_t> inds;
-        constexpr int stacks = Config::Geometry::SPHERE_STACKS;
-        constexpr int slices = Config::Geometry::SPHERE_SLICES;
-        constexpr float radius = Config::Geometry::SPHERE_RADIUS;
-
-        for (int i = 0; i <= stacks; ++i) {
-            float lat = (float)i / stacks * 3.14159f;
-            float y = cosf(lat) * radius;
-            float r = sinf(lat) * radius;
-            for (int j = 0; j <= slices; ++j) {
-                float lon = (float)j / slices * 2.0f * 3.14159f;
-                float x = cosf(lon) * r;
-                float z = sinf(lon) * r;
-                
-                // Pos
-                verts.push_back(x); verts.push_back(y); verts.push_back(z);
-                // Normal (same as pos/radius)
-                verts.push_back(x/radius); verts.push_back(y/radius); verts.push_back(z/radius);
-                // UV
-                verts.push_back((float)j/slices); verts.push_back((float)i/stacks);
-            }
-        }
-
-        for (int i = 0; i < stacks; ++i) {
-            for (int j = 0; j < slices; ++j) {
-                int first = (i * (slices + 1)) + j;
-                int second = first + slices + 1;
-                inds.push_back(first);
-                inds.push_back(second);
-                inds.push_back(first + 1);
-
-                inds.push_back(second);
-                inds.push_back(second + 1);
-                inds.push_back(first + 1);
-            }
-        }
-
-        D3D11_BUFFER_DESC svbd = {};
-        svbd.Usage = D3D11_USAGE_DEFAULT;
-        svbd.ByteWidth = (UINT)(verts.size() * sizeof(float));
-        svbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA svinit = { verts.data() };
-        hr = m_device->CreateBuffer(&svbd, &svinit, &m_sphereVB);
-        if (FAILED(hr)) { Log("Failed to create sphereVB: " + std::to_string(hr)); return false; }
-
-        D3D11_BUFFER_DESC sibd = {};
-        sibd.Usage = D3D11_USAGE_DEFAULT;
-        sibd.ByteWidth = (UINT)(inds.size() * sizeof(uint32_t));
-        sibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA siinit = { inds.data() };
-        hr = m_device->CreateBuffer(&sibd, &siinit, &m_sphereIB);
-        if (FAILED(hr)) { Log("Failed to create sphereIB: " + std::to_string(hr)); return false; }
-        m_sphereIndexCount = (UINT)inds.size();
-        Log("Debug Sphere Created");
+    if (!GeometryGenerator::CreateRoomCube(m_device.Get(), m_roomVB, m_roomIB)) {
+        Log("Failed to create room cube");
+        return false;
     }
+    Log("Room Cube Created");
 
-    // Create full screen quad
-    float fsVertices[] = {
-        -1.0f, -1.0f, 0.0f,  -1.0f,  1.0f, 0.0f,   1.0f, -1.0f, 0.0f,
-         1.0f, -1.0f, 0.0f,  -1.0f,  1.0f, 0.0f,   1.0f,  1.0f, 0.0f
-    };
-    D3D11_BUFFER_DESC fsVbd = {};
-    fsVbd.Usage = D3D11_USAGE_DEFAULT;
-    fsVbd.ByteWidth = sizeof(fsVertices);
-    fsVbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA fsVinit = { fsVertices };
-    hr = m_device->CreateBuffer(&fsVbd, &fsVinit, &m_fullScreenVB);
-    if (FAILED(hr)) { Log("Failed to create fullScreenVB: " + std::to_string(hr)); return false; }
+    if (!GeometryGenerator::CreateSphere(m_device.Get(), m_sphereVB, m_sphereIB, m_sphereIndexCount)) {
+        Log("Failed to create debug sphere");
+        return false;
+    }
+    Log("Debug Sphere Created");
+
+    if (!GeometryGenerator::CreateFullScreenQuad(m_device.Get(), m_fullScreenVB)) {
+        Log("Failed to create fullscreen quad");
+        return false;
+    }
     Log("Full Screen Quad Created");
 
     std::vector<D3D11_INPUT_ELEMENT_DESC> fsLayout = {
