@@ -7,7 +7,7 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AllowShortFunctionsOnASingleLine: None
 BreakBeforeBraces: Allman
-Standard: Cpp11
+Standard: c++17
 IncludeCategories:
   - Regex:           '^<.*'
     Priority:        1
