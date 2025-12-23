@@ -465,42 +465,24 @@ bool Renderer::Initialize(HWND hwnd) {
         return false;
     }
 
-    // Create scene render target for FXAA
-    D3D11_TEXTURE2D_DESC sceneDesc = {};
-    sceneDesc.Width = Config::Display::WINDOW_WIDTH;
-    sceneDesc.Height = Config::Display::WINDOW_HEIGHT;
-    sceneDesc.MipLevels = 1;
-    sceneDesc.ArraySize = 1;
-    sceneDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    sceneDesc.SampleDesc.Count = 1;
-    sceneDesc.SampleDesc.Quality = 0;
-    sceneDesc.Usage = D3D11_USAGE_DEFAULT;
-    sceneDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    // Create render targets using RenderTarget class
+    if (!m_sceneRT.Create(m_device.Get(), Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT)) {
+        Log("Failed to create scene render target");
+        return false;
+    }
+    Log("Scene render target created");
 
-    hr = m_device->CreateTexture2D(&sceneDesc, nullptr, &m_sceneTexture);
-    if (FAILED(hr)) { Log("Failed to create scene texture"); return false; }
+    if (!m_volRT.Create(m_device.Get(), Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT)) {
+        Log("Failed to create volumetric render target");
+        return false;
+    }
+    Log("Volumetric render target created");
 
-    hr = m_device->CreateRenderTargetView(m_sceneTexture.Get(), nullptr, &m_sceneRTV);
-    if (FAILED(hr)) { Log("Failed to create scene RTV"); return false; }
-
-    hr = m_device->CreateShaderResourceView(m_sceneTexture.Get(), nullptr, &m_sceneSRV);
-    if (FAILED(hr)) { Log("Failed to create scene SRV"); return false; }
-
-    // Create volumetric render target (for separate blur)
-    hr = m_device->CreateTexture2D(&sceneDesc, nullptr, &m_volTexture);
-    if (FAILED(hr)) { Log("Failed to create vol texture"); return false; }
-    hr = m_device->CreateRenderTargetView(m_volTexture.Get(), nullptr, &m_volRTV);
-    if (FAILED(hr)) { Log("Failed to create vol RTV"); return false; }
-    hr = m_device->CreateShaderResourceView(m_volTexture.Get(), nullptr, &m_volSRV);
-    if (FAILED(hr)) { Log("Failed to create vol SRV"); return false; }
-
-    // Create blur temp texture
-    hr = m_device->CreateTexture2D(&sceneDesc, nullptr, &m_blurTempTexture);
-    if (FAILED(hr)) { Log("Failed to create blur temp texture"); return false; }
-    hr = m_device->CreateRenderTargetView(m_blurTempTexture.Get(), nullptr, &m_blurTempRTV);
-    if (FAILED(hr)) { Log("Failed to create blur temp RTV"); return false; }
-    hr = m_device->CreateShaderResourceView(m_blurTempTexture.Get(), nullptr, &m_blurTempSRV);
-    if (FAILED(hr)) { Log("Failed to create blur temp SRV"); return false; }
+    if (!m_blurTempRT.Create(m_device.Get(), Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT)) {
+        Log("Failed to create blur temp render target");
+        return false;
+    }
+    Log("Blur temp render target created");
 
     if (!m_blurBuffer.Initialize(m_device.Get())) {
         Log("Failed to initialize blur constant buffer");
@@ -662,8 +644,8 @@ void Renderer::BeginFrame() {
 
     float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     // Render to scene texture (for FXAA), not directly to swap chain
-    m_context->OMSetRenderTargets(1, m_sceneRTV.GetAddressOf(), m_depthStencilView.Get());
-    m_context->ClearRenderTargetView(m_sceneRTV.Get(), clearColor);
+    m_sceneRT.Bind(m_context.Get(), m_depthStencilView.Get());
+    m_sceneRT.Clear(m_context.Get(), clearColor);
     m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     D3D11_VIEWPORT viewport = {};
@@ -786,8 +768,8 @@ void Renderer::BeginFrame() {
 
     // Clear volumetric texture and render to it
     float blackColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    m_context->ClearRenderTargetView(m_volRTV.Get(), blackColor);
-    m_context->OMSetRenderTargets(1, m_volRTV.GetAddressOf(), nullptr);
+    m_volRT.Clear(m_context.Get(), blackColor);
+    m_volRT.Bind(m_context.Get());
 
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
@@ -821,9 +803,9 @@ void Renderer::BeginFrame() {
             bb.direction = { 1.0f, 0.0f };
             m_blurBuffer.Update(m_context.Get(), bb);
 
-            m_context->OMSetRenderTargets(1, m_blurTempRTV.GetAddressOf(), nullptr);
+            m_blurTempRT.Bind(m_context.Get());
             m_context->PSSetConstantBuffers(0, 1, m_blurBuffer.GetAddressOf());
-            m_context->PSSetShaderResources(0, 1, m_volSRV.GetAddressOf());
+            m_context->PSSetShaderResources(0, 1, m_volRT.GetSRVAddressOf());
             m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
             m_blurShader.Bind(m_context.Get());
@@ -837,8 +819,8 @@ void Renderer::BeginFrame() {
             bb.direction = { 0.0f, 1.0f };
             m_blurBuffer.Update(m_context.Get(), bb);
 
-            m_context->OMSetRenderTargets(1, m_volRTV.GetAddressOf(), nullptr);
-            m_context->PSSetShaderResources(0, 1, m_blurTempSRV.GetAddressOf());
+            m_volRT.Bind(m_context.Get());
+            m_context->PSSetShaderResources(0, 1, m_blurTempRT.GetSRVAddressOf());
 
             m_blurShader.Bind(m_context.Get());
             m_context->Draw(6, 0);
@@ -850,9 +832,9 @@ void Renderer::BeginFrame() {
     }
 
     // Composite: add blurred volumetric to scene
-    m_context->OMSetRenderTargets(1, m_sceneRTV.GetAddressOf(), nullptr);
+    m_sceneRT.Bind(m_context.Get());
     m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
-    m_context->PSSetShaderResources(0, 1, m_volSRV.GetAddressOf());
+    m_context->PSSetShaderResources(0, 1, m_volRT.GetSRVAddressOf());
     m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
     m_compositeShader.Bind(m_context.Get());
@@ -875,7 +857,7 @@ void Renderer::BeginFrame() {
 
         m_context->VSSetConstantBuffers(0, 1, m_fxaaBuffer.GetAddressOf());
         m_context->PSSetConstantBuffers(0, 1, m_fxaaBuffer.GetAddressOf());
-        m_context->PSSetShaderResources(0, 1, m_sceneSRV.GetAddressOf());
+        m_context->PSSetShaderResources(0, 1, m_sceneRT.GetSRVAddressOf());
         m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
         m_fxaaShader.Bind(m_context.Get());
@@ -892,7 +874,7 @@ void Renderer::BeginFrame() {
         m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
         m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
 
-        m_context->PSSetShaderResources(0, 1, m_sceneSRV.GetAddressOf());
+        m_context->PSSetShaderResources(0, 1, m_sceneRT.GetSRVAddressOf());
         m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 
         m_compositeShader.Bind(m_context.Get());

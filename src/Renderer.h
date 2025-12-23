@@ -4,6 +4,7 @@
 #include <wrl/client.h>
 #include "Core/Config.h"
 #include "Core/GraphicsDevice.h"
+#include "Rendering/RenderTarget.h"
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
@@ -149,20 +150,14 @@ private:
     ComPtr<ID3D11BlendState> m_additiveBlendState;
 
     // FXAA resources
-    ComPtr<ID3D11Texture2D> m_sceneTexture;
-    ComPtr<ID3D11RenderTargetView> m_sceneRTV;
-    ComPtr<ID3D11ShaderResourceView> m_sceneSRV;
+    RenderTarget m_sceneRT;
     ConstantBuffer<FXAABuffer> m_fxaaBuffer;
     bool m_enableFXAA;
 
     // Volumetric blur resources
     Shader m_blurShader;
-    ComPtr<ID3D11Texture2D> m_volTexture;
-    ComPtr<ID3D11RenderTargetView> m_volRTV;
-    ComPtr<ID3D11ShaderResourceView> m_volSRV;
-    ComPtr<ID3D11Texture2D> m_blurTempTexture;
-    ComPtr<ID3D11RenderTargetView> m_blurTempRTV;
-    ComPtr<ID3D11ShaderResourceView> m_blurTempSRV;
+    RenderTarget m_volRT;
+    RenderTarget m_blurTempRT;
     ConstantBuffer<BlurBuffer> m_blurBuffer;
     bool m_enableVolBlur;
     int m_volBlurPasses;
