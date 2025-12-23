@@ -754,51 +754,64 @@ void Renderer::RenderUI() {
     static bool firstFrame = true;
     if (firstFrame) Log("RenderUI Started");
     
-    ImGui::Begin("Camera Controls");
-    ImGui::DragFloat("Distance", &m_camDistance, 0.1f, 1.0f, 200.0f);
-    ImGui::SliderAngle("Pitch", &m_camPitch, -89.0f, 89.0f);
-    ImGui::SliderAngle("Yaw", &m_camYaw, -180.0f, 180.0f);
-    ImGui::DragFloat3("Target", &m_camTarget.x, 0.1f);
-    ImGui::End();
+    // Main Window
+    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(350, 600), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Spotlight Renderer Controls");
 
-    ImGui::Begin("Spotlight Controls");
-    ImGui::DragFloat3("Position", &m_spotlightData.posRange.x, 0.1f);
-    ImGui::DragFloat3("Direction", &m_spotlightData.dirAngle.x, 0.01f);
-    
-    ImGui::Checkbox("Use CMY", &m_useCMY);
-    if (m_useCMY) {
-        if (ImGui::ColorEdit3("CMY", &m_cmy.x)) {
-            // Convert CMY to RGB: R = 1-C, G = 1-M, B = 1-Y
-            m_spotlightData.colorInt.x = 1.0f - m_cmy.x;
-            m_spotlightData.colorInt.y = 1.0f - m_cmy.y;
-            m_spotlightData.colorInt.z = 1.0f - m_cmy.z;
+    // Performance Section
+    ImGui::Text("Application Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Separator();
+
+    if (ImGui::CollapsingHeader("Camera Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::DragFloat("Distance", &m_camDistance, 0.1f, 1.0f, 200.0f);
+        ImGui::SliderAngle("Pitch", &m_camPitch, -89.0f, 89.0f);
+        ImGui::SliderAngle("Yaw", &m_camYaw, -180.0f, 180.0f);
+        ImGui::DragFloat3("Target", &m_camTarget.x, 0.1f);
+    }
+
+    if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Transform");
+        ImGui::DragFloat3("Position", &m_spotlightData.posRange.x, 0.1f);
+        ImGui::DragFloat3("Direction", &m_spotlightData.dirAngle.x, 0.01f);
+        if (ImGui::Button("Reset to Fixture")) {
+            m_spotlightData.posRange.x = m_fixturePos.x;
+            m_spotlightData.posRange.y = m_fixturePos.y;
+            m_spotlightData.posRange.z = m_fixturePos.z;
         }
-    } else {
-        ImGui::ColorEdit3("RGBW Color", &m_spotlightData.colorInt.x);
+
+        ImGui::Separator();
+        ImGui::Text("Color & Intensity");
+        ImGui::Checkbox("Use CMY Mixing", &m_useCMY);
+        if (m_useCMY) {
+            if (ImGui::ColorEdit3("CMY", &m_cmy.x)) {
+                m_spotlightData.colorInt.x = 1.0f - m_cmy.x;
+                m_spotlightData.colorInt.y = 1.0f - m_cmy.y;
+                m_spotlightData.colorInt.z = 1.0f - m_cmy.z;
+            }
+        } else {
+            ImGui::ColorEdit3("RGB Color", &m_spotlightData.colorInt.x);
+        }
+        ImGui::DragFloat("Intensity", &m_spotlightData.colorInt.w, 1.0f, 0.0f, 5000.0f);
+        ImGui::DragFloat("Range", &m_spotlightData.posRange.w, 1.0f, 10.0f, 1000.0f);
+
+        ImGui::Separator();
+        ImGui::Text("Beam Shape");
+        ImGui::SliderFloat("Beam Angle", &m_spotlightData.coneGobo.x, 0.0f, 1.0f);
+        ImGui::SliderFloat("Field Angle", &m_spotlightData.coneGobo.y, 0.0f, 1.0f);
     }
 
-    ImGui::DragFloat("Intensity", &m_spotlightData.colorInt.w, 1.0f, 0.0f, 2000.0f);
-    ImGui::DragFloat("Range", &m_spotlightData.posRange.w, 1.0f, 0.0f, 1000.0f);
-    ImGui::DragFloat("Beam Angle", &m_spotlightData.coneGobo.x, 0.01f, 0.0f, 1.0f);
-    ImGui::DragFloat("Field Angle", &m_spotlightData.coneGobo.y, 0.01f, 0.0f, 1.0f);
-    
-    ImGui::Separator();
-    ImGui::Text("Gobo Controls");
-    ImGui::DragFloat("Gobo Rotation", &m_spotlightData.coneGobo.z, 0.01f);
-    ImGui::DragFloat("Gobo Shake", &m_goboShakeAmount, 0.01f, 0.0f, 1.0f);
-    
-    if (ImGui::Button("Reset to Fixture")) {
-        m_spotlightData.posRange.x = m_fixturePos.x;
-        m_spotlightData.posRange.y = m_fixturePos.y;
-        m_spotlightData.posRange.z = m_fixturePos.z;
+    if (ImGui::CollapsingHeader("Gobo Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::DragFloat("Rotation", &m_spotlightData.coneGobo.z, 0.01f);
+        ImGui::SliderFloat("Shake Amount", &m_goboShakeAmount, 0.0f, 1.0f);
     }
-    
-    ImGui::Separator();
-    ImGui::Text("Volumetric Controls");
-    ImGui::DragFloat("Step Count", &m_volumetricData.params.x, 1.0f, 1.0f, 512.0f);
-    ImGui::DragFloat("Density", &m_volumetricData.params.y, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Vol Intensity", &m_volumetricData.params.z, 0.01f, 0.0f, 10.0f);
-    ImGui::DragFloat("Anisotropy (G)", &m_volumetricData.params.w, 0.01f, -0.99f, 0.99f);
+
+    if (ImGui::CollapsingHeader("Volumetric Quality")) {
+        ImGui::DragFloat("Step Count", &m_volumetricData.params.x, 1.0f, 16.0f, 512.0f);
+        ImGui::SliderFloat("Density", &m_volumetricData.params.y, 0.0f, 1.0f);
+        ImGui::SliderFloat("Light Intensity Multiplier", &m_volumetricData.params.z, 0.0f, 10.0f);
+        ImGui::SliderFloat("Anisotropy (G)", &m_volumetricData.params.w, -0.99f, 0.99f);
+    }
     
     ImGui::End();
 
