@@ -4,46 +4,16 @@
 #include <wrl/client.h>
 #include "Core/Config.h"
 #include "Core/GraphicsDevice.h"
-#include "Rendering/RenderTarget.h"
+#include "Rendering/RenderPipeline.h"
 #include "Geometry/GeometryGenerator.h"
 #include "Scene/Spotlight.h"
 #include "Scene/CeilingLights.h"
-#include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
-#include "ConstantBuffer.h"
 #include "Texture.h"
 #include <memory>
 
 using Microsoft::WRL::ComPtr;
-
-__declspec(align(16)) struct MatrixBuffer {
-    DirectX::XMMATRIX world;
-    DirectX::XMMATRIX view;
-    DirectX::XMMATRIX projection;
-    DirectX::XMMATRIX invViewProj;
-    DirectX::XMFLOAT4 cameraPos;
-};
-
-__declspec(align(16)) struct VolumetricBuffer {
-    DirectX::XMFLOAT4 params; // x: stepCount, y: density, z: intensity, w: anisotropy (G)
-    DirectX::XMFLOAT4 jitter; // x: time, yzw: unused
-};
-
-__declspec(align(16)) struct MaterialBuffer {
-    DirectX::XMFLOAT4 color;
-    DirectX::XMFLOAT4 specParams; // x: intensity, y: shininess, zw: unused
-};
-
-__declspec(align(16)) struct FXAABuffer {
-    DirectX::XMFLOAT2 rcpFrame;  // 1.0 / screenSize
-    DirectX::XMFLOAT2 padding;
-};
-
-__declspec(align(16)) struct BlurBuffer {
-    DirectX::XMFLOAT2 texelSize;
-    DirectX::XMFLOAT2 direction;
-};
 
 class Renderer {
 public:
@@ -61,56 +31,44 @@ public:
 
 private:
     void InitImGui(HWND hwnd);
-    void RenderShadowMap();
 
     // Graphics device (owns device, context, swap chain, back buffer)
     GraphicsDevice m_graphics;
+
+    // Render pipeline (owns all render passes and shared resources)
+    RenderPipeline m_pipeline;
 
     // Convenience accessors (delegate to GraphicsDevice)
     ID3D11Device* GetDevice() const { return m_graphics.GetDevice(); }
     ID3D11DeviceContext* GetContext() const { return m_graphics.GetContext(); }
 
-    // Legacy pointers kept for gradual migration (will be removed in future)
+    // Legacy pointers kept for gradual migration
     ComPtr<ID3D11Device> m_device;
     ComPtr<ID3D11DeviceContext> m_context;
-    ComPtr<IDXGISwapChain> m_swapChain;
-    ComPtr<ID3D11RenderTargetView> m_renderTargetView;
-    ComPtr<ID3D11Texture2D> m_depthStencilBuffer;
-    ComPtr<ID3D11DepthStencilView> m_depthStencilView;
-    ComPtr<ID3D11ShaderResourceView> m_depthSRV;
 
-    Shader m_basicShader;
-    Shader m_debugShader;
-    Shader m_shadowShader;
-    Shader m_volumetricShader;
-    Shader m_compositeShader;
-    Shader m_fxaaShader;
+    // Scene resources
     std::unique_ptr<Mesh> m_stageMesh;
     std::unique_ptr<Texture> m_goboTexture;
-    ComPtr<ID3D11SamplerState> m_samplerState;
-    ComPtr<ID3D11SamplerState> m_shadowSampler;
-    ComPtr<ID3D11Texture2D> m_shadowMap;
-    ComPtr<ID3D11DepthStencilView> m_shadowDSV;
-    ComPtr<ID3D11ShaderResourceView> m_shadowSRV;
+    DirectX::XMFLOAT3 m_fixturePos;
+    float m_stageOffset;
 
+    // Room geometry (owned by Renderer, passed to pipeline)
+    ComPtr<ID3D11Buffer> m_roomVB;
+    ComPtr<ID3D11Buffer> m_roomIB;
+
+    // Debug geometry (kept for future use)
     ComPtr<ID3D11Buffer> m_debugBoxVB;
     ComPtr<ID3D11Buffer> m_debugBoxIB;
     ComPtr<ID3D11Buffer> m_coneVB;
     ComPtr<ID3D11Buffer> m_coneIB;
     UINT m_coneIndexCount;
-    ComPtr<ID3D11Buffer> m_roomVB;
-    ComPtr<ID3D11Buffer> m_roomIB;
     ComPtr<ID3D11Buffer> m_sphereVB;
     ComPtr<ID3D11Buffer> m_sphereIB;
     UINT m_sphereIndexCount;
-    ComPtr<ID3D11Buffer> m_fullScreenVB;
-    DirectX::XMFLOAT3 m_fixturePos;
-    float m_stageOffset;
 
     // Scene components
     Spotlight m_spotlight;
     CeilingLights m_ceilingLights;
-    VolumetricBuffer m_volumetricData;
     bool m_useCMY;
     DirectX::XMFLOAT3 m_cmy;
 
@@ -123,25 +81,4 @@ private:
     float m_camPitch;
     float m_camYaw;
     DirectX::XMFLOAT3 m_camTarget;
-
-    ConstantBuffer<MatrixBuffer> m_matrixBuffer;
-    ConstantBuffer<SpotlightData> m_spotlightBuffer;
-    ConstantBuffer<VolumetricBuffer> m_volumetricBuffer;
-    ConstantBuffer<MaterialBuffer> m_materialBuffer;
-    ConstantBuffer<CeilingLightsData> m_ceilingLightsBuffer;
-
-    ComPtr<ID3D11BlendState> m_additiveBlendState;
-
-    // FXAA resources
-    RenderTarget m_sceneRT;
-    ConstantBuffer<FXAABuffer> m_fxaaBuffer;
-    bool m_enableFXAA;
-
-    // Volumetric blur resources
-    Shader m_blurShader;
-    RenderTarget m_volRT;
-    RenderTarget m_blurTempRT;
-    ConstantBuffer<BlurBuffer> m_blurBuffer;
-    bool m_enableVolBlur;
-    int m_volBlurPasses;
 };
