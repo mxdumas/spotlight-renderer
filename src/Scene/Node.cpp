@@ -21,8 +21,9 @@ void Node::addChild(std::shared_ptr<Node> child)
 void Node::updateWorldMatrix(const DirectX::XMMATRIX &parent_world)
 {
     // Recompute local matrix from T, R, S components
+    // XMMatrixRotationRollPitchYaw takes (pitch, yaw, roll)
     local_matrix_ = DirectX::XMMatrixScaling(scale_.x, scale_.y, scale_.z) *
-                    DirectX::XMMatrixRotationRollPitchYaw(rotation_.x, rotation_.y, rotation_.z) *
+                    DirectX::XMMatrixRotationRollPitchYaw(rotation_.y, rotation_.z, rotation_.x) *
                     DirectX::XMMatrixTranslation(translation_.x, translation_.y, translation_.z);
 
     world_matrix_ = local_matrix_ * parent_world;

@@ -69,3 +69,7 @@ add_test(NAME VolumetricJitterTest COMMAND TestVolumetricJitter)
 add_executable(TestRayMath tests/test_ray_math.cpp)
 target_include_directories(TestRayMath PRIVATE src)
 add_test(NAME RayMathTest COMMAND TestRayMath)
+
+add_executable(TestSceneGraph tests/test_scene_graph.cpp src/Scene/Node.cpp)
+target_include_directories(TestSceneGraph PRIVATE src)
+add_test(NAME SceneGraphTest COMMAND TestSceneGraph)
