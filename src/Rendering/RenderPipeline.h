@@ -233,9 +233,6 @@ private:
 
     // Shared geometry
     ComPtr<ID3D11Buffer> m_fullScreenVB;
-    ComPtr<ID3D11Buffer> m_debugSphereVB;
-    ComPtr<ID3D11Buffer> m_debugSphereIB;
-    uint32_t m_debugSphereIndexCount = 0;
 
     // Shared samplers
     ComPtr<ID3D11SamplerState> m_linearSampler;

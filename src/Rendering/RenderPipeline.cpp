@@ -34,9 +34,6 @@ bool RenderPipeline::Initialize(ID3D11Device* device) {
     // Create fullscreen quad
     if (!GeometryGenerator::CreateFullScreenQuad(device, m_fullScreenVB)) return false;
 
-    // Create debug sphere
-    if (!GeometryGenerator::CreateSphere(device, m_debugSphereVB, m_debugSphereIB, m_debugSphereIndexCount)) return false;
-
     // Create linear sampler for general use
     D3D11_SAMPLER_DESC sampDesc = {};
     sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -214,29 +211,6 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext* context, const RenderC
             context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
 
             ctx.stageMesh->DrawShape(context, i);
-        }
-    }
-
-    // Render debug spheres at anchor positions
-    if (!ctx.anchorPositions.empty() && m_debugSphereVB) {
-        m_scenePass->GetShader().Bind(context);
-        
-        for (const auto& pos : ctx.anchorPositions) {
-            mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(pos.x, pos.y, pos.z));
-            m_matrixBuffer.Update(context, mb);
-
-            MaterialBuffer mbMat = {};
-            mbMat.color = { 1.0f, 0.0f, 0.0f, 1.0f }; // Red
-            mbMat.specParams = { 0.5f, 32.0f, 0.0f, 0.0f };
-            m_scenePass->GetMaterialBuffer().Update(context, mbMat);
-            context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
-
-            UINT stride = sizeof(Vertex);
-            UINT offset = 0;
-            context->IASetVertexBuffers(0, 1, m_debugSphereVB.GetAddressOf(), &stride, &offset);
-            context->IASetIndexBuffer(m_debugSphereIB.Get(), DXGI_FORMAT_R32_UINT, 0);
-            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            context->DrawIndexed(m_debugSphereIndexCount, 0, 0);
         }
     }
 
