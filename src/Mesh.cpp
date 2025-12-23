@@ -20,14 +20,23 @@ bool Mesh::LoadFromOBJ(ID3D11Device* device, const std::string& fileName) {
     std::vector<uint32_t> indices;
 
     for (const auto& shape : shapes) {
+        ShapeInfo info;
+        info.name = shape.name;
+        
+        float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
+        float maxX = -FLT_MAX, maxY = -FLT_MAX, maxZ = -FLT_MAX;
+
         for (const auto& index : shape.mesh.indices) {
             Vertex vertex = {};
 
-            vertex.position = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
+            float vx = attrib.vertices[3 * index.vertex_index + 0];
+            float vy = attrib.vertices[3 * index.vertex_index + 1];
+            float vz = attrib.vertices[3 * index.vertex_index + 2];
+
+            minX = (std::min)(minX, vx); minY = (std::min)(minY, vy); minZ = (std::min)(minZ, vz);
+            maxX = (std::max)(maxX, vx); maxY = (std::max)(maxY, vy); maxZ = (std::max)(maxZ, vz);
+
+            vertex.position = { vx, vy, vz };
 
             if (index.normal_index >= 0) {
                 vertex.normal = {
@@ -47,6 +56,9 @@ bool Mesh::LoadFromOBJ(ID3D11Device* device, const std::string& fileName) {
             vertices.push_back(vertex);
             indices.push_back((uint32_t)indices.size());
         }
+
+        info.center = { (minX + maxX) * 0.5f, (minY + maxY) * 0.5f, (minZ + maxZ) * 0.5f };
+        m_shapes.push_back(info);
     }
 
     m_indexCount = (UINT)indices.size();

@@ -22,6 +22,7 @@ public:
     }
 
     void Update(ID3D11DeviceContext* context, const T& data) {
+        if (!m_buffer) return;
         D3D11_MAPPED_SUBRESOURCE mappedResource;
         if (SUCCEEDED(context->Map(m_buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource))) {
             memcpy(mappedResource.pData, &data, sizeof(T));

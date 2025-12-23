@@ -14,6 +14,11 @@ struct Vertex {
     DirectX::XMFLOAT2 uv;
 };
 
+struct ShapeInfo {
+    std::string name;
+    DirectX::XMFLOAT3 center;
+};
+
 class Mesh {
 public:
     Mesh();
@@ -22,8 +27,12 @@ public:
     bool LoadFromOBJ(ID3D11Device* device, const std::string& fileName);
     void Draw(ID3D11DeviceContext* context);
 
+    const std::vector<ShapeInfo>& GetShapes() const { return m_shapes; }
+
 private:
     ComPtr<ID3D11Buffer> m_vertexBuffer;
     ComPtr<ID3D11Buffer> m_indexBuffer;
     UINT m_indexCount;
+
+    std::vector<ShapeInfo> m_shapes;
 };

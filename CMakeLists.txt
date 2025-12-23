@@ -6,8 +6,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Source files
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.h)
+file(GLOB IMGUI_SOURCES 
+    external/imgui/imgui.cpp 
+    external/imgui/imgui_draw.cpp 
+    external/imgui/imgui_widgets.cpp 
+    external/imgui/imgui_tables.cpp 
+    external/imgui/imgui_demo.cpp
+    external/imgui/imgui_impl_win32.cpp
+    external/imgui/imgui_impl_dx11.cpp
+)
 
-add_executable(${PROJECT_NAME} WIN32 ${SOURCES})
+add_executable(${PROJECT_NAME} WIN32 ${SOURCES} ${IMGUI_SOURCES})
 
 # Target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -26,6 +35,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PRIVATE 
     src
     external
+    external/imgui
 )
 
 # Copy assets to output directory
