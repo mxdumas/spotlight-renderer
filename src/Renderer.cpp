@@ -218,29 +218,22 @@ bool Renderer::Initialize(HWND hwnd) {
     if (!m_blurShader.LoadPixelShader(m_device.Get(), L"shaders/blur.hlsl", "PS")) { Log("Failed to load Blur PS"); return false; }
     Log("Blur Shader Loaded");
 
-    // Initial spotlight data
-    memset(&m_spotlightData, 0, sizeof(m_spotlightData));
-    m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, Config::Spotlight::DEFAULT_RANGE };
-
+    // Initialize spotlight
+    m_spotlight.SetPosition(m_fixturePos);
     // Point towards center of stage
     DirectX::XMVECTOR lPosVec = DirectX::XMLoadFloat3(&m_fixturePos);
     DirectX::XMVECTOR lDirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(lPosVec));
-    DirectX::XMStoreFloat4(&m_spotlightData.dirAngle, lDirVec);
-
-    m_spotlightData.colorInt = { 1.0f, 1.0f, 1.0f, Config::Spotlight::DEFAULT_INTENSITY };
-    m_spotlightData.coneGobo = { Config::Spotlight::DEFAULT_BEAM_ANGLE, Config::Spotlight::DEFAULT_FIELD_ANGLE, 0.0f, 0.0f };
-    m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
+    DirectX::XMFLOAT3 dir;
+    DirectX::XMStoreFloat3(&dir, lDirVec);
+    m_spotlight.SetDirection(dir);
 
     m_volumetricData.params = { Config::Volumetric::DEFAULT_STEP_COUNT, Config::Volumetric::DEFAULT_DENSITY,
                                  Config::Volumetric::DEFAULT_INTENSITY, Config::Volumetric::DEFAULT_ANISOTROPY };
     m_volumetricData.jitter = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     m_time = 0.0f;
-    m_goboShakeAmount = 0.0f;
     m_useCMY = false;
     m_cmy = { 0.0f, 0.0f, 0.0f };
-    m_ceilingLightIntensity = Config::CeilingLights::DEFAULT_INTENSITY;
-    m_ambientFill = Config::Ambient::DEFAULT_FILL;
     m_roomSpecular = Config::Materials::ROOM_SPECULAR;
     m_roomShininess = Config::Materials::ROOM_SHININESS;
 
@@ -304,7 +297,6 @@ bool Renderer::Initialize(HWND hwnd) {
     m_enableFXAA = true;
     m_enableVolBlur = true;
     m_volBlurPasses = Config::PostProcess::DEFAULT_BLUR_PASSES;
-    m_ceilingLightIntensity = Config::CeilingLights::DEFAULT_INTENSITY;
 
     // Create Blend State
     D3D11_BLEND_DESC blendDesc = {};
@@ -394,15 +386,15 @@ void Renderer::RenderShadowMap() {
     vp.MaxDepth = 1.0f;
     m_context->RSSetViewports(1, &vp);
 
-    // The light matrices are already in m_spotlightData.lightViewProj (transposed)
-    // We need untransposed for the MatrixBuffer used by shadow shader
-    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(m_spotlightData.posRange.x, m_spotlightData.posRange.y, m_spotlightData.posRange.z, 1.0f);
-    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(DirectX::XMVectorSet(m_spotlightData.dirAngle.x, m_spotlightData.dirAngle.y, m_spotlightData.dirAngle.z, 0.0f));
+    // Get spotlight data for shadow rendering
+    const SpotlightData& spotData = m_spotlight.GetGPUData();
+    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(spotData.posRange.x, spotData.posRange.y, spotData.posRange.z, 1.0f);
+    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(DirectX::XMVectorSet(spotData.dirAngle.x, spotData.dirAngle.y, spotData.dirAngle.z, 0.0f));
     DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     if (fabsf(DirectX::XMVectorGetY(lDir)) > 0.99f) lUp = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-    
+
     DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
-    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_spotlightData.posRange.w);
+    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, spotData.posRange.w);
 
     MatrixBuffer mb;
     mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(0.0f, m_stageOffset, 0.0f));
@@ -432,18 +424,9 @@ void Renderer::BeginFrame() {
     static bool firstFrame = true;
     if (firstFrame) Log("First BeginFrame Started");
 
-    // Update spotlight matrices first
-    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(m_spotlightData.posRange.x, m_spotlightData.posRange.y, m_spotlightData.posRange.z, 1.0f);
-    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(DirectX::XMVectorSet(m_spotlightData.dirAngle.x, m_spotlightData.dirAngle.y, m_spotlightData.dirAngle.z, 0.0f));
-    DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    if (fabsf(DirectX::XMVectorGetY(lDir)) > 0.99f) lUp = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-    
-    DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
-    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_spotlightData.posRange.w);
-    m_spotlightData.lightViewProj = DirectX::XMMatrixTranspose(lView * lProj);
-
-    m_spotlightData.goboOff.x = sinf(m_time * Config::Spotlight::SHAKE_FREQ_X) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
-    m_spotlightData.goboOff.y = cosf(m_time * Config::Spotlight::SHAKE_FREQ_Y) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
+    // Update spotlight
+    m_spotlight.UpdateLightMatrix();
+    m_spotlight.UpdateGoboShake(m_time);
 
     // Render Shadow Map
     RenderShadowMap();
@@ -492,23 +475,11 @@ void Renderer::BeginFrame() {
     mb.cameraPos = { camX, camY, camZ, 1.0f };
 
     m_matrixBuffer.Update(m_context.Get(), mb);
-    m_spotlightBuffer.Update(m_context.Get(), m_spotlightData);
+    m_spotlightBuffer.Update(m_context.Get(), m_spotlight.GetGPUData());
 
     // Update Ceiling Lights
-    CeilingLightsBuffer clb;
-    int idx = 0;
-    for (int z = 0; z < Config::CeilingLights::GRID_Z; ++z) {
-        for (int x = 0; x < Config::CeilingLights::GRID_X; ++x) {
-            float posX = Config::CeilingLights::X_START + x * Config::CeilingLights::X_SPACING;
-            float posZ = Config::CeilingLights::Z_START + z * Config::CeilingLights::Z_SPACING;
-            clb.lights[idx].pos = { posX, Config::CeilingLights::HEIGHT, posZ, Config::CeilingLights::RANGE };
-            clb.lights[idx].color = { 1.0f, 1.0f, 1.0f, m_ceilingLightIntensity * Config::CeilingLights::INTENSITY_MULTIPLIER };
-            idx++;
-        }
-    }
-    float ambVal = m_ambientFill / Config::Ambient::MAX_FILL;
-    clb.ambient = { ambVal, ambVal, ambVal, 1.0f };
-    m_ceilingLightsBuffer.Update(m_context.Get(), clb);
+    m_ceilingLights.Update();
+    m_ceilingLightsBuffer.Update(m_context.Get(), m_ceilingLights.GetGPUData());
 
     if (firstFrame) Log("Buffers Updated");
 
@@ -719,20 +690,27 @@ void Renderer::RenderUI() {
     }
 
     if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // Get mutable reference to spotlight data for ImGui controls
+        SpotlightData& spotData = m_spotlight.GetGPUDataMutable();
+
         ImGui::Text("Environment");
-        ImGui::SliderFloat("Ceiling Light Intensity", &m_ceilingLightIntensity, 1.0f, 100.0f);
-        ImGui::SliderFloat("Ambient Fill", &m_ambientFill, 0.0f, 100.0f);
+        float ceilingInt = m_ceilingLights.GetIntensity();
+        if (ImGui::SliderFloat("Ceiling Light Intensity", &ceilingInt, 1.0f, 100.0f)) {
+            m_ceilingLights.SetIntensity(ceilingInt);
+        }
+        float ambFill = m_ceilingLights.GetAmbient();
+        if (ImGui::SliderFloat("Ambient Fill", &ambFill, 0.0f, 100.0f)) {
+            m_ceilingLights.SetAmbient(ambFill);
+        }
         ImGui::SliderFloat("Room Specular", &m_roomSpecular, 0.0f, 1.0f);
         ImGui::SliderFloat("Room Shininess", &m_roomShininess, 1.0f, 128.0f);
         ImGui::Separator();
 
         ImGui::Text("Transform");
-        ImGui::DragFloat3("Position", &m_spotlightData.posRange.x, 0.1f);
-        ImGui::DragFloat3("Direction", &m_spotlightData.dirAngle.x, 0.01f);
+        ImGui::DragFloat3("Position", &spotData.posRange.x, 0.1f);
+        ImGui::DragFloat3("Direction", &spotData.dirAngle.x, 0.01f);
         if (ImGui::Button("Reset to Fixture")) {
-            m_spotlightData.posRange.x = m_fixturePos.x;
-            m_spotlightData.posRange.y = m_fixturePos.y;
-            m_spotlightData.posRange.z = m_fixturePos.z;
+            m_spotlight.SetPosition(m_fixturePos);
         }
 
         ImGui::Separator();
@@ -740,25 +718,27 @@ void Renderer::RenderUI() {
         ImGui::Checkbox("Use CMY Mixing", &m_useCMY);
         if (m_useCMY) {
             if (ImGui::ColorEdit3("CMY", &m_cmy.x)) {
-                m_spotlightData.colorInt.x = 1.0f - m_cmy.x;
-                m_spotlightData.colorInt.y = 1.0f - m_cmy.y;
-                m_spotlightData.colorInt.z = 1.0f - m_cmy.z;
+                m_spotlight.SetColorFromCMY(m_cmy.x, m_cmy.y, m_cmy.z);
             }
         } else {
-            ImGui::ColorEdit3("RGB Color", &m_spotlightData.colorInt.x);
+            ImGui::ColorEdit3("RGB Color", &spotData.colorInt.x);
         }
-        ImGui::DragFloat("Intensity", &m_spotlightData.colorInt.w, 1.0f, 0.0f, 5000.0f);
-        ImGui::DragFloat("Range", &m_spotlightData.posRange.w, 1.0f, 10.0f, 1000.0f);
+        ImGui::DragFloat("Intensity", &spotData.colorInt.w, 1.0f, 0.0f, 5000.0f);
+        ImGui::DragFloat("Range", &spotData.posRange.w, 1.0f, 10.0f, 1000.0f);
 
         ImGui::Separator();
         ImGui::Text("Beam Shape");
-        ImGui::SliderFloat("Beam Angle", &m_spotlightData.coneGobo.x, 0.0f, 1.0f);
-        ImGui::SliderFloat("Field Angle", &m_spotlightData.coneGobo.y, 0.0f, 1.0f);
+        ImGui::SliderFloat("Beam Angle", &spotData.coneGobo.x, 0.0f, 1.0f);
+        ImGui::SliderFloat("Field Angle", &spotData.coneGobo.y, 0.0f, 1.0f);
     }
 
     if (ImGui::CollapsingHeader("Gobo Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::DragFloat("Rotation", &m_spotlightData.coneGobo.z, 0.01f);
-        ImGui::SliderFloat("Shake Amount", &m_goboShakeAmount, 0.0f, 1.0f);
+        SpotlightData& spotData = m_spotlight.GetGPUDataMutable();
+        ImGui::DragFloat("Rotation", &spotData.coneGobo.z, 0.01f);
+        float shake = m_spotlight.GetGoboShake();
+        if (ImGui::SliderFloat("Shake Amount", &shake, 0.0f, 1.0f)) {
+            m_spotlight.SetGoboShake(shake);
+        }
     }
 
     if (ImGui::CollapsingHeader("Volumetric Quality")) {

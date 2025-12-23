@@ -6,6 +6,8 @@
 #include "Core/GraphicsDevice.h"
 #include "Rendering/RenderTarget.h"
 #include "Geometry/GeometryGenerator.h"
+#include "Scene/Spotlight.h"
+#include "Scene/CeilingLights.h"
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
@@ -23,15 +25,6 @@ __declspec(align(16)) struct MatrixBuffer {
     DirectX::XMFLOAT4 cameraPos;
 };
 
-__declspec(align(16)) struct SpotlightBuffer {
-    DirectX::XMMATRIX lightViewProj; // c0-c3
-    DirectX::XMFLOAT4 posRange;      // c4 (xyz: pos, w: range)
-    DirectX::XMFLOAT4 dirAngle;      // c5 (xyz: dir, w: spotAngle)
-    DirectX::XMFLOAT4 colorInt;      // c6 (xyz: color, w: intensity)
-    DirectX::XMFLOAT4 coneGobo;      // c7 (x: beam, y: field, z: rotation, w: unused)
-    DirectX::XMFLOAT4 goboOff;       // c8 (xy: offset, zw: unused)
-};
-
 __declspec(align(16)) struct VolumetricBuffer {
     DirectX::XMFLOAT4 params; // x: stepCount, y: density, z: intensity, w: anisotropy (G)
     DirectX::XMFLOAT4 jitter; // x: time, yzw: unused
@@ -40,16 +33,6 @@ __declspec(align(16)) struct VolumetricBuffer {
 __declspec(align(16)) struct MaterialBuffer {
     DirectX::XMFLOAT4 color;
     DirectX::XMFLOAT4 specParams; // x: intensity, y: shininess, zw: unused
-};
-
-struct PointLight {
-    DirectX::XMFLOAT4 pos;   // xyz: pos, w: range
-    DirectX::XMFLOAT4 color; // xyz: color, w: intensity
-};
-
-__declspec(align(16)) struct CeilingLightsBuffer {
-    PointLight lights[8];
-    DirectX::XMFLOAT4 ambient;
 };
 
 __declspec(align(16)) struct FXAABuffer {
@@ -124,14 +107,13 @@ private:
     DirectX::XMFLOAT3 m_fixturePos;
     float m_stageOffset;
 
-    SpotlightBuffer m_spotlightData;
+    // Scene components
+    Spotlight m_spotlight;
+    CeilingLights m_ceilingLights;
     VolumetricBuffer m_volumetricData;
-    float m_goboShakeAmount;
     bool m_useCMY;
     DirectX::XMFLOAT3 m_cmy;
-    
-    float m_ceilingLightIntensity;
-    float m_ambientFill;
+
     float m_roomSpecular;
     float m_roomShininess;
 
@@ -143,10 +125,10 @@ private:
     DirectX::XMFLOAT3 m_camTarget;
 
     ConstantBuffer<MatrixBuffer> m_matrixBuffer;
-    ConstantBuffer<SpotlightBuffer> m_spotlightBuffer;
+    ConstantBuffer<SpotlightData> m_spotlightBuffer;
     ConstantBuffer<VolumetricBuffer> m_volumetricBuffer;
     ConstantBuffer<MaterialBuffer> m_materialBuffer;
-    ConstantBuffer<CeilingLightsBuffer> m_ceilingLightsBuffer;
+    ConstantBuffer<CeilingLightsData> m_ceilingLightsBuffer;
 
     ComPtr<ID3D11BlendState> m_additiveBlendState;
 
