@@ -2,21 +2,6 @@
 #include <iostream>
 #include <fstream>
 
-Renderer::Renderer()
-    : m_stageOffset(0.0f)
-    , m_fixturePos(0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f)
-    , m_useCMY(false)
-    , m_cmy(0.0f, 0.0f, 0.0f)
-    , m_roomSpecular(Config::Materials::ROOM_SPECULAR)
-    , m_roomShininess(Config::Materials::ROOM_SHININESS)
-    , m_time(0.0f)
-    , m_camDistance(Config::CameraDefaults::DISTANCE)
-    , m_camPitch(Config::CameraDefaults::PITCH)
-    , m_camYaw(Config::CameraDefaults::YAW)
-    , m_camTarget(0.0f, 0.0f, 0.0f)
-{
-}
-
 Renderer::~Renderer() {
     Shutdown();
 }
@@ -43,89 +28,32 @@ bool Renderer::Initialize(HWND hwnd) {
     }
     Log("GraphicsDevice initialized successfully");
 
-    // Copy pointers to legacy members for backward compatibility during migration
-    m_device = m_graphics.GetDevice();
-    m_context = m_graphics.GetContext();
-
     // Initialize render pipeline
     Log("Initializing RenderPipeline...");
-    if (!m_pipeline.Initialize(m_device.Get())) {
+    if (!m_pipeline.Initialize(m_graphics.GetDevice())) {
         Log("RenderPipeline initialization failed");
         return false;
     }
     Log("RenderPipeline initialized successfully");
 
-    // Load Mesh
-    Log("Loading stage.obj...");
-    m_stageMesh = std::make_unique<Mesh>();
-    if (!m_stageMesh->LoadFromOBJ(m_device.Get(), "data/models/stage.obj")) {
-        Log("Failed to load stage.obj");
+    // Initialize scene (loads meshes, textures, sets up camera and lights)
+    Log("Initializing Scene...");
+    if (!m_scene.Initialize(m_graphics.GetDevice())) {
+        Log("Scene initialization failed");
         return false;
     }
-    Log("Mesh Loaded Successfully");
+    Log("Scene initialized successfully");
 
-    float stageMinY = m_stageMesh->GetMinY();
-    m_stageOffset = Config::Room::FLOOR_Y - stageMinY;
-
-    m_fixturePos = { 0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f };
-    for (const auto& shape : m_stageMesh->GetShapes()) {
-        if (shape.name == "Cylinder.000") {
-            m_fixturePos = shape.center;
-            break;
-        }
-    }
-    // Apply offset to fixture position as well
-    m_fixturePos.y += m_stageOffset;
-
-    // Load gobo texture
-    m_goboTexture = std::make_unique<Texture>();
-    const char* goboPath = "data/models/gobo.jpg";
-    if (!m_goboTexture->LoadFromFile(m_device.Get(), goboPath)) {
-        Log("Failed to load gobo.jpg, falling back to stage.png");
-        m_goboTexture->LoadFromFile(m_device.Get(), "data/models/stage.png");
-    }
-
-    // Create geometry using GeometryGenerator
-    Log("Creating geometry...");
-
-    if (!GeometryGenerator::CreateDebugCube(m_device.Get(), m_debugBoxVB, m_debugBoxIB)) {
-        Log("Failed to create debug cube");
-        return false;
-    }
-    Log("Debug Cube Created");
-
-    if (!GeometryGenerator::CreateConeProxy(m_device.Get(), m_coneVB, m_coneIB, m_coneIndexCount)) {
-        Log("Failed to create cone proxy");
-        return false;
-    }
-    Log("Cone Proxy Created");
-
-    if (!GeometryGenerator::CreateRoomCube(m_device.Get(), m_roomVB, m_roomIB)) {
+    // Create room geometry
+    Log("Creating room geometry...");
+    if (!GeometryGenerator::CreateRoomCube(m_graphics.GetDevice(), m_roomVB, m_roomIB)) {
         Log("Failed to create room cube");
         return false;
     }
     Log("Room Cube Created");
 
-    if (!GeometryGenerator::CreateSphere(m_device.Get(), m_sphereVB, m_sphereIB, m_sphereIndexCount)) {
-        Log("Failed to create debug sphere");
-        return false;
-    }
-    Log("Debug Sphere Created");
-
-    // Initialize spotlight
-    m_spotlight.SetPosition(m_fixturePos);
-    // Point towards center of stage
-    DirectX::XMVECTOR lPosVec = DirectX::XMLoadFloat3(&m_fixturePos);
-    DirectX::XMVECTOR lDirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(lPosVec));
-    DirectX::XMFLOAT3 dir;
-    DirectX::XMStoreFloat3(&dir, lDirVec);
-    m_spotlight.SetDirection(dir);
-
-    // Initialize Camera
-    m_camera.SetPerspective(Config::CameraDefaults::FOV, Config::Display::ASPECT_RATIO,
-                            Config::CameraDefaults::CLIP_NEAR, Config::CameraDefaults::CLIP_FAR);
-
-    if (!m_ui.Initialize(hwnd, m_device.Get(), m_context.Get())) {
+    // Initialize UI
+    if (!m_ui.Initialize(hwnd, m_graphics.GetDevice(), m_graphics.GetContext())) {
         Log("ImGui initialization failed");
         return false;
     }
@@ -142,74 +70,47 @@ void Renderer::Shutdown() {
     // Shutdown pipeline (releases pass resources)
     m_pipeline.Shutdown();
 
-    // Release renderer-specific resources
-    m_sphereIB.Reset();
-    m_sphereVB.Reset();
-    m_coneIB.Reset();
-    m_coneVB.Reset();
+    // Release room geometry
     m_roomIB.Reset();
     m_roomVB.Reset();
-    m_debugBoxIB.Reset();
-    m_debugBoxVB.Reset();
-    m_stageMesh.reset();
-    m_goboTexture.reset();
-
-    // Clear legacy pointers
-    m_context.Reset();
-    m_device.Reset();
 
     // Shutdown graphics device (releases device, context, swap chain)
     m_graphics.Shutdown();
 }
 
 void Renderer::BeginFrame() {
-    m_time += Config::PostProcess::FRAME_DELTA;
+    // Update scene
+    m_scene.Update(Config::PostProcess::FRAME_DELTA);
+    m_scene.UpdateCamera();
 
     // Start ImGui frame
     m_ui.BeginFrame();
 
-    // Update Camera position
-    float camX = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
-    float camY = m_camDistance * sinf(m_camPitch);
-    float camZ = -m_camDistance * cosf(m_camPitch) * cosf(m_camYaw);
-    m_camera.SetLookAt({ camX, camY, camZ }, m_camTarget, { 0.0f, 1.0f, 0.0f });
-
     // Build render context for the pipeline
     RenderContext ctx;
-    ctx.camera = &m_camera;
-    ctx.cameraPos = { camX, camY, camZ };
-    ctx.spotlight = &m_spotlight;
-    ctx.ceilingLights = &m_ceilingLights;
-    ctx.stageMesh = m_stageMesh.get();
-    ctx.goboTexture = m_goboTexture.get();
-    ctx.stageOffset = m_stageOffset;
-    ctx.time = m_time;
+    ctx.camera = &m_scene.GetCamera();
+    ctx.cameraPos = m_scene.GetCameraPosition();
+    ctx.spotlight = &m_scene.GetSpotlight();
+    ctx.ceilingLights = &m_scene.GetCeilingLights();
+    ctx.stageMesh = m_scene.GetStageMesh();
+    ctx.goboTexture = m_scene.GetGoboTexture();
+    ctx.stageOffset = m_scene.GetStageOffset();
+    ctx.time = m_scene.GetTime();
     ctx.roomVB = m_roomVB.Get();
     ctx.roomIB = m_roomIB.Get();
-    ctx.roomSpecular = m_roomSpecular;
-    ctx.roomShininess = m_roomShininess;
+    ctx.roomSpecular = m_scene.GetRoomSpecular();
+    ctx.roomShininess = m_scene.GetRoomShininess();
     ctx.depthStencilView = m_graphics.GetDepthStencilView();
     ctx.depthSRV = m_graphics.GetDepthSRV();
     ctx.backBufferRTV = m_graphics.GetBackBufferRTV();
 
     // Execute the render pipeline
-    m_pipeline.Render(m_context.Get(), ctx);
+    m_pipeline.Render(m_graphics.GetContext(), ctx);
 }
 
 void Renderer::RenderUI() {
-    // Build UI context with mutable references to scene state
     UIContext ctx;
-    ctx.camDistance = &m_camDistance;
-    ctx.camPitch = &m_camPitch;
-    ctx.camYaw = &m_camYaw;
-    ctx.camTarget = &m_camTarget;
-    ctx.spotlight = &m_spotlight;
-    ctx.fixturePos = &m_fixturePos;
-    ctx.useCMY = &m_useCMY;
-    ctx.cmy = &m_cmy;
-    ctx.ceilingLights = &m_ceilingLights;
-    ctx.roomSpecular = &m_roomSpecular;
-    ctx.roomShininess = &m_roomShininess;
+    ctx.scene = &m_scene;
     ctx.pipeline = &m_pipeline;
 
     m_ui.RenderControls(ctx);

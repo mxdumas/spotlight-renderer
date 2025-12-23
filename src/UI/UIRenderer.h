@@ -5,33 +5,12 @@
 #include <DirectXMath.h>
 
 // Forward declarations
-class Spotlight;
-class CeilingLights;
+class Scene;
 class RenderPipeline;
 
 // UI context passed to render controls
-// Contains mutable references to scene state that the UI can modify
 struct UIContext {
-    // Camera
-    float* camDistance;
-    float* camPitch;
-    float* camYaw;
-    DirectX::XMFLOAT3* camTarget;
-
-    // Spotlight
-    Spotlight* spotlight;
-    const DirectX::XMFLOAT3* fixturePos; // For "Reset to Fixture" button
-
-    // CMY mixing state
-    bool* useCMY;
-    DirectX::XMFLOAT3* cmy;
-
-    // Environment
-    CeilingLights* ceilingLights;
-    float* roomSpecular;
-    float* roomShininess;
-
-    // Pipeline settings
+    Scene* scene;
     RenderPipeline* pipeline;
 };
 

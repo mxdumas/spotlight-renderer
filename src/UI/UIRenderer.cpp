@@ -3,8 +3,7 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 #include "../Core/Config.h"
-#include "../Scene/Spotlight.h"
-#include "../Scene/CeilingLights.h"
+#include "../Scene/Scene.h"
 #include "../Rendering/RenderPipeline.h"
 
 UIRenderer::~UIRenderer() {
@@ -63,9 +62,11 @@ void UIRenderer::BeginFrame() {
 }
 
 void UIRenderer::RenderControls(UIContext& ctx) {
-    if (!m_initialized) {
+    if (!m_initialized || !ctx.scene) {
         return;
     }
+
+    Scene& scene = *ctx.scene;
 
     // Main Window
     ImGui::SetNextWindowPos(ImVec2(Config::UI::WINDOW_POS_X, Config::UI::WINDOW_POS_Y), ImGuiCond_FirstUseEver);
@@ -77,42 +78,44 @@ void UIRenderer::RenderControls(UIContext& ctx) {
     ImGui::Separator();
 
     if (ImGui::CollapsingHeader("Camera Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::DragFloat("Distance", ctx.camDistance, 0.1f, 1.0f, 200.0f);
-        ImGui::SliderAngle("Pitch", ctx.camPitch, -89.0f, 89.0f);
-        ImGui::SliderAngle("Yaw", ctx.camYaw, -180.0f, 180.0f);
-        ImGui::DragFloat3("Target", &ctx.camTarget->x, 0.1f);
+        ImGui::DragFloat("Distance", &scene.CamDistance(), 0.1f, 1.0f, 200.0f);
+        ImGui::SliderAngle("Pitch", &scene.CamPitch(), -89.0f, 89.0f);
+        ImGui::SliderAngle("Yaw", &scene.CamYaw(), -180.0f, 180.0f);
+        ImGui::DragFloat3("Target", &scene.CamTarget().x, 0.1f);
     }
 
     if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
         // Get mutable reference to spotlight data for ImGui controls
-        SpotlightData& spotData = ctx.spotlight->GetGPUDataMutable();
+        Spotlight& spotlight = scene.GetSpotlight();
+        SpotlightData& spotData = spotlight.GetGPUDataMutable();
+        CeilingLights& ceilingLights = scene.GetCeilingLights();
 
         ImGui::Text("Environment");
-        float ceilingInt = ctx.ceilingLights->GetIntensity();
+        float ceilingInt = ceilingLights.GetIntensity();
         if (ImGui::SliderFloat("Ceiling Light Intensity", &ceilingInt, 1.0f, 100.0f)) {
-            ctx.ceilingLights->SetIntensity(ceilingInt);
+            ceilingLights.SetIntensity(ceilingInt);
         }
-        float ambFill = ctx.ceilingLights->GetAmbient();
+        float ambFill = ceilingLights.GetAmbient();
         if (ImGui::SliderFloat("Ambient Fill", &ambFill, 0.0f, 100.0f)) {
-            ctx.ceilingLights->SetAmbient(ambFill);
+            ceilingLights.SetAmbient(ambFill);
         }
-        ImGui::SliderFloat("Room Specular", ctx.roomSpecular, 0.0f, 1.0f);
-        ImGui::SliderFloat("Room Shininess", ctx.roomShininess, 1.0f, 128.0f);
+        ImGui::SliderFloat("Room Specular", &scene.RoomSpecular(), 0.0f, 1.0f);
+        ImGui::SliderFloat("Room Shininess", &scene.RoomShininess(), 1.0f, 128.0f);
         ImGui::Separator();
 
         ImGui::Text("Transform");
         ImGui::DragFloat3("Position", &spotData.posRange.x, 0.1f);
         ImGui::DragFloat3("Direction", &spotData.dirAngle.x, 0.01f);
         if (ImGui::Button("Reset to Fixture")) {
-            ctx.spotlight->SetPosition(*ctx.fixturePos);
+            spotlight.SetPosition(scene.GetFixturePosition());
         }
 
         ImGui::Separator();
         ImGui::Text("Color & Intensity");
-        ImGui::Checkbox("Use CMY Mixing", ctx.useCMY);
-        if (*ctx.useCMY) {
-            if (ImGui::ColorEdit3("CMY", &ctx.cmy->x)) {
-                ctx.spotlight->SetColorFromCMY(ctx.cmy->x, ctx.cmy->y, ctx.cmy->z);
+        ImGui::Checkbox("Use CMY Mixing", &scene.UseCMY());
+        if (scene.GetUseCMY()) {
+            if (ImGui::ColorEdit3("CMY", &scene.CMY().x)) {
+                spotlight.SetColorFromCMY(scene.CMY().x, scene.CMY().y, scene.CMY().z);
             }
         } else {
             ImGui::ColorEdit3("RGB Color", &spotData.colorInt.x);
@@ -127,11 +130,12 @@ void UIRenderer::RenderControls(UIContext& ctx) {
     }
 
     if (ImGui::CollapsingHeader("Gobo Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-        SpotlightData& spotData = ctx.spotlight->GetGPUDataMutable();
+        Spotlight& spotlight = scene.GetSpotlight();
+        SpotlightData& spotData = spotlight.GetGPUDataMutable();
         ImGui::DragFloat("Rotation", &spotData.coneGobo.z, 0.01f);
-        float shake = ctx.spotlight->GetGoboShake();
+        float shake = spotlight.GetGoboShake();
         if (ImGui::SliderFloat("Shake Amount", &shake, 0.0f, 1.0f)) {
-            ctx.spotlight->SetGoboShake(shake);
+            spotlight.SetGoboShake(shake);
         }
     }
 
