@@ -271,6 +271,7 @@ bool Renderer::Initialize(HWND hwnd) {
     m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     m_volumetricData.params = { 64.0f, 0.1f, 1.0f, 0.5f };
+    m_volumetricData.jitter = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     m_time = 0.0f;
     m_goboShakeAmount = 0.0f;
@@ -493,6 +494,7 @@ void Renderer::BeginFrame() {
     if (firstFrame) Log("Stage Drawn");
 
     // Volumetric Pass
+    m_volumetricData.jitter.x = m_time;
     m_volumetricBuffer.Update(m_context.Get(), m_volumetricData);
     
     m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);

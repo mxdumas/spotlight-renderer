@@ -30,6 +30,7 @@ __declspec(align(16)) struct SpotlightBuffer {
 
 __declspec(align(16)) struct VolumetricBuffer {
     DirectX::XMFLOAT4 params; // x: stepCount, y: density, z: intensity, w: anisotropy (G)
+    DirectX::XMFLOAT4 jitter; // x: time, yzw: unused
 };
 
 class Renderer {

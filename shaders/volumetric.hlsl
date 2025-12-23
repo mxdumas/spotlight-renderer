@@ -17,6 +17,7 @@ cbuffer SpotlightBuffer : register(b1) {
 
 cbuffer VolumetricBuffer : register(b2) {
     float4 volParams; // x: stepCount, y: density, z: intensity, w: anisotropy (G)
+    float4 volJitter; // x: time
 };
 
 Texture2D depthTexture : register(t0);
@@ -71,7 +72,10 @@ float4 PS(PS_INPUT input) : SV_Target {
     float3 stepVec = rayDir * stepLen;
 
     float3 accumulatedLight = float3(0, 0, 0);
-    float3 currentPos = rayStart;
+    
+    // Jittered sampling
+    float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
+    float3 currentPos = rayStart + stepVec * noise;
 
     // Spotlight params
     float3 LPos = posRange.xyz;

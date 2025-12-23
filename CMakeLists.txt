@@ -46,3 +46,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:${PROJECT_NAME}>/data)
+
+# Tests
+enable_testing()
+add_executable(TestVolumetricJitter tests/test_volumetric_jitter.cpp)
+target_include_directories(TestVolumetricJitter PRIVATE src external external/imgui)
+target_link_libraries(TestVolumetricJitter PRIVATE d3d11 dxgi d3dcompiler)
+add_test(NAME VolumetricJitterTest COMMAND TestVolumetricJitter)
