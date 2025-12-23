@@ -69,21 +69,50 @@ float4 PS(PS_INPUT input) : SV_Target {
     float rayLen = length(rayDirVec);
     float3 rayDir = rayDirVec / max(rayLen, 0.0001f);
 
-    float3 rayStart = camPos;
-    float stepCount = volParams.x;
-    float stepLen = rayLen / max(stepCount, 1.0f);
-    float3 stepVec = rayDir * stepLen;
-
-    float3 accumulatedLight = float3(0, 0, 0);
-    
-    float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
-    float3 currentPos = rayStart + stepVec * noise;
-
     float3 LPos = posRange.xyz;
     float3 LDir = normalize(dirAngle.xyz);
     float beam = coneGobo.x;
     float field = coneGobo.y;
     float g = volParams.w;
+    float range = posRange.w;
+
+    // Ray-Sphere intersection for optimization
+    float t_min = 0.0f;
+    float t_max = rayLen;
+
+    float3 L = LPos - camPos;
+    float tca = dot(L, rayDir);
+    float d2 = dot(L, L) - tca * tca;
+    float r2 = range * range;
+    if (d2 <= r2) {
+        float thc = sqrt(r2 - d2);
+        float t0 = tca - thc;
+        float t1 = tca + thc;
+        t_min = max(t_min, t0);
+        t_max = min(t_max, t1);
+    } else {
+        // Ray misses the sphere entirely
+        return float4(0, 0, 0, 1);
+    }
+
+    if (t_min >= t_max) {
+        return float4(0, 0, 0, 1);
+    }
+
+    float marchDist = t_max - t_min;
+    float stepCount = volParams.x;
+    float stepLen = marchDist / max(stepCount, 1.0f);
+    float3 stepVec = rayDir * stepLen;
+
+    float3 accumulatedLight = float3(0, 0, 0);
+    
+    float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
+    float3 rayStart = camPos + rayDir * t_min;
+    float3 currentPos = rayStart + stepVec * noise;
+
+    float4 lightSpaceStart = mul(float4(currentPos, 1.0f), lightViewProj);
+    float4 lightSpaceStep = mul(float4(stepVec, 0.0f), lightViewProj);
+    float4 currentLightSpacePos = lightSpaceStart;
 
     for (int i = 0; i < (int)stepCount; ++i) {
         float3 toLight = LPos - currentPos;
@@ -97,9 +126,8 @@ float4 PS(PS_INPUT input) : SV_Target {
 
             if (spotEffect > 0) {
                 float shadow = 1.0f;
-                float4 lightSpacePos = mul(float4(currentPos, 1.0f), lightViewProj);
-                if (lightSpacePos.w > 0.0f) {
-                    float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+                if (currentLightSpacePos.w > 0.0f) {
+                    float3 projCoords = currentLightSpacePos.xyz / currentLightSpacePos.w;
                     float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
                     shadowUV.y = 1.0f - shadowUV.y;
                     
@@ -128,6 +156,7 @@ float4 PS(PS_INPUT input) : SV_Target {
             }
         }
         currentPos += stepVec;
+        currentLightSpacePos += lightSpaceStep;
     }
 
     return float4(accumulatedLight * volParams.z, 1.0f);

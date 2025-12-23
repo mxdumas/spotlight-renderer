@@ -59,3 +59,7 @@ add_executable(TestTemporalReconstruction tests/test_temporal_reconstruction.cpp
 target_include_directories(TestTemporalReconstruction PRIVATE src external external/imgui)
 target_link_libraries(TestTemporalReconstruction PRIVATE d3d11 dxgi d3dcompiler dxguid)
 add_test(NAME TemporalReconstructionTest COMMAND TestTemporalReconstruction)
+
+add_executable(TestRayMath tests/test_ray_math.cpp)
+target_include_directories(TestRayMath PRIVATE src)
+add_test(NAME RayMathTest COMMAND TestRayMath)

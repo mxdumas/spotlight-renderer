@@ -581,7 +581,7 @@ void Renderer::RenderShadowMap() {
     if (fabsf(DirectX::XMVectorGetY(lDir)) > 0.99f) lUp = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
     
     DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
-    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, 100.0f);
+    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_spotlightData.posRange.w);
 
     MatrixBuffer mb;
     mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
@@ -618,7 +618,7 @@ void Renderer::BeginFrame() {
     if (fabsf(DirectX::XMVectorGetY(lDir)) > 0.99f) lUp = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
     
     DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
-    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, 100.0f);
+    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_spotlightData.posRange.w);
     m_spotlightData.lightViewProj = DirectX::XMMatrixTranspose(lView * lProj);
 
     m_spotlightData.goboOff.x = sinf(m_time * 30.0f) * m_goboShakeAmount * 0.05f;
@@ -778,6 +778,7 @@ void Renderer::RenderUI() {
     }
 
     ImGui::DragFloat("Intensity", &m_spotlightData.colorInt.w, 1.0f, 0.0f, 2000.0f);
+    ImGui::DragFloat("Range", &m_spotlightData.posRange.w, 1.0f, 0.0f, 1000.0f);
     ImGui::DragFloat("Beam Angle", &m_spotlightData.coneGobo.x, 0.01f, 0.0f, 1.0f);
     ImGui::DragFloat("Field Angle", &m_spotlightData.coneGobo.y, 0.01f, 0.0f, 1.0f);
     
