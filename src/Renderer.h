@@ -6,6 +6,7 @@
 #include "Mesh.h"
 #include "Camera.h"
 #include "ConstantBuffer.h"
+#include "Texture.h"
 #include <memory>
 
 using Microsoft::WRL::ComPtr;
@@ -17,6 +18,7 @@ struct MatrixBuffer {
 };
 
 struct SpotlightBuffer {
+    DirectX::XMMATRIX lightViewProj;
     DirectX::XMFLOAT3 position;
     float range;
     DirectX::XMFLOAT3 direction;
@@ -24,7 +26,9 @@ struct SpotlightBuffer {
     DirectX::XMFLOAT3 color;
     float intensity;
     DirectX::XMFLOAT2 angles; // x: beam angle, y: field angle
-    DirectX::XMFLOAT2 padding;
+    float goboRotation;
+    DirectX::XMFLOAT2 goboOffset;
+    float padding;
 };
 
 class Renderer {
@@ -53,12 +57,18 @@ private:
     Shader m_basicShader;
     Shader m_debugShader;
     std::unique_ptr<Mesh> m_stageMesh;
+    std::unique_ptr<Texture> m_goboTexture;
+    ComPtr<ID3D11SamplerState> m_samplerState;
     ComPtr<ID3D11Buffer> m_debugBoxVB;
     ComPtr<ID3D11Buffer> m_debugBoxIB;
     DirectX::XMFLOAT3 m_fixturePos;
 
     SpotlightBuffer m_spotlightData;
+    float m_goboShakeAmount;
+    bool m_useCMY;
+    DirectX::XMFLOAT3 m_cmy;
 
+    float m_time;
     Camera m_camera;
     float m_camDistance;
     float m_camPitch;
