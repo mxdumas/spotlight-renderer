@@ -15,6 +15,10 @@ cbuffer SpotlightBuffer : register(b1) {
     float4 goboOff       : packoffset(c8); // xy: offset
 };
 
+cbuffer MaterialBuffer : register(b2) {
+    float4 matColor;
+};
+
 Texture2D goboTexture : register(t0);
 Texture2D shadowMap : register(t1);
 SamplerState samLinear : register(s0);
@@ -95,5 +99,5 @@ float4 PS(PS_INPUT input) : SV_Target {
     float3 lighting = diff * colorInt.xyz * attenuation * spotEffect * goboColor * shadowFactor;
     float3 ambient = float3(0.01, 0.01, 0.01);
     
-    return float4(lighting + ambient, 1.0f);
+    return float4((lighting + ambient) * matColor.rgb, 1.0f);
 }

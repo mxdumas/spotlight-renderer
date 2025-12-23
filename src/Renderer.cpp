@@ -340,7 +340,18 @@ bool Renderer::Initialize(HWND hwnd) {
         // Let's just draw double sided or disable cull for room.
         
         uint32_t roomInds[] = {
-            16,18,17, 16,19,18
+            // Bottom
+            16,18,17, 16,19,18,
+            // Top
+            20,21,22, 20,22,23,
+            // Back
+            0,2,1, 0,3,2,
+            // Front
+            4,5,6, 4,6,7,
+            // Left
+            8,10,9, 8,11,10,
+            // Right
+            12,13,14, 12,14,15
         };
 
         D3D11_BUFFER_DESC rvbd = {};
@@ -486,6 +497,10 @@ bool Renderer::Initialize(HWND hwnd) {
     }
     if (!m_volumetricBuffer.Initialize(m_device.Get())) {
         Log("Failed to initialize volumetric constant buffer");
+        return false;
+    }
+    if (!m_materialBuffer.Initialize(m_device.Get())) {
+        Log("Failed to initialize material constant buffer");
         return false;
     }
 
@@ -676,6 +691,7 @@ void Renderer::BeginFrame() {
 
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
+    m_context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
     
     if (m_goboTexture) {
         ID3D11ShaderResourceView* srvs[] = { m_goboTexture->GetSRV(), m_shadowSRV.Get() };
@@ -689,6 +705,11 @@ void Renderer::BeginFrame() {
 
     // Render Room (Background)
     {
+        // Dark Gray Material
+        MaterialBuffer mb = {};
+        mb.color = { 0.2f, 0.2f, 0.2f, 1.0f };
+        m_materialBuffer.Update(m_context.Get(), mb);
+
         D3D11_RASTERIZER_DESC rd = {};
         rd.FillMode = D3D11_FILL_SOLID;
         rd.CullMode = D3D11_CULL_NONE;
@@ -701,12 +722,17 @@ void Renderer::BeginFrame() {
         m_context->IASetVertexBuffers(0, 1, m_roomVB.GetAddressOf(), &stride, &offset);
         m_context->IASetIndexBuffer(m_roomIB.Get(), DXGI_FORMAT_R32_UINT, 0);
         m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_context->DrawIndexed(36, 0, 0);
+        m_context->DrawIndexed(36, 0, 0); // 6 faces * 2 tris * 3 verts
 
         m_context->RSSetState(nullptr);
     }
 
     if (m_stageMesh) {
+        // White Material
+        MaterialBuffer mb = {};
+        mb.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        m_materialBuffer.Update(m_context.Get(), mb);
+
         m_stageMesh->Draw(m_context.Get());
     }
 

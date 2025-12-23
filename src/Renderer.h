@@ -33,6 +33,10 @@ __declspec(align(16)) struct VolumetricBuffer {
     DirectX::XMFLOAT4 jitter; // x: time, yzw: unused
 };
 
+__declspec(align(16)) struct MaterialBuffer {
+    DirectX::XMFLOAT4 color;
+};
+
 class Renderer {
 public:
     Renderer();
@@ -101,6 +105,7 @@ private:
     ConstantBuffer<MatrixBuffer> m_matrixBuffer;
     ConstantBuffer<SpotlightBuffer> m_spotlightBuffer;
     ConstantBuffer<VolumetricBuffer> m_volumetricBuffer;
+    ConstantBuffer<MaterialBuffer> m_materialBuffer;
 
     ComPtr<ID3D11BlendState> m_additiveBlendState;
 };
