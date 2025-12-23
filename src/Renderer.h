@@ -37,6 +37,15 @@ __declspec(align(16)) struct MaterialBuffer {
     DirectX::XMFLOAT4 color;
 };
 
+struct PointLight {
+    DirectX::XMFLOAT4 pos;   // xyz: pos, w: range
+    DirectX::XMFLOAT4 color; // xyz: color, w: intensity
+};
+
+__declspec(align(16)) struct CeilingLightsBuffer {
+    PointLight lights[8];
+};
+
 class Renderer {
 public:
     Renderer();
@@ -94,6 +103,8 @@ private:
     float m_goboShakeAmount;
     bool m_useCMY;
     DirectX::XMFLOAT3 m_cmy;
+    
+    float m_ceilingLightIntensity;
 
     float m_time;
     Camera m_camera;
@@ -106,6 +117,7 @@ private:
     ConstantBuffer<SpotlightBuffer> m_spotlightBuffer;
     ConstantBuffer<VolumetricBuffer> m_volumetricBuffer;
     ConstantBuffer<MaterialBuffer> m_materialBuffer;
+    ConstantBuffer<CeilingLightsBuffer> m_ceilingLightsBuffer;
 
     ComPtr<ID3D11BlendState> m_additiveBlendState;
 };

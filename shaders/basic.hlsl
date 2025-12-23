@@ -19,6 +19,15 @@ cbuffer MaterialBuffer : register(b2) {
     float4 matColor;
 };
 
+struct PointLight {
+    float4 pos;   // xyz: pos, w: range
+    float4 color; // xyz: color, w: intensity
+};
+
+cbuffer CeilingLightsBuffer : register(b3) {
+    PointLight lights[8];
+};
+
 Texture2D goboTexture : register(t0);
 Texture2D shadowMap : register(t1);
 SamplerState samLinear : register(s0);
@@ -97,7 +106,21 @@ float4 PS(PS_INPUT input) : SV_Target {
 
     float diff = max(dot(normal, toLight), 0.0f);
     float3 lighting = diff * colorInt.xyz * attenuation * spotEffect * goboColor * shadowFactor;
-    float3 ambient = float3(0.01, 0.01, 0.01);
     
-    return float4((lighting + ambient) * matColor.rgb, 1.0f);
+    // Add Ceiling Lights
+    float3 ceilingLighting = float3(0,0,0);
+    for (int i = 0; i < 8; ++i) {
+        float3 toPL = lights[i].pos.xyz - input.worldPos;
+        float dPL = length(toPL);
+        toPL /= dPL;
+        float attPL = lights[i].color.w / (dPL * dPL + 1.0f);
+        if (dPL > lights[i].pos.w) attPL = 0;
+        
+        float diffPL = max(dot(normal, toPL), 0.0f);
+        ceilingLighting += diffPL * lights[i].color.rgb * attPL;
+    }
+
+    float3 ambient = float3(0.001, 0.001, 0.001); // Minimal base ambient
+    
+    return float4((lighting + ceilingLighting + ambient) * matColor.rgb, 1.0f);
 }

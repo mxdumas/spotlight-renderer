@@ -478,6 +478,7 @@ bool Renderer::Initialize(HWND hwnd) {
     m_goboShakeAmount = 0.0f;
     m_useCMY = false;
     m_cmy = { 0.0f, 0.0f, 0.0f };
+    m_ceilingLightIntensity = 1.0f;
 
     // Initialize Camera
     m_camDistance = 40.0f;
@@ -503,6 +504,12 @@ bool Renderer::Initialize(HWND hwnd) {
         Log("Failed to initialize material constant buffer");
         return false;
     }
+    if (!m_ceilingLightsBuffer.Initialize(m_device.Get())) {
+        Log("Failed to initialize ceiling lights constant buffer");
+        return false;
+    }
+
+    m_ceilingLightIntensity = 1.0f; // Default 1.0
 
     // Create Blend State
     D3D11_BLEND_DESC blendDesc = {};
@@ -648,7 +655,7 @@ void Renderer::BeginFrame() {
     
     if (firstFrame) Log("ImGui NewFrame Done");
 
-    float clearColor[] = { 0.1f, 0.2f, 0.4f, 1.0f };
+    float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
     m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
     m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
@@ -687,11 +694,33 @@ void Renderer::BeginFrame() {
     m_matrixBuffer.Update(m_context.Get(), mb);
     m_spotlightBuffer.Update(m_context.Get(), m_spotlightData);
 
+    // Update Ceiling Lights
+    CeilingLightsBuffer clb;
+    float startX = -150.0f;
+    float startZ = -150.0f;
+    float spacing = 300.0f / 3.0f; // 4 rows? "2x4 grid". 2 rows of 4 lights.
+    
+    // Grid 4 in X, 2 in Z.
+    // X range: -150 to 150. Spacing = 300 / 3 = 100. (-150, -50, 50, 150)
+    // Z range: -50 to 50. Spacing = 100.
+    
+    int idx = 0;
+    for (int z = 0; z < 2; ++z) {
+        for (int x = 0; x < 4; ++x) {
+            float posX = -150.0f + x * 100.0f;
+            float posZ = -50.0f + z * 100.0f;
+            clb.lights[idx].pos = { posX, 490.0f, posZ, 1000.0f }; // Range 1000
+            clb.lights[idx].color = { 1.0f, 1.0f, 1.0f, m_ceilingLightIntensity };
+            idx++;
+        }
+    }
+    m_ceilingLightsBuffer.Update(m_context.Get(), clb);
+
     if (firstFrame) Log("Buffers Updated");
 
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
-    m_context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
+    m_context->PSSetConstantBuffers(3, 1, m_ceilingLightsBuffer.GetAddressOf());
     
     if (m_goboTexture) {
         ID3D11ShaderResourceView* srvs[] = { m_goboTexture->GetSRV(), m_shadowSRV.Get() };
@@ -797,6 +826,10 @@ void Renderer::RenderUI() {
     }
 
     if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Environment");
+        ImGui::DragFloat("Ceiling Light Intensity", &m_ceilingLightIntensity, 0.1f, 0.0f, 100.0f);
+        ImGui::Separator();
+
         ImGui::Text("Transform");
         ImGui::DragFloat3("Position", &m_spotlightData.posRange.x, 0.1f);
         ImGui::DragFloat3("Direction", &m_spotlightData.dirAngle.x, 0.01f);
