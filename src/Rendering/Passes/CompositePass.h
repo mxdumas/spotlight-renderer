@@ -9,31 +9,64 @@ using Microsoft::WRL::ComPtr;
 
 class RenderTarget;
 
-// Composite pass - blends volumetric effect onto scene
+/**
+ * @class CompositePass
+ * @brief Blends the volumetric lighting effect with the scene rendering.
+ * 
+ * This pass uses additive blending to combine the accumulated volumetric light
+ * from the volumetric pass into the main scene render target.
+ */
 class CompositePass : public IRenderPass {
 public:
+    /**
+     * @brief Default constructor for the CompositePass class.
+     */
     CompositePass() = default;
+
+    /**
+     * @brief Destructor for the CompositePass class.
+     */
     ~CompositePass() override = default;
 
+    /**
+     * @brief Initializes the composite shader and blend state objects.
+     * 
+     * @param device Pointer to the ID3D11Device.
+     * @return true if initialization succeeded, false otherwise.
+     */
     bool Initialize(ID3D11Device* device) override;
+
+    /**
+     * @brief Shuts down the pass and releases resources.
+     */
     void Shutdown() override;
 
-    // Execute additive composite of volumetric onto scene
-    // - sceneRT: scene render target to composite onto
-    // - volumetricRT: volumetric texture to add
-    // - fullScreenVB: fullscreen quad vertex buffer
-    // - sampler: linear sampler
+    /**
+     * @brief Executes an additive composite of the volumetric lighting onto the scene.
+     * 
+     * @param context Pointer to the ID3D11DeviceContext.
+     * @param sceneRT The scene render target to composite onto.
+     * @param volumetricRT The volumetric texture containing the light effect.
+     * @param fullScreenVB Vertex buffer for a full-screen quad.
+     * @param sampler Sampler state for texture sampling.
+     */
     void ExecuteAdditive(ID3D11DeviceContext* context,
                          RenderTarget* sceneRT,
                          RenderTarget* volumetricRT,
                          ID3D11Buffer* fullScreenVB,
                          ID3D11SamplerState* sampler);
 
-    // Execute simple copy (for non-FXAA path)
-    // - destRTV: destination render target view
-    // - sourceSRV: source texture SRV
-    // - fullScreenVB: fullscreen quad vertex buffer
-    // - sampler: linear sampler
+    /**
+     * @brief Executes a simple copy from a source texture to a destination render target.
+     * 
+     * Used typically as a fallback or when certain post-processing steps are disabled.
+     * 
+     * @param context Pointer to the ID3D11DeviceContext.
+     * @param destRTV The destination render target view.
+     * @param sourceSRV The source texture's shader resource view.
+     * @param fullScreenVB Vertex buffer for a full-screen quad.
+     * @param sampler Sampler state for texture sampling.
+     */
     void ExecuteCopy(ID3D11DeviceContext* context,
                      ID3D11RenderTargetView* destRTV,
                      ID3D11ShaderResourceView* sourceSRV,

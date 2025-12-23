@@ -14,16 +14,51 @@ using Microsoft::WRL::ComPtr;
 
 class Application {
 public:
+    /**
+     * @brief Default constructor for the Application class.
+     */
     Application() = default;
+
+    /**
+     * @brief Destructor for the Application class.
+     * Ensures proper cleanup of all application resources.
+     */
     ~Application();
 
+    /**
+     * @brief Initializes the application, including the graphics device, scene, UI, and render pipeline.
+     * 
+     * @param hwnd The handle to the window where the application will be rendered.
+     * @return true if initialization was successful, false otherwise.
+     * @throws std::runtime_exception if critical resources fail to initialize.
+     */
     bool Initialize(HWND hwnd);
+
+    /**
+     * @brief Shuts down the application and releases all allocated resources.
+     */
     void Shutdown();
 
+    /**
+     * @brief Begins a new frame by clearing buffers and preparing for rendering.
+     */
     void BeginFrame();
+
+    /**
+     * @brief Renders the user interface using ImGui.
+     */
     void RenderUI();
+
+    /**
+     * @brief Ends the current frame by presenting the back buffer and performing any necessary end-of-frame tasks.
+     */
     void EndFrame();
 
+    /**
+     * @brief Logs a message to the application's logging system.
+     * 
+     * @param message The string message to be logged.
+     */
     void Log(const std::string& message);
 
 private:

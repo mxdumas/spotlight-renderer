@@ -8,32 +8,69 @@
 class Scene;
 class RenderPipeline;
 
-// UI context passed to render controls
+/**
+ * @struct UIContext
+ * @brief Context data required for rendering UI controls.
+ * 
+ * Provides the UI renderer with access to the scene and render pipeline for configuration.
+ */
 struct UIContext {
-    Scene* scene;
-    RenderPipeline* pipeline;
+    Scene* scene;           ///< Pointer to the scene for camera and light controls.
+    RenderPipeline* pipeline; ///< Pointer to the render pipeline for post-processing controls.
 };
 
-// Handles all ImGui initialization, rendering, and shutdown
-// Extracted from Renderer to separate UI concerns from rendering
+/**
+ * @class UIRenderer
+ * @brief Handles ImGui initialization, rendering, and shutdown.
+ * 
+ * This class isolates UI concerns from the main rendering logic, managing the lifecycle
+ * of the ImGui context and providing methods to render application-specific controls.
+ */
 class UIRenderer {
 public:
+    /**
+     * @brief Default constructor for the UIRenderer class.
+     */
     UIRenderer() = default;
+
+    /**
+     * @brief Destructor for the UIRenderer class.
+     * Ensures ImGui is properly shut down if initialized.
+     */
     ~UIRenderer();
 
-    // Initialize ImGui backends (Win32 + DX11)
+    /**
+     * @brief Initializes the ImGui backends for Win32 and DirectX 11.
+     * 
+     * @param hwnd Handle to the window.
+     * @param device Pointer to the ID3D11Device.
+     * @param context Pointer to the ID3D11DeviceContext.
+     * @return true if initialization was successful, false otherwise.
+     */
     bool Initialize(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext* context);
 
-    // Cleanup ImGui
+    /**
+     * @brief Shuts down ImGui and cleans up backend resources.
+     */
     void Shutdown();
 
-    // Start a new ImGui frame (call at beginning of frame)
+    /**
+     * @brief Starts a new ImGui frame.
+     * Should be called at the beginning of each frame.
+     */
     void BeginFrame();
 
-    // Render all UI controls (call after BeginFrame, before EndFrame)
+    /**
+     * @brief Renders the application's UI controls.
+     * 
+     * @param ctx The UIContext providing access to scene and pipeline state.
+     */
     void RenderControls(UIContext& ctx);
 
-    // Finalize and render ImGui draw data (call at end of frame)
+    /**
+     * @brief Finalizes the ImGui frame and renders draw data to the back buffer.
+     * Should be called at the end of each frame, after all UI controls are rendered.
+     */
     void EndFrame();
 
 private:

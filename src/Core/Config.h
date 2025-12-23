@@ -2,20 +2,29 @@
 
 #include <cstdint>
 
+/**
+ * @namespace Config
+ * @brief Global configuration parameters for the Spotlight Renderer.
+ * 
+ * This namespace contains various sub-namespaces that group constants related to
+ * math, display, rendering passes, scene geometry, and UI defaults.
+ */
 namespace Config {
 
-    // ===========================================
-    // Math Constants
-    // ===========================================
+    /**
+     * @namespace Math
+     * @brief Mathematical constants.
+     */
     namespace Math {
         constexpr float PI = 3.14159265358979323846f;
         constexpr float PI_DIV_2 = PI / 2.0f;
         constexpr float PI_DIV_4 = PI / 4.0f;
     }
 
-    // ===========================================
-    // Display Configuration
-    // ===========================================
+    /**
+     * @namespace Display
+     * @brief Window and monitor configuration.
+     */
     namespace Display {
         constexpr int WINDOW_WIDTH = 1920;
         constexpr int WINDOW_HEIGHT = 1080;
@@ -23,16 +32,18 @@ namespace Config {
         constexpr int REFRESH_RATE = 60;
     }
 
-    // ===========================================
-    // Shadow Mapping
-    // ===========================================
+    /**
+     * @namespace Shadow
+     * @brief Shadow mapping parameters.
+     */
     namespace Shadow {
-        constexpr int MAP_SIZE = 2048;
+        constexpr int MAP_SIZE = 2048; ///< Resolution of the shadow map texture.
     }
 
-    // ===========================================
-    // Room Geometry
-    // ===========================================
+    /**
+     * @namespace Room
+     * @brief Dimensions and properties of the rendered room.
+     */
     namespace Room {
         constexpr float HALF_WIDTH = 50.0f;
         constexpr float FLOOR_Y = -0.05f;
@@ -40,9 +51,10 @@ namespace Config {
         constexpr int INDEX_COUNT = 36; // 6 faces * 2 triangles * 3 vertices
     }
 
-    // ===========================================
-    // Camera Defaults
-    // ===========================================
+    /**
+     * @namespace CameraDefaults
+     * @brief Initial and default parameters for the orbital camera.
+     */
     namespace CameraDefaults {
         constexpr float DISTANCE = 40.0f;
         constexpr float PITCH = 0.4f;
@@ -52,9 +64,10 @@ namespace Config {
         constexpr float CLIP_FAR = 1000.0f;
     }
 
-    // ===========================================
-    // Spotlight Defaults
-    // ===========================================
+    /**
+     * @namespace Spotlight
+     * @brief Default properties for the stage spotlight.
+     */
     namespace Spotlight {
         constexpr float DEFAULT_RANGE = 500.0f;
         constexpr float DEFAULT_INTENSITY = 100.0f;
@@ -68,9 +81,10 @@ namespace Config {
         constexpr float SHAKE_FREQ_Y = 35.0f;
     }
 
-    // ===========================================
-    // Volumetric Lighting Defaults
-    // ===========================================
+    /**
+     * @namespace Volumetric
+     * @brief Configuration for the volumetric lighting effect.
+     */
     namespace Volumetric {
         constexpr float DEFAULT_STEP_COUNT = 512.0f;
         constexpr float MIN_STEP_COUNT = 16.0f;
@@ -83,9 +97,10 @@ namespace Config {
         constexpr float JITTER_SCALE = 0.005f;
     }
 
-    // ===========================================
-    // Ceiling Lights Configuration
-    // ===========================================
+    /**
+     * @namespace CeilingLights
+     * @brief Configuration for the grid of ceiling point lights.
+     */
     namespace CeilingLights {
         constexpr float HEIGHT = 95.0f;
         constexpr float RANGE = 200.0f;
@@ -100,17 +115,19 @@ namespace Config {
         constexpr float INTENSITY_MULTIPLIER = 500.0f;
     }
 
-    // ===========================================
-    // Ambient Lighting
-    // ===========================================
+    /**
+     * @namespace Ambient
+     * @brief Global ambient (fill) light parameters.
+     */
     namespace Ambient {
         constexpr float DEFAULT_FILL = 2.0f;
         constexpr float MAX_FILL = 100.0f;
     }
 
-    // ===========================================
-    // Materials
-    // ===========================================
+    /**
+     * @namespace Materials
+     * @brief Default material properties for room and stage.
+     */
     namespace Materials {
         // Room
         constexpr float ROOM_COLOR = 0.2f;
@@ -122,9 +139,10 @@ namespace Config {
         constexpr float STAGE_SHININESS = 16.0f;
     }
 
-    // ===========================================
-    // Geometry Generation
-    // ===========================================
+    /**
+     * @namespace Geometry
+     * @brief Configuration for procedurally generated geometry.
+     */
     namespace Geometry {
         // Cone proxy
         constexpr int CONE_SEGMENTS = 16;
@@ -137,9 +155,10 @@ namespace Config {
         constexpr float SPHERE_RADIUS = 2.0f;
     }
 
-    // ===========================================
-    // Post-Processing
-    // ===========================================
+    /**
+     * @namespace PostProcess
+     * @brief Configuration for post-processing effects (blur, etc.).
+     */
     namespace PostProcess {
         // Blur
         constexpr int DEFAULT_BLUR_PASSES = 1;
@@ -150,9 +169,10 @@ namespace Config {
         constexpr float FRAME_DELTA = 0.016f;
     }
 
-    // ===========================================
-    // UI Defaults
-    // ===========================================
+    /**
+     * @namespace UI
+     * @brief Default positions and sizes for ImGui windows.
+     */
     namespace UI {
         constexpr float WINDOW_POS_X = 10.0f;
         constexpr float WINDOW_POS_Y = 10.0f;
@@ -160,9 +180,10 @@ namespace Config {
         constexpr float WINDOW_HEIGHT = 600.0f;
     }
 
-    // ===========================================
-    // Vertex Stride Constants
-    // ===========================================
+    /**
+     * @namespace Vertex
+     * @brief Layout and stride constants for vertex buffers.
+     */
     namespace Vertex {
         // Position (3) + Normal (3) + UV (2) = 8 floats = 32 bytes
         constexpr unsigned int STRIDE_FULL = 32;

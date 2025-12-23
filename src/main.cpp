@@ -9,6 +9,17 @@
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+/**
+ * @brief Windows message procedure callback.
+ * 
+ * Handles system messages such as window destruction and forwards relevant events to ImGui.
+ * 
+ * @param hwnd Handle to the window.
+ * @param uMsg The message code.
+ * @param wParam Additional message-specific information.
+ * @param lParam Additional message-specific information.
+ * @return Result of the message processing.
+ */
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
@@ -23,6 +34,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
+/**
+ * @brief Entry point for the Windows application.
+ * 
+ * Initializes the window, the application logic, and enters the main message loop.
+ * 
+ * @param hInstance Handle to the current instance of the application.
+ * @param hPrevInstance Always NULL in Win32.
+ * @param lpCmdLine Pointer to the command line string.
+ * @param nCmdShow Specifies how the window is to be shown.
+ * @return Exit code of the application.
+ */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     SetProcessDPIAware();
