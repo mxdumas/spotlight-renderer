@@ -17,14 +17,12 @@ cbuffer SpotlightBuffer : register(b1) {
 
 cbuffer VolumetricBuffer : register(b2) {
     float4 volParams; // x: stepCount, y: density, z: intensity, w: anisotropy (G)
-    float4 volJitter; // x: time, y: temporalWeight
-    matrix prevViewProj;
+    float4 volJitter; // x: time
 };
 
 Texture2D depthTexture : register(t0);
 Texture2D goboTexture : register(t1);
 Texture2D shadowMap : register(t2);
-Texture2D historyTexture : register(t3);
 
 SamplerState samLinear : register(s0);
 SamplerComparisonState shadowSampler : register(s1);
@@ -54,23 +52,6 @@ float HenyeyGreenstein(float cosTheta, float g) {
     return (1.0f - g2) / (4.0f * 3.14159f * pow(max(0.001f, 1.0f + g2 - 2.0f * g * cosTheta), 1.5f));
 }
 
-float3 RGBToYCoCg(float3 rgb) {
-    float y  = dot(rgb, float3(0.25f, 0.50f, 0.25f));
-    float co = dot(rgb, float3(0.50f, 0.00f, -0.50f));
-    float cg = dot(rgb, float3(-0.25f, 0.50f, -0.25f));
-    return float3(y, co, cg);
-}
-
-float3 YCoCgToRGB(float3 ycocg) {
-    float y  = ycocg.x;
-    float co = ycocg.y;
-    float cg = ycocg.z;
-    float r = y + co - cg;
-    float g = y + cg;
-    float b = y - co - cg;
-    return float3(r, g, b);
-}
-
 float4 PS(PS_INPUT input) : SV_Target {
     float2 uv = input.pos.xy / float2(1920.0f, 1080.0f);
 
@@ -95,11 +76,7 @@ float4 PS(PS_INPUT input) : SV_Target {
 
     float3 accumulatedLight = float3(0, 0, 0);
     
-    // Original sine-based noise distribution
-    float frameIndex = volJitter.x * 60.0f; 
-    float2 noiseUV = uv + float2(frac(frameIndex * 0.61803398875f), frac(frameIndex * 0.70710678118f));
-    float noise = frac(sin(dot(noiseUV, float2(12.9898f, 78.233f))) * 43758.5453f);
-    
+    float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
     float3 currentPos = rayStart + stepVec * noise;
 
     float3 LPos = posRange.xyz;
@@ -153,48 +130,5 @@ float4 PS(PS_INPUT input) : SV_Target {
         currentPos += stepVec;
     }
 
-    float3 currentResult = max(0, accumulatedLight * volParams.z);
-    
-    // Protection against NaNs/Infs
-    if (any(isnan(currentResult)) || any(isinf(currentResult))) {
-        currentResult = float3(0, 0, 0);
-    }
-    
-    // Reproject for history
-    float4 prevClipPos = mul(float4(worldPos, 1.0f), prevViewProj);
-    float3 prevScreenPos = prevClipPos.xyz / (prevClipPos.w + 0.00001f);
-    float2 prevUV = prevScreenPos.xy * 0.5f + 0.5f;
-    prevUV.y = 1.0f - prevUV.y;
-
-    float3 history = historyTexture.SampleLevel(samLinear, prevUV, 0).rgb;
-    if (any(isnan(history)) || any(isinf(history))) {
-        history = currentResult;
-    }
-    
-    float weight = volJitter.y;
-    
-    // Reduce weight during camera movement to prevent lag/ghosting
-    float camMove = volJitter.z;
-    weight *= saturate(1.0f - camMove * 10.0f);
-
-    // TAA-style YCoCg Clipping
-    float3 currYCoCg = RGBToYCoCg(currentResult);
-    float3 histYCoCg = RGBToYCoCg(history);
-
-    // Simple neighborhood estimate (1x1 for now, but with expanded box)
-    float3 minColor = currYCoCg - float3(0.2f, 0.1f, 0.1f);
-    float3 maxColor = currYCoCg + float3(0.2f, 0.1f, 0.1f);
-    
-    // Clamp history to current neighborhood in YCoCg space
-    histYCoCg = clamp(histYCoCg, minColor, maxColor);
-    history = YCoCgToRGB(histYCoCg);
-    
-    // Reject history if out of bounds
-    if (prevUV.x < 0 || prevUV.x > 1 || prevUV.y < 0 || prevUV.y > 1) {
-        weight = 0.0f;
-    }
-
-    float3 finalColor = lerp(currentResult, history, weight);
-
-    return float4(finalColor, 1.0f);
+    return float4(accumulatedLight * volParams.z, 1.0f);
 }
