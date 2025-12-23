@@ -25,91 +25,28 @@ bool Renderer::Initialize(HWND hwnd) {
     { std::ofstream logFile("debug.log", std::ios::trunc); }
 
     Log("Renderer::Initialize Started");
-    DXGI_SWAP_CHAIN_DESC sd = {};
-    sd.BufferCount = 1;
-    sd.BufferDesc.Width = Config::Display::WINDOW_WIDTH;
-    sd.BufferDesc.Height = Config::Display::WINDOW_HEIGHT;
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    sd.BufferDesc.RefreshRate.Numerator = Config::Display::REFRESH_RATE;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = hwnd;
-    sd.SampleDesc.Count = 1;
-    sd.SampleDesc.Quality = 0;
-    sd.Windowed = TRUE;
 
-    UINT createDeviceFlags = 0;
-    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
-    D3D_FEATURE_LEVEL featureLevel;
-
-    Log("Creating Device and SwapChain...");
-    HRESULT hr = D3D11CreateDeviceAndSwapChain(
-        nullptr,
-        D3D_DRIVER_TYPE_HARDWARE,
-        nullptr,
-        createDeviceFlags,
-        featureLevels,
-        1,
-        D3D11_SDK_VERSION,
-        &sd,
-        &m_swapChain,
-        &m_device,
-        &featureLevel,
-        &m_context
-    );
-
-    if (FAILED(hr)) {
-        Log("D3D11CreateDeviceAndSwapChain Failed with HR: " + std::to_string(hr));
+    // Initialize graphics device (handles device, swap chain, depth buffer)
+    Log("Initializing GraphicsDevice...");
+    if (!m_graphics.Initialize(hwnd)) {
+        Log("GraphicsDevice initialization failed");
         return false;
     }
-    Log("Device & SwapChain Created Successfully");
+    Log("GraphicsDevice initialized successfully");
 
-    ComPtr<ID3D11Texture2D> backBuffer;
-    hr = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
-    if (FAILED(hr)) return false;
+    // Copy pointers to legacy members for backward compatibility during migration
+    // These will be removed once all code uses GraphicsDevice directly
+    m_device = m_graphics.GetDevice();
+    m_context = m_graphics.GetContext();
+    m_swapChain = m_graphics.GetSwapChain();
+    m_renderTargetView = m_graphics.GetBackBufferRTV();
+    m_depthStencilView = m_graphics.GetDepthStencilView();
+    m_depthSRV = m_graphics.GetDepthSRV();
 
-    hr = m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_renderTargetView);
-    if (FAILED(hr)) return false;
-
-    // Create Depth/Stencil Buffer
-    D3D11_TEXTURE2D_DESC depthDesc = {};
-    depthDesc.Width = Config::Display::WINDOW_WIDTH;
-    depthDesc.Height = Config::Display::WINDOW_HEIGHT;
-    depthDesc.MipLevels = 1;
-    depthDesc.ArraySize = 1;
-    depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-    depthDesc.SampleDesc.Count = 1;
-    depthDesc.SampleDesc.Quality = 0;
-    depthDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-
-    hr = m_device->CreateTexture2D(&depthDesc, nullptr, &m_depthStencilBuffer);
-    if (FAILED(hr)) return false;
-
-    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    hr = m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, &m_depthStencilView);
-    if (FAILED(hr)) return false;
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc = {};
-    depthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-    depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    depthSRVDesc.Texture2D.MipLevels = 1;
-    hr = m_device->CreateShaderResourceView(m_depthStencilBuffer.Get(), &depthSRVDesc, &m_depthSRV);
-    if (FAILED(hr)) return false;
-
-    m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
-
-    D3D11_VIEWPORT viewport = {};
-    viewport.Width = static_cast<float>(Config::Display::WINDOW_WIDTH);
-    viewport.Height = static_cast<float>(Config::Display::WINDOW_HEIGHT);
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
-    m_context->RSSetViewports(1, &viewport);
     Log("Viewport and Render Targets Set");
+
+    // HRESULT for remaining resource creation
+    HRESULT hr;
 
     // Initialize shader
     std::vector<D3D11_INPUT_ELEMENT_DESC> layout = {
@@ -627,25 +564,29 @@ void Renderer::Shutdown() {
         ImGui::DestroyContext();
     }
 
+    // Release renderer-specific resources
     m_shadowSRV.Reset();
     m_shadowDSV.Reset();
     m_shadowMap.Reset();
     m_shadowSampler.Reset();
-
-    m_depthSRV.Reset();
     m_additiveBlendState.Reset();
-
     m_fullScreenVB.Reset();
     m_debugBoxIB.Reset();
     m_debugBoxVB.Reset();
-    m_depthStencilView.Reset();
-    m_depthStencilBuffer.Reset();
     m_stageMesh.reset();
     m_goboTexture.reset();
+
+    // Clear legacy pointers (they point to GraphicsDevice resources)
+    m_depthSRV.Reset();
+    m_depthStencilView.Reset();
+    m_depthStencilBuffer.Reset();
     m_renderTargetView.Reset();
     m_swapChain.Reset();
     m_context.Reset();
     m_device.Reset();
+
+    // Shutdown graphics device (releases device, context, swap chain)
+    m_graphics.Shutdown();
 }
 
 void Renderer::RenderShadowMap() {
@@ -1053,7 +994,7 @@ void Renderer::EndFrame() {
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-    m_swapChain->Present(1, 0);
+    m_graphics.Present(true);
 
     if (firstFrame) {
         Log("First EndFrame Completed Successfully!");

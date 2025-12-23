@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 #include "Core/Config.h"
+#include "Core/GraphicsDevice.h"
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
@@ -76,6 +77,15 @@ public:
 private:
     void InitImGui(HWND hwnd);
     void RenderShadowMap();
+
+    // Graphics device (owns device, context, swap chain, back buffer)
+    GraphicsDevice m_graphics;
+
+    // Convenience accessors (delegate to GraphicsDevice)
+    ID3D11Device* GetDevice() const { return m_graphics.GetDevice(); }
+    ID3D11DeviceContext* GetContext() const { return m_graphics.GetContext(); }
+
+    // Legacy pointers kept for gradual migration (will be removed in future)
     ComPtr<ID3D11Device> m_device;
     ComPtr<ID3D11DeviceContext> m_context;
     ComPtr<IDXGISwapChain> m_swapChain;
