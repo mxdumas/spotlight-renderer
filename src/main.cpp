@@ -24,6 +24,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+    SetProcessDPIAware();
     const wchar_t CLASS_NAME[]  = L"SpotlightRendererWindowClass";
     
     WNDCLASS wc = { };
@@ -35,12 +36,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     RegisterClass(&wc);
 
+    RECT wr = { 0, 0, 1920, 1080 };
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+
     HWND hwnd = CreateWindowEx(
         0,
         CLASS_NAME,
         L"Spotlight Renderer",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720,
+        CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
         NULL,
         NULL,
         hInstance,

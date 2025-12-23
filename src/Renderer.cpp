@@ -26,8 +26,8 @@ bool Renderer::Initialize(HWND hwnd) {
     Log("Renderer::Initialize Started");
     DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferCount = 1;
-    sd.BufferDesc.Width = 1280;
-    sd.BufferDesc.Height = 720;
+    sd.BufferDesc.Width = 1920;
+    sd.BufferDesc.Height = 1080;
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.BufferDesc.RefreshRate.Numerator = 60;
     sd.BufferDesc.RefreshRate.Denominator = 1;
@@ -72,8 +72,8 @@ bool Renderer::Initialize(HWND hwnd) {
 
     // Create Depth/Stencil Buffer
     D3D11_TEXTURE2D_DESC depthDesc = {};
-    depthDesc.Width = 1280;
-    depthDesc.Height = 720;
+    depthDesc.Width = 1920;
+    depthDesc.Height = 1080;
     depthDesc.MipLevels = 1;
     depthDesc.ArraySize = 1;
     depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -91,8 +91,8 @@ bool Renderer::Initialize(HWND hwnd) {
     m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
 
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = 1280.0f;
-    viewport.Height = 720.0f;
+    viewport.Width = 1920.0f;
+    viewport.Height = 1080.0f;
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     viewport.TopLeftX = 0;
@@ -191,26 +191,25 @@ bool Renderer::Initialize(HWND hwnd) {
     Log("Debug Buffers Created");
 
     // Initial spotlight data
-    m_spotlightData.position = m_fixturePos;
-    m_spotlightData.range = 50.0f;
-    m_spotlightData.direction = { 0.0f, -1.0f, 0.0f };
-    m_spotlightData.spotAngle = 0.5f;
-    m_spotlightData.color = { 1.0f, 1.0f, 1.0f };
-    m_spotlightData.intensity = 500.0f;
-    m_spotlightData.angles = { 0.95f, 0.8f };
-    m_spotlightData.goboRotation = 0.0f;
+    memset(&m_spotlightData, 0, sizeof(m_spotlightData));
+    m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, 100.0f };
+    m_spotlightData.dirAngle = { 0.0f, -1.0f, 0.0f, 0.0f };
+    m_spotlightData.colorInt = { 1.0f, 1.0f, 1.0f, 100.0f };
+    m_spotlightData.coneGobo = { 0.98f, 0.71f, 0.0f, 0.0f };
+    m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+
+    m_time = 0.0f;
     m_goboShakeAmount = 0.0f;
     m_useCMY = false;
     m_cmy = { 0.0f, 0.0f, 0.0f };
-
-    m_time = 0.0f;
 
     // Initialize Camera
     m_camDistance = 40.0f;
     m_camPitch = 0.4f;
     m_camYaw = 0.0f;
     m_camTarget = { 0.0f, 0.0f, 0.0f };
-    m_camera.SetPerspective(DirectX::XM_PIDIV4, 1280.0f / 720.0f, 0.1f, 1000.0f);
+    m_camera.SetPerspective(DirectX::XM_PIDIV4, 1920.0f / 1080.0f, 0.1f, 1000.0f);
 
     // Initialize Constant Buffers
     if (!m_matrixBuffer.Initialize(m_device.Get())) {
@@ -302,13 +301,9 @@ void Renderer::BeginFrame() {
     mb.projection = DirectX::XMMatrixTranspose(m_camera.GetProjectionMatrix());
     m_matrixBuffer.Update(m_context.Get(), mb);
 
-    // Update spotlight
-    m_spotlightData.position = m_spotlightData.position; // Position is handled by UI
-    m_spotlightData.direction = m_spotlightData.direction;
-
     // Calculate light matrices for projection
-    DirectX::XMVECTOR lPos = DirectX::XMLoadFloat3(&m_spotlightData.position);
-    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&m_spotlightData.direction));
+    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(m_spotlightData.posRange.x, m_spotlightData.posRange.y, m_spotlightData.posRange.z, 1.0f);
+    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(DirectX::XMVectorSet(m_spotlightData.dirAngle.x, m_spotlightData.dirAngle.y, m_spotlightData.dirAngle.z, 0.0f));
     DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     if (fabsf(DirectX::XMVectorGetY(lDir)) > 0.99f) lUp = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
     
@@ -316,11 +311,13 @@ void Renderer::BeginFrame() {
     DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, 100.0f);
     m_spotlightData.lightViewProj = DirectX::XMMatrixTranspose(lView * lProj);
 
-    m_spotlightData.goboOffset.x = sinf(m_time * 30.0f) * m_goboShakeAmount * 0.05f;
-    m_spotlightData.goboOffset.y = cosf(m_time * 35.0f) * m_goboShakeAmount * 0.05f;
+    m_spotlightData.goboOff.x = sinf(m_time * 30.0f) * m_goboShakeAmount * 0.05f;
+    m_spotlightData.goboOff.y = cosf(m_time * 35.0f) * m_goboShakeAmount * 0.05f;
 
+    m_matrixBuffer.Update(m_context.Get(), mb);
     m_spotlightBuffer.Update(m_context.Get(), m_spotlightData);
 
+    if (firstFrame) Log("Buffers Updated");
 
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
@@ -365,32 +362,34 @@ void Renderer::RenderUI() {
     ImGui::End();
 
     ImGui::Begin("Spotlight Controls");
-    ImGui::DragFloat3("Position", &m_spotlightData.position.x, 0.1f);
-    ImGui::DragFloat3("Direction", &m_spotlightData.direction.x, 0.01f);
+    ImGui::DragFloat3("Position", &m_spotlightData.posRange.x, 0.1f);
+    ImGui::DragFloat3("Direction", &m_spotlightData.dirAngle.x, 0.01f);
     
     ImGui::Checkbox("Use CMY", &m_useCMY);
     if (m_useCMY) {
         if (ImGui::ColorEdit3("CMY", &m_cmy.x)) {
             // Convert CMY to RGB: R = 1-C, G = 1-M, B = 1-Y
-            m_spotlightData.color.x = 1.0f - m_cmy.x;
-            m_spotlightData.color.y = 1.0f - m_cmy.y;
-            m_spotlightData.color.z = 1.0f - m_cmy.z;
+            m_spotlightData.colorInt.x = 1.0f - m_cmy.x;
+            m_spotlightData.colorInt.y = 1.0f - m_cmy.y;
+            m_spotlightData.colorInt.z = 1.0f - m_cmy.z;
         }
     } else {
-        ImGui::ColorEdit3("RGBW Color", &m_spotlightData.color.x);
+        ImGui::ColorEdit3("RGBW Color", &m_spotlightData.colorInt.x);
     }
 
-    ImGui::DragFloat("Intensity", &m_spotlightData.intensity, 1.0f, 0.0f, 2000.0f);
-    ImGui::DragFloat("Beam Angle", &m_spotlightData.angles.x, 0.01f, 0.0f, 1.0f);
-    ImGui::DragFloat("Field Angle", &m_spotlightData.angles.y, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Intensity", &m_spotlightData.colorInt.w, 1.0f, 0.0f, 2000.0f);
+    ImGui::DragFloat("Beam Angle", &m_spotlightData.coneGobo.x, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Field Angle", &m_spotlightData.coneGobo.y, 0.01f, 0.0f, 1.0f);
     
     ImGui::Separator();
     ImGui::Text("Gobo Controls");
-    ImGui::DragFloat("Gobo Rotation", &m_spotlightData.goboRotation, 0.01f);
+    ImGui::DragFloat("Gobo Rotation", &m_spotlightData.coneGobo.z, 0.01f);
     ImGui::DragFloat("Gobo Shake", &m_goboShakeAmount, 0.01f, 0.0f, 1.0f);
     
     if (ImGui::Button("Reset to Fixture")) {
-        m_spotlightData.position = m_fixturePos;
+        m_spotlightData.posRange.x = m_fixturePos.x;
+        m_spotlightData.posRange.y = m_fixturePos.y;
+        m_spotlightData.posRange.z = m_fixturePos.z;
     }
     
     ImGui::End();

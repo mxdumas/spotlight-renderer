@@ -11,24 +11,19 @@
 
 using Microsoft::WRL::ComPtr;
 
-struct MatrixBuffer {
+__declspec(align(16)) struct MatrixBuffer {
     DirectX::XMMATRIX world;
     DirectX::XMMATRIX view;
     DirectX::XMMATRIX projection;
 };
 
-struct SpotlightBuffer {
-    DirectX::XMMATRIX lightViewProj;
-    DirectX::XMFLOAT3 position;
-    float range;
-    DirectX::XMFLOAT3 direction;
-    float spotAngle;
-    DirectX::XMFLOAT3 color;
-    float intensity;
-    DirectX::XMFLOAT2 angles; // x: beam angle, y: field angle
-    float goboRotation;
-    DirectX::XMFLOAT2 goboOffset;
-    float padding;
+__declspec(align(16)) struct SpotlightBuffer {
+    DirectX::XMMATRIX lightViewProj; // c0-c3
+    DirectX::XMFLOAT4 posRange;      // c4 (xyz: pos, w: range)
+    DirectX::XMFLOAT4 dirAngle;      // c5 (xyz: dir, w: spotAngle)
+    DirectX::XMFLOAT4 colorInt;      // c6 (xyz: color, w: intensity)
+    DirectX::XMFLOAT4 coneGobo;      // c7 (x: beam, y: field, z: rotation, w: unused)
+    DirectX::XMFLOAT4 goboOff;       // c8 (xy: offset, zw: unused)
 };
 
 class Renderer {
