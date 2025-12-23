@@ -29,16 +29,30 @@ bool Scene::Initialize(ID3D11Device* device) {
     float stageMinY = m_stageMesh->GetMinY();
     m_stageOffset = Config::Room::FLOOR_Y - stageMinY;
 
-    // Find fixture position from mesh
-    m_fixturePos = { 0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f };
+    // Find anchor points from mesh
+    m_anchorPositions.clear();
     for (const auto& shape : m_stageMesh->GetShapes()) {
-        if (shape.name == "Cylinder.000") {
-            m_fixturePos = shape.center;
-            break;
+        if (shape.name.find("Anchor.") == 0) {
+            DirectX::XMFLOAT3 pos = shape.center;
+            pos.y += m_stageOffset;
+            m_anchorPositions.push_back(pos);
         }
     }
-    // Apply offset to fixture position
-    m_fixturePos.y += m_stageOffset;
+
+    // Fallback if no anchors found
+    if (m_anchorPositions.empty()) {
+        m_fixturePos = { 0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f };
+        for (const auto& shape : m_stageMesh->GetShapes()) {
+            if (shape.name == "Cylinder.000") {
+                m_fixturePos = shape.center;
+                break;
+            }
+        }
+        m_fixturePos.y += m_stageOffset;
+        m_anchorPositions.push_back(m_fixturePos);
+    } else {
+        m_fixturePos = m_anchorPositions[0];
+    }
 
     // Load gobo texture
     m_goboTexture = std::make_unique<Texture>();
@@ -47,14 +61,21 @@ bool Scene::Initialize(ID3D11Device* device) {
         m_goboTexture->LoadFromFile(device, "data/models/stage.png");
     }
 
-    // Initialize primary spotlight
-    m_spotlights[0].SetPosition(m_fixturePos);
-    // Point towards center of stage
-    DirectX::XMVECTOR posVec = DirectX::XMLoadFloat3(&m_fixturePos);
-    DirectX::XMVECTOR dirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(posVec));
-    DirectX::XMFLOAT3 dir;
-    DirectX::XMStoreFloat3(&dir, dirVec);
-    m_spotlights[0].SetDirection(dir);
+    // Initialize spotlights
+    m_spotlights.clear();
+    for (const auto& pos : m_anchorPositions) {
+        Spotlight light;
+        light.SetPosition(pos);
+        
+        // Point towards center of stage
+        DirectX::XMVECTOR posVec = DirectX::XMLoadFloat3(&pos);
+        DirectX::XMVECTOR dirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(posVec));
+        DirectX::XMFLOAT3 dir;
+        DirectX::XMStoreFloat3(&dir, dirVec);
+        light.SetDirection(dir);
+        
+        m_spotlights.push_back(light);
+    }
 
     // Initialize camera
     m_camera.SetPerspective(Config::CameraDefaults::FOV, Config::Display::ASPECT_RATIO,

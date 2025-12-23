@@ -152,7 +152,7 @@ namespace Config {
         // Debug sphere
         constexpr int SPHERE_STACKS = 10;
         constexpr int SPHERE_SLICES = 10;
-        constexpr float SPHERE_RADIUS = 2.0f;
+        constexpr float SPHERE_RADIUS = 0.5f;
     }
 
     /**

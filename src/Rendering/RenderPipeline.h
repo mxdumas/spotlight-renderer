@@ -41,6 +41,7 @@ struct RenderContext {
     DirectX::XMFLOAT3 cameraPos;                ///< Current camera position in world space.
 
     // Scene data
+    std::vector<DirectX::XMFLOAT3> anchorPositions; ///< Positions of fixture anchors.
     Spotlight* spotlight;                       ///< Pointer to the main spotlight.
     CeilingLights* ceilingLights;               ///< Pointer to the ceiling lights collection.
     Mesh* stageMesh;                            ///< Pointer to the stage geometry mesh.
@@ -232,6 +233,9 @@ private:
 
     // Shared geometry
     ComPtr<ID3D11Buffer> m_fullScreenVB;
+    ComPtr<ID3D11Buffer> m_debugSphereVB;
+    ComPtr<ID3D11Buffer> m_debugSphereIB;
+    uint32_t m_debugSphereIndexCount = 0;
 
     // Shared samplers
     ComPtr<ID3D11SamplerState> m_linearSampler;

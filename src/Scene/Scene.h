@@ -167,6 +167,12 @@ public:
     const Texture* GetGoboTexture() const { return m_goboTexture.get(); }
 
     /**
+     * @brief Gets the list of anchor positions.
+     * @return Const reference to the vector of anchor positions.
+     */
+    const std::vector<DirectX::XMFLOAT3>& GetAnchorPositions() const { return m_anchorPositions; }
+
+    /**
      * @brief Gets the position where the spotlight fixture is mounted.
      * @return Reference to the fixture position XMFLOAT3.
      */
@@ -249,6 +255,7 @@ private:
     std::unique_ptr<Texture> m_goboTexture;
 
     // Derived from mesh
+    std::vector<DirectX::XMFLOAT3> m_anchorPositions;
     DirectX::XMFLOAT3 m_fixturePos;
     float m_stageOffset;
 
