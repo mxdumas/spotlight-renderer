@@ -71,13 +71,22 @@ void ScenePass::Execute(ID3D11DeviceContext* context,
         context->RSSetState(nullptr);
     }
 
-    // Render Stage Mesh with white material
+    // Render Stage Mesh with per-shape materials from MTL
     if (stageMesh) {
-        MaterialBuffer mbMat = {};
-        mbMat.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        mbMat.specParams = { Config::Materials::STAGE_SPECULAR, Config::Materials::STAGE_SHININESS, 0.0f, 0.0f };
-        m_materialBuffer.Update(context, mbMat);
+        const auto& shapes = stageMesh->GetShapes();
+        for (size_t i = 0; i < shapes.size(); ++i) {
+            const auto& shape = shapes[i];
 
-        stageMesh->Draw(context);
+            MaterialBuffer mbMat = {};
+            mbMat.color = { shape.material.diffuse.x, shape.material.diffuse.y,
+                            shape.material.diffuse.z, 1.0f };
+            float specIntensity = (shape.material.specular.x + shape.material.specular.y +
+                                   shape.material.specular.z) / 3.0f;
+            mbMat.specParams = { specIntensity, shape.material.shininess, 0.0f, 0.0f };
+            m_materialBuffer.Update(context, mbMat);
+            context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
+
+            stageMesh->DrawShape(context, i);
+        }
     }
 }

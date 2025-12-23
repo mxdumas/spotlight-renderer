@@ -191,19 +191,27 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext* context, const RenderC
                          ctx.roomSpecular,
                          ctx.roomShininess);
 
-    // Render stage with offset world matrix
+    // Render stage with offset world matrix and per-shape materials from MTL
     if (ctx.stageMesh) {
         mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(0.0f, ctx.stageOffset, 0.0f));
         m_matrixBuffer.Update(context, mb);
-
-        MaterialBuffer mbMat = {};
-        mbMat.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        mbMat.specParams = { Config::Materials::STAGE_SPECULAR, Config::Materials::STAGE_SHININESS, 0.0f, 0.0f };
-        m_scenePass->GetMaterialBuffer().Update(context, mbMat);
-        context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
-
         m_scenePass->GetShader().Bind(context);
-        ctx.stageMesh->Draw(context);
+
+        const auto& shapes = ctx.stageMesh->GetShapes();
+        for (size_t i = 0; i < shapes.size(); ++i) {
+            const auto& shape = shapes[i];
+
+            MaterialBuffer mbMat = {};
+            mbMat.color = { shape.material.diffuse.x, shape.material.diffuse.y,
+                            shape.material.diffuse.z, 1.0f };
+            float specIntensity = (shape.material.specular.x + shape.material.specular.y +
+                                   shape.material.specular.z) / 3.0f;
+            mbMat.specParams = { specIntensity, shape.material.shininess, 0.0f, 0.0f };
+            m_scenePass->GetMaterialBuffer().Update(context, mbMat);
+            context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
+
+            ctx.stageMesh->DrawShape(context, i);
+        }
     }
 
     // Restore identity matrix

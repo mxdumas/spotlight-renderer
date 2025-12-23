@@ -19,12 +19,25 @@ struct Vertex {
 };
 
 /**
+ * @struct MaterialData
+ * @brief Material properties loaded from MTL files.
+ */
+struct MaterialData {
+    DirectX::XMFLOAT3 diffuse = {1.0f, 1.0f, 1.0f};   ///< Diffuse color (Kd).
+    DirectX::XMFLOAT3 specular = {0.5f, 0.5f, 0.5f};  ///< Specular color (Ks).
+    float shininess = 32.0f;                           ///< Shininess exponent (Ns).
+};
+
+/**
  * @struct ShapeInfo
  * @brief Metadata about a specific shape or object within a mesh file.
  */
 struct ShapeInfo {
-    std::string name;           ///< Name of the shape.
+    std::string name;            ///< Name of the shape.
     DirectX::XMFLOAT3 center;    ///< Computed center point of the shape.
+    MaterialData material;       ///< Material properties for this shape.
+    uint32_t startIndex = 0;     ///< Starting index in the index buffer.
+    uint32_t indexCount = 0;     ///< Number of indices for this shape.
 };
 
 /**
@@ -57,11 +70,19 @@ public:
     bool LoadFromOBJ(ID3D11Device* device, const std::string& fileName);
 
     /**
-     * @brief Binds the vertex and index buffers and issues a draw call.
-     * 
+     * @brief Binds the vertex and index buffers and issues a draw call for entire mesh.
+     *
      * @param context Pointer to the ID3D11DeviceContext.
      */
     void Draw(ID3D11DeviceContext* context);
+
+    /**
+     * @brief Draws a single shape from the mesh by index.
+     *
+     * @param context Pointer to the ID3D11DeviceContext.
+     * @param shapeIndex Index of the shape to draw.
+     */
+    void DrawShape(ID3D11DeviceContext* context, size_t shapeIndex);
 
     /**
      * @brief Gets the metadata for all shapes found in the mesh file.

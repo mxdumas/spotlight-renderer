@@ -131,6 +131,6 @@ float4 PS(PS_INPUT input) : SV_Target {
     }
 
     float3 ambient = float3(0.001, 0.001, 0.001) + ambientColor.rgb; // Minimal base ambient + controllable fill
-    
+
     return float4((lighting + ceilingLighting + ambient) * matColor.rgb, 1.0f);
 }
