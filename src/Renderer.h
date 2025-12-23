@@ -67,6 +67,7 @@ private:
     Shader m_debugShader;
     Shader m_shadowShader;
     Shader m_volumetricShader;
+    Shader m_compositeShader;
     std::unique_ptr<Mesh> m_stageMesh;
     std::unique_ptr<Texture> m_goboTexture;
     ComPtr<ID3D11SamplerState> m_samplerState;

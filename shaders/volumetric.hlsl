@@ -54,6 +54,23 @@ float HenyeyGreenstein(float cosTheta, float g) {
     return (1.0f - g2) / (4.0f * 3.14159f * pow(max(0.001f, 1.0f + g2 - 2.0f * g * cosTheta), 1.5f));
 }
 
+float3 RGBToYCoCg(float3 rgb) {
+    float y  = dot(rgb, float3(0.25f, 0.50f, 0.25f));
+    float co = dot(rgb, float3(0.50f, 0.00f, -0.50f));
+    float cg = dot(rgb, float3(-0.25f, 0.50f, -0.25f));
+    return float3(y, co, cg);
+}
+
+float3 YCoCgToRGB(float3 ycocg) {
+    float y  = ycocg.x;
+    float co = ycocg.y;
+    float cg = ycocg.z;
+    float r = y + co - cg;
+    float g = y + cg;
+    float b = y - co - cg;
+    return float3(r, g, b);
+}
+
 float4 PS(PS_INPUT input) : SV_Target {
     float2 uv = input.pos.xy / float2(1920.0f, 1080.0f);
 
@@ -69,16 +86,20 @@ float4 PS(PS_INPUT input) : SV_Target {
 
     float3 rayDirVec = worldPos - camPos;
     float rayLen = length(rayDirVec);
-    float3 rayDir = rayDirVec / rayLen;
+    float3 rayDir = rayDirVec / max(rayLen, 0.0001f);
 
     float3 rayStart = camPos;
     float stepCount = volParams.x;
-    float stepLen = rayLen / stepCount;
+    float stepLen = rayLen / max(stepCount, 1.0f);
     float3 stepVec = rayDir * stepLen;
 
     float3 accumulatedLight = float3(0, 0, 0);
     
-    float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
+    // Original sine-based noise distribution
+    float frameIndex = volJitter.x * 60.0f; 
+    float2 noiseUV = uv + float2(frac(frameIndex * 0.61803398875f), frac(frameIndex * 0.70710678118f));
+    float noise = frac(sin(dot(noiseUV, float2(12.9898f, 78.233f))) * 43758.5453f);
+    
     float3 currentPos = rayStart + stepVec * noise;
 
     float3 LPos = posRange.xyz;
@@ -90,7 +111,7 @@ float4 PS(PS_INPUT input) : SV_Target {
     for (int i = 0; i < (int)stepCount; ++i) {
         float3 toLight = LPos - currentPos;
         float dist = length(toLight);
-        float3 toLightNorm = toLight / dist;
+        float3 toLightNorm = toLight / max(dist, 0.0001f);
 
         float attenuation = colorInt.w / (dist * dist + 1.0f);
         if (dist < posRange.w) {
@@ -132,20 +153,41 @@ float4 PS(PS_INPUT input) : SV_Target {
         currentPos += stepVec;
     }
 
-    float3 currentResult = accumulatedLight * volParams.z;
+    float3 currentResult = max(0, accumulatedLight * volParams.z);
+    
+    // Protection against NaNs/Infs
+    if (any(isnan(currentResult)) || any(isinf(currentResult))) {
+        currentResult = float3(0, 0, 0);
+    }
     
     // Reproject for history
     float4 prevClipPos = mul(float4(worldPos, 1.0f), prevViewProj);
-    float3 prevScreenPos = prevClipPos.xyz / prevClipPos.w;
+    float3 prevScreenPos = prevClipPos.xyz / (prevClipPos.w + 0.00001f);
     float2 prevUV = prevScreenPos.xy * 0.5f + 0.5f;
     prevUV.y = 1.0f - prevUV.y;
 
     float3 history = historyTexture.SampleLevel(samLinear, prevUV, 0).rgb;
+    if (any(isnan(history)) || any(isinf(history))) {
+        history = currentResult;
+    }
     
-    // Clamp history to avoid excessive trails or ghosting if scene changes rapidly
-    // Basic clamping: currentResult +/- some delta? 
-    // For now, simple lerp.
     float weight = volJitter.y;
+    
+    // Reduce weight during camera movement to prevent lag/ghosting
+    float camMove = volJitter.z;
+    weight *= saturate(1.0f - camMove * 10.0f);
+
+    // TAA-style YCoCg Clipping
+    float3 currYCoCg = RGBToYCoCg(currentResult);
+    float3 histYCoCg = RGBToYCoCg(history);
+
+    // Simple neighborhood estimate (1x1 for now, but with expanded box)
+    float3 minColor = currYCoCg - float3(0.2f, 0.1f, 0.1f);
+    float3 maxColor = currYCoCg + float3(0.2f, 0.1f, 0.1f);
+    
+    // Clamp history to current neighborhood in YCoCg space
+    histYCoCg = clamp(histYCoCg, minColor, maxColor);
+    history = YCoCgToRGB(histYCoCg);
     
     // Reject history if out of bounds
     if (prevUV.x < 0 || prevUV.x > 1 || prevUV.y < 0 || prevUV.y > 1) {

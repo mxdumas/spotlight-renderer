@@ -238,14 +238,16 @@ bool Renderer::Initialize(HWND hwnd) {
     vbd.ByteWidth = sizeof(vertices);
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     D3D11_SUBRESOURCE_DATA vinit = { vertices };
-    m_device->CreateBuffer(&vbd, &vinit, &m_debugBoxVB);
+    hr = m_device->CreateBuffer(&vbd, &vinit, &m_debugBoxVB);
+    if (FAILED(hr)) { Log("Failed to create debugBoxVB: " + std::to_string(hr)); return false; }
 
     D3D11_BUFFER_DESC ibd = {};
     ibd.Usage = D3D11_USAGE_DEFAULT;
     ibd.ByteWidth = sizeof(indices);
     ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
     D3D11_SUBRESOURCE_DATA iinit = { indices };
-    m_device->CreateBuffer(&ibd, &iinit, &m_debugBoxIB);
+    hr = m_device->CreateBuffer(&ibd, &iinit, &m_debugBoxIB);
+    if (FAILED(hr)) { Log("Failed to create debugBoxIB: " + std::to_string(hr)); return false; }
     Log("Debug Buffers Created");
 
     // Create Spotlight Cone Proxy
@@ -282,15 +284,18 @@ bool Renderer::Initialize(HWND hwnd) {
         cvbd.ByteWidth = (UINT)(coneVertices.size() * sizeof(float));
         cvbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         D3D11_SUBRESOURCE_DATA cvinit = { coneVertices.data() };
-        m_device->CreateBuffer(&cvbd, &cvinit, &m_coneVB);
+        hr = m_device->CreateBuffer(&cvbd, &cvinit, &m_coneVB);
+        if (FAILED(hr)) { Log("Failed to create coneVB: " + std::to_string(hr)); return false; }
 
         D3D11_BUFFER_DESC cibd = {};
         cibd.Usage = D3D11_USAGE_DEFAULT;
         cibd.ByteWidth = (UINT)(coneIndices.size() * sizeof(uint32_t));
         cibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
         D3D11_SUBRESOURCE_DATA ciinit = { coneIndices.data() };
-        m_device->CreateBuffer(&cibd, &ciinit, &m_coneIB);
+        hr = m_device->CreateBuffer(&cibd, &ciinit, &m_coneIB);
+        if (FAILED(hr)) { Log("Failed to create coneIB: " + std::to_string(hr)); return false; }
         m_coneIndexCount = (UINT)coneIndices.size();
+        Log("Cone Proxy Created");
     }
 
     // Create Room Cube (500x500 width, floor at -0.05)
@@ -346,15 +351,18 @@ bool Renderer::Initialize(HWND hwnd) {
         rvbd.ByteWidth = sizeof(roomVerts);
         rvbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         D3D11_SUBRESOURCE_DATA rvinit = { roomVerts };
-        m_device->CreateBuffer(&rvbd, &rvinit, &m_roomVB);
+        hr = m_device->CreateBuffer(&rvbd, &rvinit, &m_roomVB);
+        if (FAILED(hr)) { Log("Failed to create roomVB: " + std::to_string(hr)); return false; }
 
         D3D11_BUFFER_DESC ribd = {};
         ribd.Usage = D3D11_USAGE_DEFAULT;
         ribd.ByteWidth = sizeof(roomInds);
         ribd.BindFlags = D3D11_BIND_INDEX_BUFFER;
         D3D11_SUBRESOURCE_DATA riinit = { roomInds };
-        m_device->CreateBuffer(&ribd, &riinit, &m_roomIB);
+        hr = m_device->CreateBuffer(&ribd, &riinit, &m_roomIB);
+        if (FAILED(hr)) { Log("Failed to create roomIB: " + std::to_string(hr)); return false; }
         // Store index count if needed or just use 6
+        Log("Room Cube Created");
     }
 
     // Create Debug Sphere
@@ -402,15 +410,18 @@ bool Renderer::Initialize(HWND hwnd) {
         svbd.ByteWidth = (UINT)(verts.size() * sizeof(float));
         svbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         D3D11_SUBRESOURCE_DATA svinit = { verts.data() };
-        m_device->CreateBuffer(&svbd, &svinit, &m_sphereVB);
+        hr = m_device->CreateBuffer(&svbd, &svinit, &m_sphereVB);
+        if (FAILED(hr)) { Log("Failed to create sphereVB: " + std::to_string(hr)); return false; }
 
         D3D11_BUFFER_DESC sibd = {};
         sibd.Usage = D3D11_USAGE_DEFAULT;
         sibd.ByteWidth = (UINT)(inds.size() * sizeof(uint32_t));
         sibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
         D3D11_SUBRESOURCE_DATA siinit = { inds.data() };
-        m_device->CreateBuffer(&sibd, &siinit, &m_sphereIB);
+        hr = m_device->CreateBuffer(&sibd, &siinit, &m_sphereIB);
+        if (FAILED(hr)) { Log("Failed to create sphereIB: " + std::to_string(hr)); return false; }
         m_sphereIndexCount = (UINT)inds.size();
+        Log("Debug Sphere Created");
     }
 
     // Create full screen quad
@@ -423,13 +434,21 @@ bool Renderer::Initialize(HWND hwnd) {
     fsVbd.ByteWidth = sizeof(fsVertices);
     fsVbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     D3D11_SUBRESOURCE_DATA fsVinit = { fsVertices };
-    m_device->CreateBuffer(&fsVbd, &fsVinit, &m_fullScreenVB);
+    hr = m_device->CreateBuffer(&fsVbd, &fsVinit, &m_fullScreenVB);
+    if (FAILED(hr)) { Log("Failed to create fullScreenVB: " + std::to_string(hr)); return false; }
+    Log("Full Screen Quad Created");
 
     std::vector<D3D11_INPUT_ELEMENT_DESC> fsLayout = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
-    if (!m_volumetricShader.LoadVertexShader(m_device.Get(), L"shaders/volumetric.hlsl", "VS", fsLayout)) return false;
-    if (!m_volumetricShader.LoadPixelShader(m_device.Get(), L"shaders/volumetric.hlsl", "PS")) return false;
+    Log("Loading volumetric.hlsl...");
+    if (!m_volumetricShader.LoadVertexShader(m_device.Get(), L"shaders/volumetric.hlsl", "VS", fsLayout)) { Log("Failed to load volumetric VS"); return false; }
+    if (!m_volumetricShader.LoadPixelShader(m_device.Get(), L"shaders/volumetric.hlsl", "PS")) { Log("Failed to load volumetric PS"); return false; }
+
+    Log("Loading composite.hlsl...");
+    if (!m_compositeShader.LoadVertexShader(m_device.Get(), L"shaders/composite.hlsl", "VS", fsLayout)) { Log("Failed to load composite VS"); return false; }
+    if (!m_compositeShader.LoadPixelShader(m_device.Get(), L"shaders/composite.hlsl", "PS")) { Log("Failed to load composite PS"); return false; }
+    Log("Volumetric and Composite Shaders Loaded");
 
     // Initial spotlight data
     memset(&m_spotlightData, 0, sizeof(m_spotlightData));
@@ -771,9 +790,9 @@ void Renderer::BeginFrame() {
     m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
     m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
     
-    // Use basic shader (or a specialized composite shader, but basic/debug works for a quad)
-    m_debugShader.Bind(m_context.Get());
+    m_compositeShader.Bind(m_context.Get());
     m_context->PSSetShaderResources(0, 1, m_volHistorySRV[m_currHistory].GetAddressOf());
+    m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
     m_context->Draw(6, 0);
 
     // Restore state
