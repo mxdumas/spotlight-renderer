@@ -48,6 +48,16 @@ __declspec(align(16)) struct CeilingLightsBuffer {
     DirectX::XMFLOAT4 ambient;
 };
 
+__declspec(align(16)) struct FXAABuffer {
+    DirectX::XMFLOAT2 rcpFrame;  // 1.0 / screenSize
+    DirectX::XMFLOAT2 padding;
+};
+
+__declspec(align(16)) struct BlurBuffer {
+    DirectX::XMFLOAT2 texelSize;
+    DirectX::XMFLOAT2 direction;
+};
+
 class Renderer {
 public:
     Renderer();
@@ -78,6 +88,7 @@ private:
     Shader m_shadowShader;
     Shader m_volumetricShader;
     Shader m_compositeShader;
+    Shader m_fxaaShader;
     std::unique_ptr<Mesh> m_stageMesh;
     std::unique_ptr<Texture> m_goboTexture;
     ComPtr<ID3D11SamplerState> m_samplerState;
@@ -126,4 +137,23 @@ private:
     ConstantBuffer<CeilingLightsBuffer> m_ceilingLightsBuffer;
 
     ComPtr<ID3D11BlendState> m_additiveBlendState;
+
+    // FXAA resources
+    ComPtr<ID3D11Texture2D> m_sceneTexture;
+    ComPtr<ID3D11RenderTargetView> m_sceneRTV;
+    ComPtr<ID3D11ShaderResourceView> m_sceneSRV;
+    ConstantBuffer<FXAABuffer> m_fxaaBuffer;
+    bool m_enableFXAA;
+
+    // Volumetric blur resources
+    Shader m_blurShader;
+    ComPtr<ID3D11Texture2D> m_volTexture;
+    ComPtr<ID3D11RenderTargetView> m_volRTV;
+    ComPtr<ID3D11ShaderResourceView> m_volSRV;
+    ComPtr<ID3D11Texture2D> m_blurTempTexture;
+    ComPtr<ID3D11RenderTargetView> m_blurTempRTV;
+    ComPtr<ID3D11ShaderResourceView> m_blurTempSRV;
+    ConstantBuffer<BlurBuffer> m_blurBuffer;
+    bool m_enableVolBlur;
+    int m_volBlurPasses;
 };

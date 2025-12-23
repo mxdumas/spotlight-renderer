@@ -460,6 +460,16 @@ bool Renderer::Initialize(HWND hwnd) {
     if (!m_compositeShader.LoadPixelShader(m_device.Get(), L"shaders/composite.hlsl", "PS")) { Log("Failed to load composite PS"); return false; }
     Log("Volumetric and Composite Shaders Loaded");
 
+    Log("Loading fxaa.hlsl...");
+    if (!m_fxaaShader.LoadVertexShader(m_device.Get(), L"shaders/fxaa.hlsl", "VS", fsLayout)) { Log("Failed to load FXAA VS"); return false; }
+    if (!m_fxaaShader.LoadPixelShader(m_device.Get(), L"shaders/fxaa.hlsl", "PS")) { Log("Failed to load FXAA PS"); return false; }
+    Log("FXAA Shader Loaded");
+
+    Log("Loading blur.hlsl...");
+    if (!m_blurShader.LoadVertexShader(m_device.Get(), L"shaders/blur.hlsl", "VS", fsLayout)) { Log("Failed to load Blur VS"); return false; }
+    if (!m_blurShader.LoadPixelShader(m_device.Get(), L"shaders/blur.hlsl", "PS")) { Log("Failed to load Blur PS"); return false; }
+    Log("Blur Shader Loaded");
+
     // Initial spotlight data
     memset(&m_spotlightData, 0, sizeof(m_spotlightData));
     m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, 500.0f };
@@ -473,7 +483,7 @@ bool Renderer::Initialize(HWND hwnd) {
     m_spotlightData.coneGobo = { 0.98f, 0.71f, 0.0f, 0.0f };
     m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    m_volumetricData.params = { 128.0f, 0.2f, 10.0f, 0.5f };
+    m_volumetricData.params = { 512.0f, 0.2f, 10.0f, 0.5f };
     m_volumetricData.jitter = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     m_time = 0.0f;
@@ -513,7 +523,56 @@ bool Renderer::Initialize(HWND hwnd) {
         Log("Failed to initialize ceiling lights constant buffer");
         return false;
     }
+    if (!m_fxaaBuffer.Initialize(m_device.Get())) {
+        Log("Failed to initialize FXAA constant buffer");
+        return false;
+    }
 
+    // Create scene render target for FXAA
+    D3D11_TEXTURE2D_DESC sceneDesc = {};
+    sceneDesc.Width = 1920;
+    sceneDesc.Height = 1080;
+    sceneDesc.MipLevels = 1;
+    sceneDesc.ArraySize = 1;
+    sceneDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sceneDesc.SampleDesc.Count = 1;
+    sceneDesc.SampleDesc.Quality = 0;
+    sceneDesc.Usage = D3D11_USAGE_DEFAULT;
+    sceneDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    hr = m_device->CreateTexture2D(&sceneDesc, nullptr, &m_sceneTexture);
+    if (FAILED(hr)) { Log("Failed to create scene texture"); return false; }
+
+    hr = m_device->CreateRenderTargetView(m_sceneTexture.Get(), nullptr, &m_sceneRTV);
+    if (FAILED(hr)) { Log("Failed to create scene RTV"); return false; }
+
+    hr = m_device->CreateShaderResourceView(m_sceneTexture.Get(), nullptr, &m_sceneSRV);
+    if (FAILED(hr)) { Log("Failed to create scene SRV"); return false; }
+
+    // Create volumetric render target (for separate blur)
+    hr = m_device->CreateTexture2D(&sceneDesc, nullptr, &m_volTexture);
+    if (FAILED(hr)) { Log("Failed to create vol texture"); return false; }
+    hr = m_device->CreateRenderTargetView(m_volTexture.Get(), nullptr, &m_volRTV);
+    if (FAILED(hr)) { Log("Failed to create vol RTV"); return false; }
+    hr = m_device->CreateShaderResourceView(m_volTexture.Get(), nullptr, &m_volSRV);
+    if (FAILED(hr)) { Log("Failed to create vol SRV"); return false; }
+
+    // Create blur temp texture
+    hr = m_device->CreateTexture2D(&sceneDesc, nullptr, &m_blurTempTexture);
+    if (FAILED(hr)) { Log("Failed to create blur temp texture"); return false; }
+    hr = m_device->CreateRenderTargetView(m_blurTempTexture.Get(), nullptr, &m_blurTempRTV);
+    if (FAILED(hr)) { Log("Failed to create blur temp RTV"); return false; }
+    hr = m_device->CreateShaderResourceView(m_blurTempTexture.Get(), nullptr, &m_blurTempSRV);
+    if (FAILED(hr)) { Log("Failed to create blur temp SRV"); return false; }
+
+    if (!m_blurBuffer.Initialize(m_device.Get())) {
+        Log("Failed to initialize blur constant buffer");
+        return false;
+    }
+
+    m_enableFXAA = true;
+    m_enableVolBlur = true;
+    m_volBlurPasses = 1;
     m_ceilingLightIntensity = 1.0f; // Default 1.0
 
     // Create Blend State
@@ -661,8 +720,9 @@ void Renderer::BeginFrame() {
     if (firstFrame) Log("ImGui NewFrame Done");
 
     float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
-    m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
+    // Render to scene texture (for FXAA), not directly to swap chain
+    m_context->OMSetRenderTargets(1, m_sceneRTV.GetAddressOf(), m_depthStencilView.Get());
+    m_context->ClearRenderTargetView(m_sceneRTV.Get(), clearColor);
     m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     D3D11_VIEWPORT viewport = {};
@@ -783,14 +843,15 @@ void Renderer::BeginFrame() {
 
     if (firstFrame) Log("Stage Drawn");
 
-    // Volumetric Pass
-    m_volumetricData.jitter.x = m_time;
+    // Volumetric Pass - render to separate texture for blur
+    m_volumetricData.jitter.x = m_time * 0.005f; // Slow down temporal jitter
     m_volumetricBuffer.Update(m_context.Get(), m_volumetricData);
-    
-    // Unbind depth to allow sampling
-    m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
-    m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
-    
+
+    // Clear volumetric texture and render to it
+    float blackColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    m_context->ClearRenderTargetView(m_volRTV.Get(), blackColor);
+    m_context->OMSetRenderTargets(1, m_volRTV.GetAddressOf(), nullptr);
+
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
@@ -798,7 +859,7 @@ void Renderer::BeginFrame() {
 
     ID3D11ShaderResourceView* volSRVs[] = { m_depthSRV.Get(), m_goboTexture ? m_goboTexture->GetSRV() : nullptr, m_shadowSRV.Get() };
     m_context->PSSetShaderResources(0, 3, volSRVs);
-    
+
     ID3D11SamplerState* volSamplers[] = { m_samplerState.Get(), m_shadowSampler.Get() };
     m_context->PSSetSamplers(0, 2, volSamplers);
 
@@ -809,11 +870,101 @@ void Renderer::BeginFrame() {
     m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_context->Draw(6, 0);
 
-    // Restore state
-    m_context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
     m_context->PSSetShaderResources(0, 3, nullSRVs);
 
     if (firstFrame) Log("Volumetric Draw Done");
+
+    // Blur volumetric texture
+    if (m_enableVolBlur) {
+        BlurBuffer bb;
+        bb.texelSize = { 1.0f / 1920.0f, 1.0f / 1080.0f };
+
+        for (int pass = 0; pass < m_volBlurPasses; ++pass) {
+            // Horizontal blur: volRTV -> blurTempRTV
+            bb.direction = { 1.0f, 0.0f };
+            m_blurBuffer.Update(m_context.Get(), bb);
+
+            m_context->OMSetRenderTargets(1, m_blurTempRTV.GetAddressOf(), nullptr);
+            m_context->PSSetConstantBuffers(0, 1, m_blurBuffer.GetAddressOf());
+            m_context->PSSetShaderResources(0, 1, m_volSRV.GetAddressOf());
+            m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+
+            m_blurShader.Bind(m_context.Get());
+            m_context->IASetVertexBuffers(0, 1, m_fullScreenVB.GetAddressOf(), &strideFS, &offsetFS);
+            m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            m_context->Draw(6, 0);
+
+            m_context->PSSetShaderResources(0, 1, nullSRVs);
+
+            // Vertical blur: blurTempRTV -> volRTV
+            bb.direction = { 0.0f, 1.0f };
+            m_blurBuffer.Update(m_context.Get(), bb);
+
+            m_context->OMSetRenderTargets(1, m_volRTV.GetAddressOf(), nullptr);
+            m_context->PSSetShaderResources(0, 1, m_blurTempSRV.GetAddressOf());
+
+            m_blurShader.Bind(m_context.Get());
+            m_context->Draw(6, 0);
+
+            m_context->PSSetShaderResources(0, 1, nullSRVs);
+        }
+
+        if (firstFrame) Log("Volumetric Blur Done");
+    }
+
+    // Composite: add blurred volumetric to scene
+    m_context->OMSetRenderTargets(1, m_sceneRTV.GetAddressOf(), nullptr);
+    m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
+    m_context->PSSetShaderResources(0, 1, m_volSRV.GetAddressOf());
+    m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+
+    m_compositeShader.Bind(m_context.Get());
+    m_context->IASetVertexBuffers(0, 1, m_fullScreenVB.GetAddressOf(), &strideFS, &offsetFS);
+    m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_context->Draw(6, 0);
+
+    m_context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+    m_context->PSSetShaderResources(0, 1, nullSRVs);
+
+    // FXAA Pass - render from scene texture to swap chain
+    if (m_enableFXAA) {
+        m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
+        m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
+
+        FXAABuffer fb;
+        fb.rcpFrame = { 1.0f / 1920.0f, 1.0f / 1080.0f };
+        fb.padding = { 0.0f, 0.0f };
+        m_fxaaBuffer.Update(m_context.Get(), fb);
+
+        m_context->VSSetConstantBuffers(0, 1, m_fxaaBuffer.GetAddressOf());
+        m_context->PSSetConstantBuffers(0, 1, m_fxaaBuffer.GetAddressOf());
+        m_context->PSSetShaderResources(0, 1, m_sceneSRV.GetAddressOf());
+        m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+
+        m_fxaaShader.Bind(m_context.Get());
+        m_context->IASetVertexBuffers(0, 1, m_fullScreenVB.GetAddressOf(), &strideFS, &offsetFS);
+        m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_context->Draw(6, 0);
+
+        // Unbind scene SRV
+        m_context->PSSetShaderResources(0, 1, nullSRVs);
+
+        if (firstFrame) Log("FXAA Pass Done");
+    } else {
+        // No FXAA - just copy scene to swap chain
+        m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
+        m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
+
+        m_context->PSSetShaderResources(0, 1, m_sceneSRV.GetAddressOf());
+        m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+
+        m_compositeShader.Bind(m_context.Get());
+        m_context->IASetVertexBuffers(0, 1, m_fullScreenVB.GetAddressOf(), &strideFS, &offsetFS);
+        m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_context->Draw(6, 0);
+
+        m_context->PSSetShaderResources(0, 1, nullSRVs);
+    }
 }
 
 void Renderer::RenderUI() {
@@ -885,7 +1036,13 @@ void Renderer::RenderUI() {
         ImGui::SliderFloat("Light Intensity Multiplier", &m_volumetricData.params.z, 0.0f, 10.0f);
         ImGui::SliderFloat("Anisotropy (G)", &m_volumetricData.params.w, -0.99f, 0.99f);
     }
-    
+
+    if (ImGui::CollapsingHeader("Post Processing")) {
+        ImGui::Checkbox("Enable FXAA", &m_enableFXAA);
+        ImGui::Checkbox("Enable Volumetric Blur", &m_enableVolBlur);
+        ImGui::SliderInt("Blur Passes", &m_volBlurPasses, 1, 5);
+    }
+
     ImGui::End();
 
     if (firstFrame) {

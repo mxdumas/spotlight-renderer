@@ -52,6 +52,13 @@ float HenyeyGreenstein(float cosTheta, float g) {
     return (1.0f - g2) / (4.0f * 3.14159f * pow(max(0.001f, 1.0f + g2 - 2.0f * g * cosTheta), 1.5f));
 }
 
+// Interleaved Gradient Noise - deterministic, spatially coherent dither pattern
+// Avoids temporal jitter while preventing banding
+float InterleavedGradientNoise(float2 screenPos) {
+    float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
+    return frac(magic.z * frac(dot(screenPos, magic.xy)));
+}
+
 float4 PS(PS_INPUT input) : SV_Target {
     float2 uv = input.pos.xy / float2(1920.0f, 1080.0f);
 
@@ -132,7 +139,7 @@ float4 PS(PS_INPUT input) : SV_Target {
                     shadowUV.y = 1.0f - shadowUV.y;
                     
                     if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
-                        shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, projCoords.z - 0.001f).r;
+                        shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, projCoords.z - 0.01f).r;
                     }
 
                     if (shadow > 0) {
