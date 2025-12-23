@@ -73,6 +73,14 @@ private:
 
     ComPtr<ID3D11Buffer> m_debugBoxVB;
     ComPtr<ID3D11Buffer> m_debugBoxIB;
+    ComPtr<ID3D11Buffer> m_coneVB;
+    ComPtr<ID3D11Buffer> m_coneIB;
+    UINT m_coneIndexCount;
+    ComPtr<ID3D11Buffer> m_roomVB;
+    ComPtr<ID3D11Buffer> m_roomIB;
+    ComPtr<ID3D11Buffer> m_sphereVB;
+    ComPtr<ID3D11Buffer> m_sphereIB;
+    UINT m_sphereIndexCount;
     ComPtr<ID3D11Buffer> m_fullScreenVB;
     DirectX::XMFLOAT3 m_fixturePos;
 

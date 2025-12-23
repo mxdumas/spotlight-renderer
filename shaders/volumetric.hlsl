@@ -33,18 +33,16 @@ struct VS_INPUT {
 
 struct PS_INPUT {
     float4 pos : SV_POSITION;
-    float4 screenPos : TEXCOORD0;
 };
 
 PS_INPUT VS(VS_INPUT input) {
     PS_INPUT output;
     output.pos = float4(input.pos, 1.0f);
-    output.screenPos = output.pos;
     return output;
 }
 
-float3 ScreenToWorld(float2 screenUV, float depth) {
-    float4 clipPos = float4(screenUV.x * 2.0f - 1.0f, (1.0f - screenUV.y) * 2.0f - 1.0f, depth, 1.0f);
+float3 ScreenToWorld(float2 uv, float depth) {
+    float4 clipPos = float4(uv.x * 2.0f - 1.0f, (1.0f - uv.y) * 2.0f - 1.0f, depth, 1.0f);
     float4 worldPos = mul(clipPos, invViewProj);
     return worldPos.xyz / worldPos.w;
 }
@@ -55,13 +53,18 @@ float HenyeyGreenstein(float cosTheta, float g) {
 }
 
 float4 PS(PS_INPUT input) : SV_Target {
-    float2 uv = input.screenPos.xy / input.screenPos.w * 0.5f + 0.5f;
-    uv.y = 1.0f - uv.y;
+    float2 uv = input.pos.xy / float2(1920.0f, 1080.0f);
 
-    float depth = depthTexture.SampleLevel(samLinear, uv, 0).r;
+    uint2 pixelPos = uint2(input.pos.xy);
+    float depth = depthTexture.Load(uint3(pixelPos, 0)).r;
+    
     float3 worldPos = ScreenToWorld(uv, depth);
     float3 camPos = cameraPos.xyz;
     
+    if (depth >= 1.0f) {
+        worldPos = ScreenToWorld(uv, 1.0f);
+    }
+
     float3 rayDirVec = worldPos - camPos;
     float rayLen = length(rayDirVec);
     float3 rayDir = rayDirVec / rayLen;
@@ -73,11 +76,9 @@ float4 PS(PS_INPUT input) : SV_Target {
 
     float3 accumulatedLight = float3(0, 0, 0);
     
-    // Jittered sampling
     float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
     float3 currentPos = rayStart + stepVec * noise;
 
-    // Spotlight params
     float3 LPos = posRange.xyz;
     float3 LDir = normalize(dirAngle.xyz);
     float beam = coneGobo.x;
@@ -103,15 +104,14 @@ float4 PS(PS_INPUT input) : SV_Target {
                     shadowUV.y = 1.0f - shadowUV.y;
                     
                     if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
-                        shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, projCoords.z - 0.005f).r;
+                        shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, projCoords.z - 0.001f).r;
                     }
 
                     if (shadow > 0) {
-                        // Phase function
                         float cosTheta = dot(rayDir, -toLightNorm);
                         float phase = HenyeyGreenstein(cosTheta, g);
 
-                        // Gobo
+                        // Gobo sampling
                         float s, c;
                         sincos(coneGobo.z, s, c);
                         float2 rUV;
@@ -122,7 +122,7 @@ float4 PS(PS_INPUT input) : SV_Target {
                         goboUV.y = 1.0f - goboUV.y;
                         float3 goboColor = goboTexture.SampleLevel(samLinear, goboUV, 0).rgb;
 
-                        accumulatedLight += colorInt.xyz * attenuation * spotEffect * shadow * goboColor * phase * volParams.y;
+                        accumulatedLight += colorInt.xyz * attenuation * spotEffect * shadow * goboColor * phase * volParams.y * stepLen;
                     }
                 }
             }

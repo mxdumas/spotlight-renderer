@@ -244,6 +244,171 @@ bool Renderer::Initialize(HWND hwnd) {
     m_device->CreateBuffer(&ibd, &iinit, &m_debugBoxIB);
     Log("Debug Buffers Created");
 
+    // Create Spotlight Cone Proxy
+    {
+        std::vector<float> coneVertices;
+        std::vector<uint32_t> coneIndices;
+
+        // Tip
+        coneVertices.push_back(0.0f); coneVertices.push_back(0.0f); coneVertices.push_back(0.0f);
+
+        const int segments = 16;
+        const float radius = 1.0f;
+        const float height = 1.0f;
+
+        for (int i = 0; i < segments; ++i) {
+            float angle = (float)i / segments * 2.0f * 3.14159f;
+            coneVertices.push_back(cosf(angle) * radius);
+            coneVertices.push_back(sinf(angle) * radius);
+            coneVertices.push_back(height);
+        }
+
+        for (int i = 0; i < segments; ++i) {
+            // Lines from tip
+            coneIndices.push_back(0);
+            coneIndices.push_back(i + 1);
+
+            // Lines for base circle
+            coneIndices.push_back(i + 1);
+            coneIndices.push_back(((i + 1) % segments) + 1);
+        }
+
+        D3D11_BUFFER_DESC cvbd = {};
+        cvbd.Usage = D3D11_USAGE_DEFAULT;
+        cvbd.ByteWidth = (UINT)(coneVertices.size() * sizeof(float));
+        cvbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA cvinit = { coneVertices.data() };
+        m_device->CreateBuffer(&cvbd, &cvinit, &m_coneVB);
+
+        D3D11_BUFFER_DESC cibd = {};
+        cibd.Usage = D3D11_USAGE_DEFAULT;
+        cibd.ByteWidth = (UINT)(coneIndices.size() * sizeof(uint32_t));
+        cibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA ciinit = { coneIndices.data() };
+        m_device->CreateBuffer(&cibd, &ciinit, &m_coneIB);
+        m_coneIndexCount = (UINT)coneIndices.size();
+    }
+
+    // Create Room Cube (500x500 width, floor at -0.05)
+    {
+        float r = 250.0f;
+        float floorY = -0.05f;
+        float ceilY = 500.0f;
+        
+        float roomVerts[] = {
+            // Back (-Z)
+            -r, floorY, -r,  0,0,-1,  0,1,
+             r, floorY, -r,  0,0,-1,  1,1,
+             r, ceilY,  -r,  0,0,-1,  1,0,
+            -r, ceilY,  -r,  0,0,-1,  0,0,
+            // Front (+Z)
+            -r, floorY,  r,  0,0, 1,  0,1,
+             r, floorY,  r,  0,0, 1,  1,1,
+             r, ceilY,   r,  0,0, 1,  1,0,
+            -r, ceilY,   r,  0,0, 1,  0,0,
+            // Left (-X)
+            -r, floorY,  r, -1,0,0,   0,1,
+            -r, floorY, -r, -1,0,0,   1,1,
+            -r, ceilY,  -r, -1,0,0,   1,0,
+            -r, ceilY,   r, -1,0,0,   0,0,
+            // Right (+X)
+             r, floorY,  r,  1,0,0,   0,1,
+             r, floorY, -r,  1,0,0,   1,1,
+             r, ceilY,  -r,  1,0,0,   1,0,
+             r, ceilY,   r,  1,0,0,   0,0,
+            // Bottom (-Y)
+            -r, floorY,  r,  0,-1,0,  0,1,
+            -r, floorY, -r,  0,-1,0,  1,1,
+             r, floorY, -r,  0,-1,0,  1,0,
+             r, floorY,  r,  0,-1,0,  0,0,
+            // Top (+Y)
+            -r, ceilY,   r,  0,1,0,   0,1,
+            -r, ceilY,  -r,  0,1,0,   1,1,
+             r, ceilY,  -r,  0,1,0,   1,0,
+             r, ceilY,   r,  0,1,0,   0,0,
+        };
+
+        // Inverted indices (CW for inside view if culling back)
+        // Or just use CCW and disable culling? Standard is Back Face Culling.
+        // If we serve standard Front Face logic, we need to order indices carefully.
+        // Let's just draw double sided or disable cull for room.
+        
+        uint32_t roomInds[] = {
+            16,18,17, 16,19,18
+        };
+
+        D3D11_BUFFER_DESC rvbd = {};
+        rvbd.Usage = D3D11_USAGE_DEFAULT;
+        rvbd.ByteWidth = sizeof(roomVerts);
+        rvbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA rvinit = { roomVerts };
+        m_device->CreateBuffer(&rvbd, &rvinit, &m_roomVB);
+
+        D3D11_BUFFER_DESC ribd = {};
+        ribd.Usage = D3D11_USAGE_DEFAULT;
+        ribd.ByteWidth = sizeof(roomInds);
+        ribd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA riinit = { roomInds };
+        m_device->CreateBuffer(&ribd, &riinit, &m_roomIB);
+        // Store index count if needed or just use 6
+    }
+
+    // Create Debug Sphere
+    {
+        std::vector<float> verts;
+        std::vector<uint32_t> inds;
+        const int stacks = 10;
+        const int slices = 10;
+        const float radius = 2.0f;
+
+        for (int i = 0; i <= stacks; ++i) {
+            float lat = (float)i / stacks * 3.14159f;
+            float y = cosf(lat) * radius;
+            float r = sinf(lat) * radius;
+            for (int j = 0; j <= slices; ++j) {
+                float lon = (float)j / slices * 2.0f * 3.14159f;
+                float x = cosf(lon) * r;
+                float z = sinf(lon) * r;
+                
+                // Pos
+                verts.push_back(x); verts.push_back(y); verts.push_back(z);
+                // Normal (same as pos/radius)
+                verts.push_back(x/radius); verts.push_back(y/radius); verts.push_back(z/radius);
+                // UV
+                verts.push_back((float)j/slices); verts.push_back((float)i/stacks);
+            }
+        }
+
+        for (int i = 0; i < stacks; ++i) {
+            for (int j = 0; j < slices; ++j) {
+                int first = (i * (slices + 1)) + j;
+                int second = first + slices + 1;
+                inds.push_back(first);
+                inds.push_back(second);
+                inds.push_back(first + 1);
+
+                inds.push_back(second);
+                inds.push_back(second + 1);
+                inds.push_back(first + 1);
+            }
+        }
+
+        D3D11_BUFFER_DESC svbd = {};
+        svbd.Usage = D3D11_USAGE_DEFAULT;
+        svbd.ByteWidth = (UINT)(verts.size() * sizeof(float));
+        svbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA svinit = { verts.data() };
+        m_device->CreateBuffer(&svbd, &svinit, &m_sphereVB);
+
+        D3D11_BUFFER_DESC sibd = {};
+        sibd.Usage = D3D11_USAGE_DEFAULT;
+        sibd.ByteWidth = (UINT)(inds.size() * sizeof(uint32_t));
+        sibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA siinit = { inds.data() };
+        m_device->CreateBuffer(&sibd, &siinit, &m_sphereIB);
+        m_sphereIndexCount = (UINT)inds.size();
+    }
+
     // Create full screen quad
     float fsVertices[] = {
         -1.0f, -1.0f, 0.0f,  -1.0f,  1.0f, 0.0f,   1.0f, -1.0f, 0.0f,
@@ -264,13 +429,18 @@ bool Renderer::Initialize(HWND hwnd) {
 
     // Initial spotlight data
     memset(&m_spotlightData, 0, sizeof(m_spotlightData));
-    m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, 100.0f };
-    m_spotlightData.dirAngle = { 0.0f, -1.0f, 0.0f, 0.0f };
+    m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, 500.0f };
+    
+    // Point towards center of stage
+    DirectX::XMVECTOR lPosVec = DirectX::XMLoadFloat3(&m_fixturePos);
+    DirectX::XMVECTOR lDirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(lPosVec));
+    DirectX::XMStoreFloat4(&m_spotlightData.dirAngle, lDirVec);
+
     m_spotlightData.colorInt = { 1.0f, 1.0f, 1.0f, 100.0f };
     m_spotlightData.coneGobo = { 0.98f, 0.71f, 0.0f, 0.0f };
     m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    m_volumetricData.params = { 64.0f, 0.1f, 1.0f, 0.5f };
+    m_volumetricData.params = { 128.0f, 0.2f, 10.0f, 0.5f };
     m_volumetricData.jitter = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     m_time = 0.0f;
@@ -413,6 +583,11 @@ void Renderer::RenderShadowMap() {
 
 void Renderer::BeginFrame() {
     m_time += 0.016f; // Approx 60fps for now
+    
+    // Unbind all SRVs to avoid conflicts with depth/stencil and render targets
+    ID3D11ShaderResourceView* nullSRVs[8] = { nullptr };
+    m_context->PSSetShaderResources(0, 8, nullSRVs);
+
     static bool firstFrame = true;
     if (firstFrame) Log("First BeginFrame Started");
 
@@ -466,8 +641,12 @@ void Renderer::BeginFrame() {
     mb.view = DirectX::XMMatrixTranspose(m_camera.GetViewMatrix());
     mb.projection = DirectX::XMMatrixTranspose(m_camera.GetProjectionMatrix());
     
-    DirectX::XMMATRIX viewProj = m_camera.GetViewMatrix() * m_camera.GetProjectionMatrix();
-    mb.invViewProj = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, viewProj));
+    DirectX::XMMATRIX invView = DirectX::XMMatrixInverse(nullptr, m_camera.GetViewMatrix());
+    DirectX::XMMATRIX invProj = DirectX::XMMatrixInverse(nullptr, m_camera.GetProjectionMatrix());
+    // To transform from Clip Space to World Space: World = Clip * InvProj * InvView
+    // But since we transpose for the constant buffer, we calculate (InvProj * InvView)^T
+    mb.invViewProj = DirectX::XMMatrixTranspose(invProj * invView);
+
     mb.cameraPos = { camX, camY, camZ, 1.0f };
 
     m_matrixBuffer.Update(m_context.Get(), mb);
@@ -487,9 +666,34 @@ void Renderer::BeginFrame() {
     }
 
     m_basicShader.Bind(m_context.Get());
+
+    // Render Room (Background)
+    {
+        D3D11_RASTERIZER_DESC rd = {};
+        rd.FillMode = D3D11_FILL_SOLID;
+        rd.CullMode = D3D11_CULL_NONE;
+        ComPtr<ID3D11RasterizerState> rs;
+        m_device->CreateRasterizerState(&rd, &rs);
+        m_context->RSSetState(rs.Get());
+
+        UINT stride = 32;
+        UINT offset = 0;
+        m_context->IASetVertexBuffers(0, 1, m_roomVB.GetAddressOf(), &stride, &offset);
+        m_context->IASetIndexBuffer(m_roomIB.Get(), DXGI_FORMAT_R32_UINT, 0);
+        m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_context->DrawIndexed(36, 0, 0);
+
+        m_context->RSSetState(nullptr);
+    }
+
     if (m_stageMesh) {
         m_stageMesh->Draw(m_context.Get());
     }
+
+    // Restore main matrix buffer
+    m_matrixBuffer.Update(m_context.Get(), mb);
+    m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
+    m_context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
 
     if (firstFrame) Log("Stage Drawn");
 
@@ -497,10 +701,12 @@ void Renderer::BeginFrame() {
     m_volumetricData.jitter.x = m_time;
     m_volumetricBuffer.Update(m_context.Get(), m_volumetricData);
     
+    // Unbind depth to allow sampling
+    m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
     m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
-    // Unbind depth SRV from output to allow sampling it (already handled by OMSetRenderTargets but being safe)
     
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
+    m_context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(2, 1, m_volumetricBuffer.GetAddressOf());
 
@@ -519,24 +725,9 @@ void Renderer::BeginFrame() {
 
     // Restore state
     m_context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-    ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr, nullptr };
     m_context->PSSetShaderResources(0, 3, nullSRVs);
 
-    // Render debug box
-    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(m_spotlightData.posRange.x, m_spotlightData.posRange.y, m_spotlightData.posRange.z));
-    mb.invViewProj = DirectX::XMMatrixIdentity();
-    mb.cameraPos = { 0,0,0,0 };
-    m_matrixBuffer.Update(m_context.Get(), mb);
-    
-    m_debugShader.Bind(m_context.Get());
-    UINT stride = 12;
-    UINT offset = 0;
-    m_context->IASetVertexBuffers(0, 1, m_debugBoxVB.GetAddressOf(), &stride, &offset);
-    m_context->IASetIndexBuffer(m_debugBoxIB.Get(), DXGI_FORMAT_R32_UINT, 0);
-    m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m_context->DrawIndexed(36, 0, 0);
-
-    if (firstFrame) Log("Debug Box Drawn");
+    if (firstFrame) Log("Volumetric Draw Done");
 }
 
 void Renderer::RenderUI() {
