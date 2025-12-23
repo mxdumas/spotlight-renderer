@@ -108,8 +108,11 @@ bool Scene::Initialize(ID3D11Device *device)
                 auto orientationNode = std::make_shared<SceneGraph::Node>("Orientation");
                 // Rotate 90 degrees around X (Pitch) to make GDTF "Forward" point down (-Y)
                 orientationNode->setRotation(0.0f, DirectX::XM_PIDIV2, 0.0f);
-                // Scale 2x as requested
+                // Scale 2x
                 orientationNode->setScale(2.0f, 2.0f, 2.0f);
+                
+                // Bring it up a little to touch the truss
+                placementNode->setTranslation(pos.x, pos.y + 0.45f, pos.z);
                 
                 placementNode->addChild(orientationNode);
                 orientationNode->addChild(instanceRoot);
