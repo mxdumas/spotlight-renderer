@@ -1,5 +1,5 @@
 #include "ShadowPass.h"
-#include "../../Mesh.h"
+#include "../../Resources/Mesh.h"
 #include "../../Scene/Spotlight.h"
 #include <cmath>
 

@@ -1,5 +1,5 @@
 #include "ScenePass.h"
-#include "../../Mesh.h"
+#include "../../Resources/Mesh.h"
 #include "../RenderTarget.h"
 
 bool ScenePass::Initialize(ID3D11Device* device) {

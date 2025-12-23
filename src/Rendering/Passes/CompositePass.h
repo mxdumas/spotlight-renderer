@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IRenderPass.h"
-#include "../../Shader.h"
+#include "../../Resources/Shader.h"
 #include "../../Core/Config.h"
 #include <wrl/client.h>
 

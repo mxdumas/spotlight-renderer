@@ -7,8 +7,8 @@
 #include "Passes/BlurPass.h"
 #include "Passes/CompositePass.h"
 #include "Passes/FXAAPass.h"
-#include "../ConstantBuffer.h"
-#include "../Camera.h"
+#include "../Core/ConstantBuffer.h"
+#include "../Scene/Camera.h"
 #include "../Scene/Spotlight.h"
 #include "../Scene/CeilingLights.h"
 #include <d3d11.h>

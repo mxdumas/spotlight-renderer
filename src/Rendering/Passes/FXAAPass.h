@@ -1,8 +1,8 @@
 #pragma once
 
 #include "IRenderPass.h"
-#include "../../Shader.h"
-#include "../../ConstantBuffer.h"
+#include "../../Resources/Shader.h"
+#include "../../Core/ConstantBuffer.h"
 #include "../../Core/Config.h"
 #include <wrl/client.h>
 #include <DirectXMath.h>

@@ -2,9 +2,9 @@
 
 #include "Spotlight.h"
 #include "CeilingLights.h"
-#include "../Camera.h"
-#include "../Mesh.h"
-#include "../Texture.h"
+#include "Camera.h"
+#include "../Resources/Mesh.h"
+#include "../Resources/Texture.h"
 #include "../Core/Config.h"
 #include <memory>
 #include <vector>

@@ -1,12 +1,12 @@
-#include "Renderer.h"
+#include "Application.h"
 #include <iostream>
 #include <fstream>
 
-Renderer::~Renderer() {
+Application::~Application() {
     Shutdown();
 }
 
-void Renderer::Log(const std::string& message) {
+void Application::Log(const std::string& message) {
     std::ofstream logFile("debug.log", std::ios::app);
     if (logFile.is_open()) {
         logFile << message << std::endl;
@@ -14,11 +14,11 @@ void Renderer::Log(const std::string& message) {
     OutputDebugStringA((message + "\n").c_str());
 }
 
-bool Renderer::Initialize(HWND hwnd) {
+bool Application::Initialize(HWND hwnd) {
     // Clear previous log
     { std::ofstream logFile("debug.log", std::ios::trunc); }
 
-    Log("Renderer::Initialize Started");
+    Log("Application::Initialize Started");
 
     // Initialize graphics device (handles device, swap chain, depth buffer)
     Log("Initializing GraphicsDevice...");
@@ -59,11 +59,11 @@ bool Renderer::Initialize(HWND hwnd) {
     }
     Log("ImGui Initialized Successfully");
 
-    Log("Renderer::Initialize Completed Successfully");
+    Log("Application::Initialize Completed Successfully");
     return true;
 }
 
-void Renderer::Shutdown() {
+void Application::Shutdown() {
     // Shutdown UI first
     m_ui.Shutdown();
 
@@ -78,7 +78,7 @@ void Renderer::Shutdown() {
     m_graphics.Shutdown();
 }
 
-void Renderer::BeginFrame() {
+void Application::BeginFrame() {
     // Update scene
     m_scene.Update(Config::PostProcess::FRAME_DELTA);
     m_scene.UpdateCamera();
@@ -108,7 +108,7 @@ void Renderer::BeginFrame() {
     m_pipeline.Render(m_graphics.GetContext(), ctx);
 }
 
-void Renderer::RenderUI() {
+void Application::RenderUI() {
     UIContext ctx;
     ctx.scene = &m_scene;
     ctx.pipeline = &m_pipeline;
@@ -116,7 +116,7 @@ void Renderer::RenderUI() {
     m_ui.RenderControls(ctx);
 }
 
-void Renderer::EndFrame() {
+void Application::EndFrame() {
     m_ui.EndFrame();
     m_graphics.Present(true);
 }

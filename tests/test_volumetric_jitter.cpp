@@ -1,4 +1,4 @@
-#include "Renderer.h"
+#include "Rendering/Passes/VolumetricPass.h"
 #include <cassert>
 #include <iostream>
 

@@ -3,7 +3,7 @@
 #endif
 
 #include <windows.h>
-#include "Renderer.h"
+#include "Application.h"
 #include "Core/Config.h"
 #include "imgui_impl_win32.h"
 
@@ -57,10 +57,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }
 
-    Renderer renderer;
-    if (!renderer.Initialize(hwnd))
+    Application app;
+    if (!app.Initialize(hwnd))
     {
-        MessageBoxW(hwnd, L"Failed to initialize Renderer!", L"Error", MB_OK);
+        MessageBoxW(hwnd, L"Failed to initialize Application!", L"Error", MB_OK);
         return 0;
     }
 
@@ -82,9 +82,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         if (running)
         {
-            renderer.BeginFrame();
-            renderer.RenderUI();
-            renderer.EndFrame();
+            app.BeginFrame();
+            app.RenderUI();
+            app.EndFrame();
         }
     }
 

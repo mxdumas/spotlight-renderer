@@ -1,7 +1,7 @@
 #include "RenderPipeline.h"
 #include "../Geometry/GeometryGenerator.h"
-#include "../Mesh.h"
-#include "../Texture.h"
+#include "../Resources/Mesh.h"
+#include "../Resources/Texture.h"
 
 RenderPipeline::~RenderPipeline() {
     Shutdown();

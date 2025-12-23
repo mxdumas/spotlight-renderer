@@ -12,10 +12,10 @@
 
 using Microsoft::WRL::ComPtr;
 
-class Renderer {
+class Application {
 public:
-    Renderer() = default;
-    ~Renderer();
+    Application() = default;
+    ~Application();
 
     bool Initialize(HWND hwnd);
     void Shutdown();
@@ -43,7 +43,7 @@ private:
     ID3D11Device* GetDevice() const { return m_graphics.GetDevice(); }
     ID3D11DeviceContext* GetContext() const { return m_graphics.GetContext(); }
 
-    // Room geometry (GPU resource, owned by Renderer)
+    // Room geometry (GPU resource, owned by Application)
     ComPtr<ID3D11Buffer> m_roomVB;
     ComPtr<ID3D11Buffer> m_roomIB;
 };
