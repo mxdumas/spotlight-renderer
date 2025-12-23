@@ -17,7 +17,12 @@ file(GLOB IMGUI_SOURCES
     external/imgui/imgui_impl_dx11.cpp
 )
 
-add_executable(${PROJECT_NAME} WIN32 src/main.cpp ${SOURCES} ${IMGUI_SOURCES})
+set(EXTERNAL_SOURCES
+    external/pugixml/pugixml.cpp
+    external/miniz/miniz.c
+)
+
+add_executable(${PROJECT_NAME} WIN32 src/main.cpp ${SOURCES} ${IMGUI_SOURCES} ${EXTERNAL_SOURCES})
 
 # Target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -37,6 +42,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     src
     external
     external/imgui
+    external/pugixml
+    external/miniz
+    external/tinygltf
 )
 
 # Copy assets to output directory
