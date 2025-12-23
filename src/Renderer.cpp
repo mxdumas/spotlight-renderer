@@ -478,7 +478,8 @@ bool Renderer::Initialize(HWND hwnd) {
     m_goboShakeAmount = 0.0f;
     m_useCMY = false;
     m_cmy = { 0.0f, 0.0f, 0.0f };
-    m_ceilingLightIntensity = 1.0f;
+    m_ceilingLightIntensity = 200000.0f;
+    m_ambientFill = 5.0f;
 
     // Initialize Camera
     m_camDistance = 40.0f;
@@ -714,12 +715,15 @@ void Renderer::BeginFrame() {
             idx++;
         }
     }
+    float ambVal = m_ambientFill / 100.0f; // 0-1 range
+    clb.ambient = { ambVal, ambVal, ambVal, 1.0f };
     m_ceilingLightsBuffer.Update(m_context.Get(), clb);
 
     if (firstFrame) Log("Buffers Updated");
 
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
+    m_context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(3, 1, m_ceilingLightsBuffer.GetAddressOf());
     
     if (m_goboTexture) {
@@ -827,7 +831,8 @@ void Renderer::RenderUI() {
 
     if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Text("Environment");
-        ImGui::DragFloat("Ceiling Light Intensity", &m_ceilingLightIntensity, 0.1f, 0.0f, 100.0f);
+        ImGui::DragFloat("Ceiling Light Intensity", &m_ceilingLightIntensity, 100.0f, 0.0f, 500000.0f);
+        ImGui::SliderFloat("Ambient Fill", &m_ambientFill, 0.0f, 100.0f);
         ImGui::Separator();
 
         ImGui::Text("Transform");

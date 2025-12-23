@@ -26,6 +26,7 @@ struct PointLight {
 
 cbuffer CeilingLightsBuffer : register(b3) {
     PointLight lights[8];
+    float4 ambientColor;
 };
 
 Texture2D goboTexture : register(t0);
@@ -120,7 +121,7 @@ float4 PS(PS_INPUT input) : SV_Target {
         ceilingLighting += diffPL * lights[i].color.rgb * attPL;
     }
 
-    float3 ambient = float3(0.001, 0.001, 0.001); // Minimal base ambient
+    float3 ambient = float3(0.001, 0.001, 0.001) + ambientColor.rgb; // Minimal base ambient + controllable fill
     
     return float4((lighting + ceilingLighting + ambient) * matColor.rgb, 1.0f);
 }

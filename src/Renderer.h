@@ -44,6 +44,7 @@ struct PointLight {
 
 __declspec(align(16)) struct CeilingLightsBuffer {
     PointLight lights[8];
+    DirectX::XMFLOAT4 ambient;
 };
 
 class Renderer {
@@ -105,6 +106,7 @@ private:
     DirectX::XMFLOAT3 m_cmy;
     
     float m_ceilingLightIntensity;
+    float m_ambientFill;
 
     float m_time;
     Camera m_camera;
