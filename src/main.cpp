@@ -1,9 +1,10 @@
 #ifndef UNICODE
 #define UNICODE
-#endif 
+#endif
 
 #include <windows.h>
 #include "Renderer.h"
+#include "Core/Config.h"
 #include "imgui_impl_win32.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -36,7 +37,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     RegisterClass(&wc);
 
-    RECT wr = { 0, 0, 1920, 1080 };
+    RECT wr = { 0, 0, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT };
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
     HWND hwnd = CreateWindowEx(

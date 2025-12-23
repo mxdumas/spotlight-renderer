@@ -27,10 +27,10 @@ bool Renderer::Initialize(HWND hwnd) {
     Log("Renderer::Initialize Started");
     DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferCount = 1;
-    sd.BufferDesc.Width = 1920;
-    sd.BufferDesc.Height = 1080;
+    sd.BufferDesc.Width = Config::Display::WINDOW_WIDTH;
+    sd.BufferDesc.Height = Config::Display::WINDOW_HEIGHT;
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    sd.BufferDesc.RefreshRate.Numerator = 60;
+    sd.BufferDesc.RefreshRate.Numerator = Config::Display::REFRESH_RATE;
     sd.BufferDesc.RefreshRate.Denominator = 1;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow = hwnd;
@@ -73,8 +73,8 @@ bool Renderer::Initialize(HWND hwnd) {
 
     // Create Depth/Stencil Buffer
     D3D11_TEXTURE2D_DESC depthDesc = {};
-    depthDesc.Width = 1920;
-    depthDesc.Height = 1080;
+    depthDesc.Width = Config::Display::WINDOW_WIDTH;
+    depthDesc.Height = Config::Display::WINDOW_HEIGHT;
     depthDesc.MipLevels = 1;
     depthDesc.ArraySize = 1;
     depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
@@ -102,8 +102,8 @@ bool Renderer::Initialize(HWND hwnd) {
     m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
 
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = 1920.0f;
-    viewport.Height = 1080.0f;
+    viewport.Width = static_cast<float>(Config::Display::WINDOW_WIDTH);
+    viewport.Height = static_cast<float>(Config::Display::WINDOW_HEIGHT);
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     viewport.TopLeftX = 0;
@@ -146,10 +146,9 @@ bool Renderer::Initialize(HWND hwnd) {
     Log("Mesh Loaded Successfully");
 
     float stageMinY = m_stageMesh->GetMinY();
-    float floorY = -0.05f;
-    m_stageOffset = floorY - stageMinY;
+    m_stageOffset = Config::Room::FLOOR_Y - stageMinY;
 
-    m_fixturePos = { 0.0f, 15.0f, 0.0f };
+    m_fixturePos = { 0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f };
     for (const auto& shape : m_stageMesh->GetShapes()) {
         if (shape.name == "Cylinder.000") {
             m_fixturePos = shape.center;
@@ -185,8 +184,8 @@ bool Renderer::Initialize(HWND hwnd) {
 
     // Create Shadow Mapping Resources
     D3D11_TEXTURE2D_DESC smDesc = {};
-    smDesc.Width = SHADOW_MAP_SIZE;
-    smDesc.Height = SHADOW_MAP_SIZE;
+    smDesc.Width = Config::Shadow::MAP_SIZE;
+    smDesc.Height = Config::Shadow::MAP_SIZE;
     smDesc.MipLevels = 1;
     smDesc.ArraySize = 1;
     smDesc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -261,12 +260,12 @@ bool Renderer::Initialize(HWND hwnd) {
         // Tip
         coneVertices.push_back(0.0f); coneVertices.push_back(0.0f); coneVertices.push_back(0.0f);
 
-        const int segments = 16;
-        const float radius = 1.0f;
-        const float height = 1.0f;
+        constexpr int segments = Config::Geometry::CONE_SEGMENTS;
+        constexpr float radius = Config::Geometry::CONE_RADIUS;
+        constexpr float height = Config::Geometry::CONE_HEIGHT;
 
         for (int i = 0; i < segments; ++i) {
-            float angle = (float)i / segments * 2.0f * 3.14159f;
+            float angle = static_cast<float>(i) / segments * 2.0f * 3.14159f;
             coneVertices.push_back(cosf(angle) * radius);
             coneVertices.push_back(sinf(angle) * radius);
             coneVertices.push_back(height);
@@ -301,11 +300,11 @@ bool Renderer::Initialize(HWND hwnd) {
         Log("Cone Proxy Created");
     }
 
-    // Create Room Cube (100x100 width, floor at -0.05)
+    // Create Room Cube
     {
-        float r = 50.0f;
-        float floorY = -0.05f;
-        float ceilY = 100.0f;
+        constexpr float r = Config::Room::HALF_WIDTH;
+        constexpr float floorY = Config::Room::FLOOR_Y;
+        constexpr float ceilY = Config::Room::CEILING_Y;
         
         float roomVerts[] = {
             // Back (-Z)
@@ -379,9 +378,9 @@ bool Renderer::Initialize(HWND hwnd) {
     {
         std::vector<float> verts;
         std::vector<uint32_t> inds;
-        const int stacks = 10;
-        const int slices = 10;
-        const float radius = 2.0f;
+        constexpr int stacks = Config::Geometry::SPHERE_STACKS;
+        constexpr int slices = Config::Geometry::SPHERE_SLICES;
+        constexpr float radius = Config::Geometry::SPHERE_RADIUS;
 
         for (int i = 0; i <= stacks; ++i) {
             float lat = (float)i / stacks * 3.14159f;
@@ -472,35 +471,36 @@ bool Renderer::Initialize(HWND hwnd) {
 
     // Initial spotlight data
     memset(&m_spotlightData, 0, sizeof(m_spotlightData));
-    m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, 500.0f };
-    
+    m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, Config::Spotlight::DEFAULT_RANGE };
+
     // Point towards center of stage
     DirectX::XMVECTOR lPosVec = DirectX::XMLoadFloat3(&m_fixturePos);
     DirectX::XMVECTOR lDirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(lPosVec));
     DirectX::XMStoreFloat4(&m_spotlightData.dirAngle, lDirVec);
 
-    m_spotlightData.colorInt = { 1.0f, 1.0f, 1.0f, 100.0f };
-    m_spotlightData.coneGobo = { 0.98f, 0.71f, 0.0f, 0.0f };
+    m_spotlightData.colorInt = { 1.0f, 1.0f, 1.0f, Config::Spotlight::DEFAULT_INTENSITY };
+    m_spotlightData.coneGobo = { Config::Spotlight::DEFAULT_BEAM_ANGLE, Config::Spotlight::DEFAULT_FIELD_ANGLE, 0.0f, 0.0f };
     m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    m_volumetricData.params = { 512.0f, 0.2f, 10.0f, 0.5f };
+    m_volumetricData.params = { Config::Volumetric::DEFAULT_STEP_COUNT, Config::Volumetric::DEFAULT_DENSITY,
+                                 Config::Volumetric::DEFAULT_INTENSITY, Config::Volumetric::DEFAULT_ANISOTROPY };
     m_volumetricData.jitter = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     m_time = 0.0f;
     m_goboShakeAmount = 0.0f;
     m_useCMY = false;
     m_cmy = { 0.0f, 0.0f, 0.0f };
-    m_ceilingLightIntensity = 40.0f;
-    m_ambientFill = 2.0f;
-    m_roomSpecular = 0.8f;
-    m_roomShininess = 64.0f;
+    m_ceilingLightIntensity = Config::CeilingLights::DEFAULT_INTENSITY;
+    m_ambientFill = Config::Ambient::DEFAULT_FILL;
+    m_roomSpecular = Config::Materials::ROOM_SPECULAR;
+    m_roomShininess = Config::Materials::ROOM_SHININESS;
 
     // Initialize Camera
-    m_camDistance = 40.0f;
-    m_camPitch = 0.4f;
-    m_camYaw = 0.0f;
+    m_camDistance = Config::CameraDefaults::DISTANCE;
+    m_camPitch = Config::CameraDefaults::PITCH;
+    m_camYaw = Config::CameraDefaults::YAW;
     m_camTarget = { 0.0f, 0.0f, 0.0f };
-    m_camera.SetPerspective(DirectX::XM_PIDIV4, 1920.0f / 1080.0f, 0.1f, 1000.0f);
+    m_camera.SetPerspective(Config::CameraDefaults::FOV, Config::Display::ASPECT_RATIO, Config::CameraDefaults::CLIP_NEAR, Config::CameraDefaults::CLIP_FAR);
 
     // Initialize Constant Buffers
     if (!m_matrixBuffer.Initialize(m_device.Get())) {
@@ -530,8 +530,8 @@ bool Renderer::Initialize(HWND hwnd) {
 
     // Create scene render target for FXAA
     D3D11_TEXTURE2D_DESC sceneDesc = {};
-    sceneDesc.Width = 1920;
-    sceneDesc.Height = 1080;
+    sceneDesc.Width = Config::Display::WINDOW_WIDTH;
+    sceneDesc.Height = Config::Display::WINDOW_HEIGHT;
     sceneDesc.MipLevels = 1;
     sceneDesc.ArraySize = 1;
     sceneDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -572,8 +572,8 @@ bool Renderer::Initialize(HWND hwnd) {
 
     m_enableFXAA = true;
     m_enableVolBlur = true;
-    m_volBlurPasses = 1;
-    m_ceilingLightIntensity = 1.0f; // Default 1.0
+    m_volBlurPasses = Config::PostProcess::DEFAULT_BLUR_PASSES;
+    m_ceilingLightIntensity = Config::CeilingLights::DEFAULT_INTENSITY;
 
     // Create Blend State
     D3D11_BLEND_DESC blendDesc = {};
@@ -653,8 +653,8 @@ void Renderer::RenderShadowMap() {
     m_context->OMSetRenderTargets(0, nullptr, m_shadowDSV.Get());
 
     D3D11_VIEWPORT vp = {};
-    vp.Width = (float)SHADOW_MAP_SIZE;
-    vp.Height = (float)SHADOW_MAP_SIZE;
+    vp.Width = static_cast<float>(Config::Shadow::MAP_SIZE);
+    vp.Height = static_cast<float>(Config::Shadow::MAP_SIZE);
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     m_context->RSSetViewports(1, &vp);
@@ -688,7 +688,7 @@ void Renderer::RenderShadowMap() {
 }
 
 void Renderer::BeginFrame() {
-    m_time += 0.016f; // Approx 60fps for now
+    m_time += Config::PostProcess::FRAME_DELTA;
     
     // Unbind all SRVs to avoid conflicts with depth/stencil and render targets
     ID3D11ShaderResourceView* nullSRVs[8] = { nullptr };
@@ -707,8 +707,8 @@ void Renderer::BeginFrame() {
     DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_spotlightData.posRange.w);
     m_spotlightData.lightViewProj = DirectX::XMMatrixTranspose(lView * lProj);
 
-    m_spotlightData.goboOff.x = sinf(m_time * 30.0f) * m_goboShakeAmount * 0.05f;
-    m_spotlightData.goboOff.y = cosf(m_time * 35.0f) * m_goboShakeAmount * 0.05f;
+    m_spotlightData.goboOff.x = sinf(m_time * Config::Spotlight::SHAKE_FREQ_X) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
+    m_spotlightData.goboOff.y = cosf(m_time * Config::Spotlight::SHAKE_FREQ_Y) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
 
     // Render Shadow Map
     RenderShadowMap();
@@ -726,8 +726,8 @@ void Renderer::BeginFrame() {
     m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = 1920.0f;
-    viewport.Height = 1080.0f;
+    viewport.Width = static_cast<float>(Config::Display::WINDOW_WIDTH);
+    viewport.Height = static_cast<float>(Config::Display::WINDOW_HEIGHT);
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     viewport.TopLeftX = 0;
@@ -761,21 +761,17 @@ void Renderer::BeginFrame() {
 
     // Update Ceiling Lights
     CeilingLightsBuffer clb;
-    // Grid 4 in X, 2 in Z.
-    // X range: -40 to 40. Spacing = 80 / 3 = 26.
-    // Z range: -20 to 20. Spacing = 40.
-    
     int idx = 0;
-    for (int z = 0; z < 2; ++z) {
-        for (int x = 0; x < 4; ++x) {
-            float posX = -40.0f + x * 26.6f;
-            float posZ = -20.0f + z * 40.0f;
-            clb.lights[idx].pos = { posX, 95.0f, posZ, 200.0f }; // Range 200
-            clb.lights[idx].color = { 1.0f, 1.0f, 1.0f, m_ceilingLightIntensity * 500.0f };
+    for (int z = 0; z < Config::CeilingLights::GRID_Z; ++z) {
+        for (int x = 0; x < Config::CeilingLights::GRID_X; ++x) {
+            float posX = Config::CeilingLights::X_START + x * Config::CeilingLights::X_SPACING;
+            float posZ = Config::CeilingLights::Z_START + z * Config::CeilingLights::Z_SPACING;
+            clb.lights[idx].pos = { posX, Config::CeilingLights::HEIGHT, posZ, Config::CeilingLights::RANGE };
+            clb.lights[idx].color = { 1.0f, 1.0f, 1.0f, m_ceilingLightIntensity * Config::CeilingLights::INTENSITY_MULTIPLIER };
             idx++;
         }
     }
-    float ambVal = m_ambientFill / 100.0f; // 0-1 range
+    float ambVal = m_ambientFill / Config::Ambient::MAX_FILL;
     clb.ambient = { ambVal, ambVal, ambVal, 1.0f };
     m_ceilingLightsBuffer.Update(m_context.Get(), clb);
 
@@ -800,7 +796,7 @@ void Renderer::BeginFrame() {
     {
         // Dark Gray Material
         MaterialBuffer mb = {};
-        mb.color = { 0.2f, 0.2f, 0.2f, 1.0f };
+        mb.color = { Config::Materials::ROOM_COLOR, Config::Materials::ROOM_COLOR, Config::Materials::ROOM_COLOR, 1.0f };
         mb.specParams = { m_roomSpecular, m_roomShininess, 0.0f, 0.0f };
         m_materialBuffer.Update(m_context.Get(), mb);
 
@@ -811,12 +807,12 @@ void Renderer::BeginFrame() {
         m_device->CreateRasterizerState(&rd, &rs);
         m_context->RSSetState(rs.Get());
 
-        UINT stride = 32;
+        UINT stride = Config::Vertex::STRIDE_FULL;
         UINT offset = 0;
         m_context->IASetVertexBuffers(0, 1, m_roomVB.GetAddressOf(), &stride, &offset);
         m_context->IASetIndexBuffer(m_roomIB.Get(), DXGI_FORMAT_R32_UINT, 0);
         m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_context->DrawIndexed(36, 0, 0); // 6 faces * 2 tris * 3 verts
+        m_context->DrawIndexed(Config::Room::INDEX_COUNT, 0, 0);
 
         m_context->RSSetState(nullptr);
     }
@@ -825,7 +821,7 @@ void Renderer::BeginFrame() {
         // White Material
         MaterialBuffer mbMat = {};
         mbMat.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        mbMat.specParams = { 0.1f, 16.0f, 0.0f, 0.0f }; // Subtle spec for stage
+        mbMat.specParams = { Config::Materials::STAGE_SPECULAR, Config::Materials::STAGE_SHININESS, 0.0f, 0.0f };
         m_materialBuffer.Update(m_context.Get(), mbMat);
 
         // Update world matrix for stage
@@ -844,7 +840,7 @@ void Renderer::BeginFrame() {
     if (firstFrame) Log("Stage Drawn");
 
     // Volumetric Pass - render to separate texture for blur
-    m_volumetricData.jitter.x = m_time * 0.005f; // Slow down temporal jitter
+    m_volumetricData.jitter.x = m_time * Config::Volumetric::JITTER_SCALE;
     m_volumetricBuffer.Update(m_context.Get(), m_volumetricData);
 
     // Clear volumetric texture and render to it
@@ -864,7 +860,7 @@ void Renderer::BeginFrame() {
     m_context->PSSetSamplers(0, 2, volSamplers);
 
     m_volumetricShader.Bind(m_context.Get());
-    UINT strideFS = 12;
+    UINT strideFS = Config::Vertex::STRIDE_POSITION_ONLY;
     UINT offsetFS = 0;
     m_context->IASetVertexBuffers(0, 1, m_fullScreenVB.GetAddressOf(), &strideFS, &offsetFS);
     m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -877,7 +873,7 @@ void Renderer::BeginFrame() {
     // Blur volumetric texture
     if (m_enableVolBlur) {
         BlurBuffer bb;
-        bb.texelSize = { 1.0f / 1920.0f, 1.0f / 1080.0f };
+        bb.texelSize = { 1.0f / Config::Display::WINDOW_WIDTH, 1.0f / Config::Display::WINDOW_HEIGHT };
 
         for (int pass = 0; pass < m_volBlurPasses; ++pass) {
             // Horizontal blur: volRTV -> blurTempRTV
@@ -932,7 +928,7 @@ void Renderer::BeginFrame() {
         m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
 
         FXAABuffer fb;
-        fb.rcpFrame = { 1.0f / 1920.0f, 1.0f / 1080.0f };
+        fb.rcpFrame = { 1.0f / Config::Display::WINDOW_WIDTH, 1.0f / Config::Display::WINDOW_HEIGHT };
         fb.padding = { 0.0f, 0.0f };
         m_fxaaBuffer.Update(m_context.Get(), fb);
 
@@ -970,10 +966,10 @@ void Renderer::BeginFrame() {
 void Renderer::RenderUI() {
     static bool firstFrame = true;
     if (firstFrame) Log("RenderUI Started");
-    
+
     // Main Window
-    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(350, 600), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(Config::UI::WINDOW_POS_X, Config::UI::WINDOW_POS_Y), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(Config::UI::WINDOW_WIDTH, Config::UI::WINDOW_HEIGHT), ImGuiCond_FirstUseEver);
     ImGui::Begin("Spotlight Renderer Controls");
 
     // Performance Section
@@ -1031,16 +1027,16 @@ void Renderer::RenderUI() {
     }
 
     if (ImGui::CollapsingHeader("Volumetric Quality")) {
-        ImGui::DragFloat("Step Count", &m_volumetricData.params.x, 1.0f, 16.0f, 512.0f);
+        ImGui::DragFloat("Step Count", &m_volumetricData.params.x, 1.0f, Config::Volumetric::MIN_STEP_COUNT, Config::Volumetric::MAX_STEP_COUNT);
         ImGui::SliderFloat("Density", &m_volumetricData.params.y, 0.0f, 1.0f);
-        ImGui::SliderFloat("Light Intensity Multiplier", &m_volumetricData.params.z, 0.0f, 10.0f);
-        ImGui::SliderFloat("Anisotropy (G)", &m_volumetricData.params.w, -0.99f, 0.99f);
+        ImGui::SliderFloat("Light Intensity Multiplier", &m_volumetricData.params.z, 0.0f, Config::Volumetric::DEFAULT_INTENSITY);
+        ImGui::SliderFloat("Anisotropy (G)", &m_volumetricData.params.w, Config::Volumetric::MIN_ANISOTROPY, Config::Volumetric::MAX_ANISOTROPY);
     }
 
     if (ImGui::CollapsingHeader("Post Processing")) {
         ImGui::Checkbox("Enable FXAA", &m_enableFXAA);
         ImGui::Checkbox("Enable Volumetric Blur", &m_enableVolBlur);
-        ImGui::SliderInt("Blur Passes", &m_volBlurPasses, 1, 5);
+        ImGui::SliderInt("Blur Passes", &m_volBlurPasses, Config::PostProcess::MIN_BLUR_PASSES, Config::PostProcess::MAX_BLUR_PASSES);
     }
 
     ImGui::End();

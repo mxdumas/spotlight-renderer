@@ -2,6 +2,7 @@
 
 #include <d3d11.h>
 #include <wrl/client.h>
+#include "Core/Config.h"
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
@@ -96,7 +97,6 @@ private:
     ComPtr<ID3D11Texture2D> m_shadowMap;
     ComPtr<ID3D11DepthStencilView> m_shadowDSV;
     ComPtr<ID3D11ShaderResourceView> m_shadowSRV;
-    static const int SHADOW_MAP_SIZE = 2048;
 
     ComPtr<ID3D11Buffer> m_debugBoxVB;
     ComPtr<ID3D11Buffer> m_debugBoxIB;
