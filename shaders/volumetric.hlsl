@@ -17,12 +17,14 @@ cbuffer SpotlightBuffer : register(b1) {
 
 cbuffer VolumetricBuffer : register(b2) {
     float4 volParams; // x: stepCount, y: density, z: intensity, w: anisotropy (G)
-    float4 volJitter; // x: time
+    float4 volJitter; // x: time, y: temporalWeight
+    matrix prevViewProj;
 };
 
 Texture2D depthTexture : register(t0);
 Texture2D goboTexture : register(t1);
 Texture2D shadowMap : register(t2);
+Texture2D historyTexture : register(t3);
 
 SamplerState samLinear : register(s0);
 SamplerComparisonState shadowSampler : register(s1);
@@ -130,5 +132,27 @@ float4 PS(PS_INPUT input) : SV_Target {
         currentPos += stepVec;
     }
 
-    return float4(accumulatedLight * volParams.z, 1.0f);
+    float3 currentResult = accumulatedLight * volParams.z;
+    
+    // Reproject for history
+    float4 prevClipPos = mul(float4(worldPos, 1.0f), prevViewProj);
+    float3 prevScreenPos = prevClipPos.xyz / prevClipPos.w;
+    float2 prevUV = prevScreenPos.xy * 0.5f + 0.5f;
+    prevUV.y = 1.0f - prevUV.y;
+
+    float3 history = historyTexture.SampleLevel(samLinear, prevUV, 0).rgb;
+    
+    // Clamp history to avoid excessive trails or ghosting if scene changes rapidly
+    // Basic clamping: currentResult +/- some delta? 
+    // For now, simple lerp.
+    float weight = volJitter.y;
+    
+    // Reject history if out of bounds
+    if (prevUV.x < 0 || prevUV.x > 1 || prevUV.y < 0 || prevUV.y > 1) {
+        weight = 0.0f;
+    }
+
+    float3 finalColor = lerp(currentResult, history, weight);
+
+    return float4(finalColor, 1.0f);
 }

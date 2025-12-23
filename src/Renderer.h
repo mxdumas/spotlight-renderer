@@ -30,7 +30,8 @@ __declspec(align(16)) struct SpotlightBuffer {
 
 __declspec(align(16)) struct VolumetricBuffer {
     DirectX::XMFLOAT4 params; // x: stepCount, y: density, z: intensity, w: anisotropy (G)
-    DirectX::XMFLOAT4 jitter; // x: time, yzw: unused
+    DirectX::XMFLOAT4 jitter; // x: time, y: temporalWeight, zw: unused
+    DirectX::XMMATRIX prevViewProj;
 };
 
 class Renderer {
@@ -47,9 +48,13 @@ public:
 
     void Log(const std::string& message);
 
+    float GetTemporalWeight() const { return m_temporalWeight; }
+    void SetTemporalWeight(float weight) { m_temporalWeight = weight; }
+
 private:
     void InitImGui(HWND hwnd);
     void RenderShadowMap();
+    void CreateHistoryBuffers();
     ComPtr<ID3D11Device> m_device;
     ComPtr<ID3D11DeviceContext> m_context;
     ComPtr<IDXGISwapChain> m_swapChain;
@@ -102,4 +107,12 @@ private:
     ConstantBuffer<VolumetricBuffer> m_volumetricBuffer;
 
     ComPtr<ID3D11BlendState> m_additiveBlendState;
+
+    // Temporal Resources
+    ComPtr<ID3D11Texture2D> m_volHistory[2];
+    ComPtr<ID3D11RenderTargetView> m_volHistoryRTV[2];
+    ComPtr<ID3D11ShaderResourceView> m_volHistorySRV[2];
+    int m_currHistory;
+    float m_temporalWeight;
+    DirectX::XMMATRIX m_prevViewProj;
 };

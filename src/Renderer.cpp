@@ -5,7 +5,11 @@
 #include <iostream>
 #include <fstream>
 
-Renderer::Renderer() {}
+Renderer::Renderer() {
+    m_temporalWeight = 0.9f;
+    m_currHistory = 0;
+    m_prevViewProj = DirectX::XMMatrixIdentity();
+}
 
 Renderer::~Renderer() {
     Shutdown();
@@ -441,12 +445,16 @@ bool Renderer::Initialize(HWND hwnd) {
     m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     m_volumetricData.params = { 128.0f, 0.2f, 10.0f, 0.5f };
-    m_volumetricData.jitter = { 0.0f, 0.0f, 0.0f, 0.0f };
+    m_volumetricData.jitter = { 0.0f, 0.9f, 0.0f, 0.0f }; // Default 0.9 temporal weight
+    m_volumetricData.prevViewProj = DirectX::XMMatrixIdentity();
 
     m_time = 0.0f;
     m_goboShakeAmount = 0.0f;
     m_useCMY = false;
     m_cmy = { 0.0f, 0.0f, 0.0f };
+    m_currHistory = 0;
+    m_temporalWeight = 0.9f;
+    m_prevViewProj = DirectX::XMMatrixIdentity();
 
     // Initialize Camera
     m_camDistance = 40.0f;
@@ -468,6 +476,8 @@ bool Renderer::Initialize(HWND hwnd) {
         Log("Failed to initialize volumetric constant buffer");
         return false;
     }
+
+    CreateHistoryBuffers();
 
     // Create Blend State
     D3D11_BLEND_DESC blendDesc = {};
@@ -514,11 +524,35 @@ void Renderer::InitImGui(HWND hwnd) {
     Log("ImGui DX11 Init Done");
 }
 
+void Renderer::CreateHistoryBuffers() {
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = 1920;
+    desc.Height = 1080;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    for (int i = 0; i < 2; ++i) {
+        m_device->CreateTexture2D(&desc, nullptr, &m_volHistory[i]);
+        m_device->CreateRenderTargetView(m_volHistory[i].Get(), nullptr, &m_volHistoryRTV[i]);
+        m_device->CreateShaderResourceView(m_volHistory[i].Get(), nullptr, &m_volHistorySRV[i]);
+    }
+}
+
 void Renderer::Shutdown() {
     if (ImGui::GetCurrentContext()) {
         ImGui_ImplDX11_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        m_volHistorySRV[i].Reset();
+        m_volHistoryRTV[i].Reset();
+        m_volHistory[i].Reset();
     }
 
     m_shadowSRV.Reset();
@@ -699,19 +733,29 @@ void Renderer::BeginFrame() {
 
     // Volumetric Pass
     m_volumetricData.jitter.x = m_time;
+    m_volumetricData.jitter.y = m_temporalWeight;
+    m_volumetricData.prevViewProj = m_prevViewProj;
     m_volumetricBuffer.Update(m_context.Get(), m_volumetricData);
     
-    // Unbind depth to allow sampling
-    m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
-    m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
+    int prevHistory = 1 - m_currHistory;
+
+    // Render to current history buffer
+    m_context->OMSetRenderTargets(1, m_volHistoryRTV[m_currHistory].GetAddressOf(), nullptr);
+    float zeroClear[] = { 0,0,0,0 };
+    m_context->ClearRenderTargetView(m_volHistoryRTV[m_currHistory].Get(), zeroClear);
     
     m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
     m_context->PSSetConstantBuffers(2, 1, m_volumetricBuffer.GetAddressOf());
 
-    ID3D11ShaderResourceView* volSRVs[] = { m_depthSRV.Get(), m_goboTexture ? m_goboTexture->GetSRV() : nullptr, m_shadowSRV.Get() };
-    m_context->PSSetShaderResources(0, 3, volSRVs);
+    ID3D11ShaderResourceView* volSRVs[] = { 
+        m_depthSRV.Get(), 
+        m_goboTexture ? m_goboTexture->GetSRV() : nullptr, 
+        m_shadowSRV.Get(),
+        m_volHistorySRV[prevHistory].Get() // History buffer
+    };
+    m_context->PSSetShaderResources(0, 4, volSRVs);
     
     ID3D11SamplerState* volSamplers[] = { m_samplerState.Get(), m_shadowSampler.Get() };
     m_context->PSSetSamplers(0, 2, volSamplers);
@@ -723,9 +767,21 @@ void Renderer::BeginFrame() {
     m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_context->Draw(6, 0);
 
+    // Composite to Main RT
+    m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
+    m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
+    
+    // Use basic shader (or a specialized composite shader, but basic/debug works for a quad)
+    m_debugShader.Bind(m_context.Get());
+    m_context->PSSetShaderResources(0, 1, m_volHistorySRV[m_currHistory].GetAddressOf());
+    m_context->Draw(6, 0);
+
     // Restore state
     m_context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-    m_context->PSSetShaderResources(0, 3, nullSRVs);
+    m_context->PSSetShaderResources(0, 4, nullSRVs);
+
+    m_prevViewProj = m_camera.GetViewMatrix() * m_camera.GetProjectionMatrix();
+    m_currHistory = 1 - m_currHistory;
 
     if (firstFrame) Log("Volumetric Draw Done");
 }
@@ -778,6 +834,7 @@ void Renderer::RenderUI() {
     ImGui::DragFloat("Density", &m_volumetricData.params.y, 0.001f, 0.0f, 1.0f);
     ImGui::DragFloat("Vol Intensity", &m_volumetricData.params.z, 0.01f, 0.0f, 10.0f);
     ImGui::DragFloat("Anisotropy (G)", &m_volumetricData.params.w, 0.01f, -0.99f, 0.99f);
+    ImGui::SliderFloat("Temporal Weight", &m_temporalWeight, 0.0f, 0.99f);
     
     ImGui::End();
 

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Source files
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.h)
+list(FILTER SOURCES EXCLUDE REGEX "src/main.cpp")
 file(GLOB IMGUI_SOURCES 
     external/imgui/imgui.cpp 
     external/imgui/imgui_draw.cpp 
@@ -16,7 +17,7 @@ file(GLOB IMGUI_SOURCES
     external/imgui/imgui_impl_dx11.cpp
 )
 
-add_executable(${PROJECT_NAME} WIN32 ${SOURCES} ${IMGUI_SOURCES})
+add_executable(${PROJECT_NAME} WIN32 src/main.cpp ${SOURCES} ${IMGUI_SOURCES})
 
 # Target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -53,3 +54,8 @@ add_executable(TestVolumetricJitter tests/test_volumetric_jitter.cpp)
 target_include_directories(TestVolumetricJitter PRIVATE src external external/imgui)
 target_link_libraries(TestVolumetricJitter PRIVATE d3d11 dxgi d3dcompiler)
 add_test(NAME VolumetricJitterTest COMMAND TestVolumetricJitter)
+
+add_executable(TestTemporalReconstruction tests/test_temporal_reconstruction.cpp ${SOURCES} ${IMGUI_SOURCES})
+target_include_directories(TestTemporalReconstruction PRIVATE src external external/imgui)
+target_link_libraries(TestTemporalReconstruction PRIVATE d3d11 dxgi d3dcompiler dxguid)
+add_test(NAME TemporalReconstructionTest COMMAND TestTemporalReconstruction)
