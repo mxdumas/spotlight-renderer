@@ -1,6 +1,9 @@
 #include "GDTFParser.h"
 #include <iostream>
 #include <miniz/miniz.h>
+#include <sstream>
+#include <algorithm>
+#include <fstream>
 
 namespace GDTF
 {
@@ -66,9 +69,21 @@ bool GDTFParser::parseXML(const std::string &xml_content)
     pugi::xml_node fixture_type = doc_.child("GDTF").child("FixtureType");
     fixture_type_name_ = fixture_type.attribute("Name").as_string();
 
+    // Parse Models
+    model_to_file_.clear();
+    pugi::xml_node models = fixture_type.child("Models");
+    for (pugi::xml_node model : models.children("Model"))
+    {
+        std::string name = model.attribute("Name").as_string();
+        std::string file = model.attribute("File").as_string();
+        if (!name.empty() && !file.empty())
+        {
+            model_to_file_[name] = file;
+        }
+    }
+
     // Parse Geometries
     pugi::xml_node geometries = fixture_type.child("Geometries");
-    // Find the primary root (usually the first child of Geometries)
     for (pugi::xml_node child : geometries.children())
     {
         geometry_root_ = parseGeometry(child);
@@ -76,7 +91,7 @@ bool GDTFParser::parseXML(const std::string &xml_content)
             break;
     }
 
-    // Parse DMX Modes (take the first one for simplicity)
+    // Parse DMX Modes (take the first one)
     pugi::xml_node dmx_mode = fixture_type.child("DMXModes").child("DMXMode");
     if (dmx_mode)
     {
@@ -89,10 +104,7 @@ bool GDTFParser::parseXML(const std::string &xml_content)
             if (dc.name.empty())
                 dc.name = chan.attribute("Attribute").as_string();
 
-            // DMX offset
             dc.offset = current_offset;
-
-            // Byte count from coarse/fine/etc.
             dc.byte_count = 0;
             for ([[maybe_unused]] pugi::xml_node logical : chan.children("LogicalChannel"))
             {
@@ -103,7 +115,6 @@ bool GDTFParser::parseXML(const std::string &xml_content)
 
             dc.default_value = chan.attribute("Default").as_float();
             dmx_channels_.push_back(dc);
-
             current_offset += dc.byte_count;
         }
     }
@@ -114,16 +125,45 @@ bool GDTFParser::parseXML(const std::string &xml_content)
 std::shared_ptr<GeometryNode> GDTFParser::parseGeometry(pugi::xml_node node)
 {
     std::string type = node.name();
-    if (type == "Geometry" || type == "Axis" || type == "Beam")
+    if (type == "Geometry" || type == "Axis" || type == "Beam" || type == "Filter" || type == "ColorBeam")
     {
         auto gn = std::make_shared<GeometryNode>();
         gn->name = node.attribute("Name").as_string();
         gn->type = type;
         gn->model = node.attribute("Model").as_string();
 
-        // Matrix parsing (GDTF stores 4x4 matrices as space-separated floats)
-        // For simplicity, we'll just extract position for now
-        // This would need a full matrix parser for real-world GDTF
+        std::string matrix_str = node.attribute("Matrix").as_string();
+        if (matrix_str.empty())
+            matrix_str = node.attribute("Position").as_string();
+
+        if (!matrix_str.empty())
+        {
+            std::string cleaned = matrix_str;
+            std::replace(cleaned.begin(), cleaned.end(), '{', ' ');
+            std::replace(cleaned.begin(), cleaned.end(), '}', ' ');
+            std::replace(cleaned.begin(), cleaned.end(), ',', ' ');
+            
+            std::stringstream ss(cleaned);
+            float m[16];
+            for (int i = 0; i < 16; ++i) {
+                if (!(ss >> m[i])) m[i] = (i % 5 == 0) ? 1.0f : 0.0f;
+            }
+
+            // GDTF is Row-Major with translation in 4th column.
+            // Transpose to move translation to 4th row for DirectX.
+            DirectX::XMFLOAT4X4 raw(m);
+            DirectX::XMMATRIX gdtfMat = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&raw));
+            
+            // USER REQUEST: Translate on the opposite side.
+            // This suggests the relative offsets are inverted.
+            DirectX::XMFLOAT4X4 finalMat;
+            DirectX::XMStoreFloat4x4(&finalMat, gdtfMat);
+            finalMat._41 = -finalMat._41;
+            finalMat._42 = -finalMat._42;
+            finalMat._43 = -finalMat._43;
+            
+            gn->matrix = finalMat;
+        }
 
         for (pugi::xml_node child : node.children())
         {
@@ -136,6 +176,16 @@ std::shared_ptr<GeometryNode> GDTFParser::parseGeometry(pugi::xml_node node)
         return gn;
     }
     return nullptr;
+}
+
+std::string GDTFParser::getModelFile(const std::string &model_name) const
+{
+    auto it = model_to_file_.find(model_name);
+    if (it != model_to_file_.end())
+    {
+        return it->second;
+    }
+    return model_name;
 }
 
 } // namespace GDTF

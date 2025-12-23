@@ -104,6 +104,7 @@ void Application::BeginFrame()
     ctx.camera = &m_scene.GetCamera();
     ctx.cameraPos = m_scene.GetCameraPosition();
     ctx.anchorPositions = m_scene.GetAnchorPositions();
+    ctx.fixtureNodes = m_scene.GetFixtureNodes();
     ctx.spotlight = &m_scene.GetSpotlight();
     ctx.ceilingLights = &m_scene.GetCeilingLights();
     ctx.stageMesh = m_scene.GetStageMesh();

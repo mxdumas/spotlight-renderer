@@ -10,11 +10,22 @@ using Microsoft::WRL::ComPtr;
  * @namespace GeometryGenerator
  * @brief Provides utility functions for procedurally generating simple 3D geometry.
  */
+#include <vector>
+#include "../Resources/Mesh.h"
+
+// ...
 namespace GeometryGenerator
 {
 
 /**
+ * @brief Generates raw vertex and index data for a box.
+ */
+void CreateBox(float width, float height, float depth, std::vector<Vertex> &outVertices,
+               std::vector<uint32_t> &outIndices);
+
+/**
  * @brief Creates a simple debug cube (8 vertices).
+// ...
  *
  * @param device Pointer to the ID3D11Device.
  * @param outVB Reference to the ComPtr that will receive the vertex buffer (position only).

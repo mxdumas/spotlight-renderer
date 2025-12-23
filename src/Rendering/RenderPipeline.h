@@ -2,10 +2,12 @@
 
 #include <d3d11.h>
 #include <memory>
+#include <vector>
 #include <wrl/client.h>
 #include "../Core/ConstantBuffer.h"
 #include "../Scene/Camera.h"
 #include "../Scene/CeilingLights.h"
+#include "../Scene/Node.h"
 #include "../Scene/Spotlight.h"
 #include "Passes/BlurPass.h"
 #include "Passes/CompositePass.h"
@@ -44,6 +46,7 @@ struct RenderContext
 
     // Scene data
     std::vector<DirectX::XMFLOAT3> anchorPositions; ///< Positions of fixture anchors.
+    std::vector<std::shared_ptr<SceneGraph::Node>> fixtureNodes; ///< Fixture hierarchies.
     Spotlight *spotlight;                           ///< Pointer to the main spotlight.
     CeilingLights *ceilingLights;                   ///< Pointer to the ceiling lights collection.
     Mesh *stageMesh;                                ///< Pointer to the stage geometry mesh.
@@ -200,6 +203,16 @@ private:
     void RenderScenePass(ID3D11DeviceContext *context, const RenderContext &ctx);
 
     /**
+     * @brief Helper to recursively render scene graph nodes.
+     *
+     * @param context Pointer to the ID3D11DeviceContext.
+     * @param node The node to render.
+     * @param mb Matrix buffer to update for each node.
+     */
+    void RenderNodeRecursive(ID3D11DeviceContext *context, std::shared_ptr<SceneGraph::Node> node,
+                            PipelineMatrixBuffer &mb);
+
+    /**
      * @brief Executes the volumetric lighting pass.
      *
      * @param context Pointer to the ID3D11DeviceContext.
@@ -260,6 +273,9 @@ private:
 
     // Shared geometry
     ComPtr<ID3D11Buffer> m_fullScreenVB;
+    ComPtr<ID3D11Buffer> m_debugSphereVB;
+    ComPtr<ID3D11Buffer> m_debugSphereIB;
+    uint32_t m_debugSphereIndexCount = 0;
 
     // Shared samplers
     ComPtr<ID3D11SamplerState> m_linearSampler;

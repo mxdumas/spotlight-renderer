@@ -1,3 +1,8 @@
+/**
+ * @file GDTFParser.h
+ * @brief GDTF archive extraction and XML parsing for fixture definitions.
+ */
+
 #pragma once
 
 #include <DirectXMath.h>
@@ -19,9 +24,12 @@ struct GeometryNode
     std::string name;                                    ///< Unique name of the geometry.
     std::string type;                                    ///< Type of geometry (Base, Yoke, Head, Beam, etc.).
     std::string model;                                   ///< Reference name to the 3D model (GLB).
-    DirectX::XMFLOAT3 position = {0.0f, 0.0f, 0.0f};     ///< Local relative position.
-    DirectX::XMFLOAT3 rotation = {0.0f, 0.0f, 0.0f};     ///< Local relative rotation (Euler).
+    DirectX::XMFLOAT4X4 matrix;                          ///< Local transformation matrix.
     std::vector<std::shared_ptr<GeometryNode>> children; ///< Child nodes in the hierarchy.
+
+    GeometryNode() {
+        DirectX::XMStoreFloat4x4(&matrix, DirectX::XMMatrixIdentity());
+    }
 };
 
 /**
@@ -100,6 +108,13 @@ public:
         return dmx_channels_;
     }
 
+    /**
+     * @brief Gets the actual file name for a model name.
+     * @param model_name The name of the model in the geometry tree.
+     * @return The file name (usually GLB), or the model_name if not found.
+     */
+    std::string getModelFile(const std::string &model_name) const;
+
 private:
     /**
      * @brief Internal helper to parse the XML content of description.xml.
@@ -119,6 +134,7 @@ private:
     std::string fixture_type_name_;               ///< Name extracted from the XML.
     std::shared_ptr<GeometryNode> geometry_root_; ///< Root of the logical geometry tree.
     std::vector<DMXChannel> dmx_channels_;        ///< List of DMX attributes.
+    std::map<std::string, std::string> model_to_file_; ///< Mapping from model name to file name.
 
     pugi::xml_document doc_; ///< Persistent XML document.
 };

@@ -20,6 +20,7 @@ file(GLOB IMGUI_SOURCES
 
 # External dependencies via vcpkg
 find_package(miniz CONFIG REQUIRED)
+find_package(assimp CONFIG REQUIRED)
 
 set(EXTERNAL_SOURCES
     external/pugixml/pugixml.cpp
@@ -39,6 +40,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dxgi
     dxguid
     miniz::miniz
+    assimp::assimp
 )
 
 # Include directories

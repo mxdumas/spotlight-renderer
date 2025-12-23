@@ -1,5 +1,7 @@
 #include "Scene.h"
 #include <cmath>
+#include <fstream>
+#include <iostream>
 
 Scene::Scene()
     : m_camDistance(Config::CameraDefaults::DISTANCE), m_camPitch(Config::CameraDefaults::PITCH),
@@ -66,6 +68,17 @@ bool Scene::Initialize(ID3D11Device *device)
 
     // Initialize spotlights
     m_spotlights.clear();
+    m_fixtureNodes.clear();
+
+    // Load GDTF fixture model once
+    GDTF::GDTFParser parser;
+    std::shared_ptr<SceneGraph::Node> gdtfRoot;
+    if (parser.load("data/fixtures/Martin_Professional@MAC_Viper_Performance@20230516NoMeas.gdtf"))
+    {
+        GDTF::GDTFLoader loader;
+        gdtfRoot = loader.buildSceneGraph(device, parser);
+    }
+
     for (const auto &pos : m_anchorPositions)
     {
         Spotlight light;
@@ -79,6 +92,31 @@ bool Scene::Initialize(ID3D11Device *device)
         light.SetDirection(dir);
 
         m_spotlights.push_back(light);
+
+        // Add GDTF fixture node at this anchor
+        if (gdtfRoot)
+        {
+            GDTF::GDTFLoader loader;
+            auto instanceRoot = loader.buildSceneGraph(device, parser);
+            if (instanceRoot)
+            {
+                // Placement node handles the world position (Anchor point)
+                auto placementNode = std::make_shared<SceneGraph::Node>("Placement");
+                placementNode->setTranslation(pos.x, pos.y, pos.z);
+                
+                // Orientation node handles the flip (so the fixture hangs correctly)
+                auto orientationNode = std::make_shared<SceneGraph::Node>("Orientation");
+                // Rotate 90 degrees around X (Pitch) to make GDTF "Forward" point down (-Y)
+                orientationNode->setRotation(0.0f, DirectX::XM_PIDIV2, 0.0f);
+                // Scale 2x as requested
+                orientationNode->setScale(2.0f, 2.0f, 2.0f);
+                
+                placementNode->addChild(orientationNode);
+                orientationNode->addChild(instanceRoot);
+                
+                m_fixtureNodes.push_back(placementNode);
+            }
+        }
     }
 
     // Initialize camera
@@ -92,6 +130,12 @@ bool Scene::Initialize(ID3D11Device *device)
 void Scene::Update(float deltaTime)
 {
     m_time += deltaTime;
+
+    // Update GDTF fixture hierarchies
+    for (auto &node : m_fixtureNodes)
+    {
+        node->updateWorldMatrix();
+    }
 }
 
 DirectX::XMFLOAT3 Scene::GetCameraPosition() const

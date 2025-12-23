@@ -2,6 +2,7 @@
 #include "../Geometry/GeometryGenerator.h"
 #include "../Resources/Mesh.h"
 #include "../Resources/Texture.h"
+#include "../Scene/MeshNode.h"
 
 RenderPipeline::~RenderPipeline()
 {
@@ -44,6 +45,9 @@ bool RenderPipeline::Initialize(ID3D11Device *device)
 
     // Create fullscreen quad
     if (!GeometryGenerator::CreateFullScreenQuad(device, m_fullScreenVB))
+        return false;
+
+    if (!GeometryGenerator::CreateSphere(device, m_debugSphereVB, m_debugSphereIB, m_debugSphereIndexCount))
         return false;
 
     // Create linear sampler for general use
@@ -222,10 +226,10 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
             const auto &shape = shapes[i];
 
             MaterialBuffer mbMat = {};
-            mbMat.color = {shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f};
+            mbMat.color = DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
             float specIntensity =
                 (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
-            mbMat.specParams = {specIntensity, shape.material.shininess, 0.0f, 0.0f};
+            mbMat.specParams = DirectX::XMFLOAT4(specIntensity, shape.material.shininess, 0.0f, 0.0f);
             m_scenePass->GetMaterialBuffer().Update(context, mbMat);
             context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
 
@@ -233,9 +237,50 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
         }
     }
 
-    // Restore identity matrix
-    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
-    m_matrixBuffer.Update(context, mb);
+    // Render GDTF Fixtures
+    for (auto &node : ctx.fixtureNodes)
+    {
+        RenderNodeRecursive(context, node, mb);
+    }
+}
+
+void RenderPipeline::RenderNodeRecursive(ID3D11DeviceContext *context, std::shared_ptr<SceneGraph::Node> node,
+                                         PipelineMatrixBuffer &mb)
+{
+    if (!node)
+        return;
+
+    // Check if it's a mesh node
+    auto meshNode = std::dynamic_pointer_cast<SceneGraph::MeshNode>(node);
+    if (meshNode && meshNode->getMesh())
+    {
+        // Update world matrix
+        mb.world = DirectX::XMMatrixTranspose(node->getWorldMatrix());
+        m_matrixBuffer.Update(context, mb);
+
+        auto mesh = meshNode->getMesh();
+        const auto &shapes = mesh->GetShapes();
+
+        for (size_t i = 0; i < shapes.size(); ++i)
+        {
+            const auto &shape = shapes[i];
+            MaterialBuffer mbMat = {};
+            mbMat.color = DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
+            float specIntensity =
+                (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
+            mbMat.specParams = DirectX::XMFLOAT4(specIntensity, shape.material.shininess, 0.0f, 0.0f);
+            m_scenePass->GetMaterialBuffer().Update(context, mbMat);
+            context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
+
+            mesh->DrawShape(context, i);
+        }
+    }
+
+    // Recurse to children
+    for (auto &child : node->getChildren())
+    {
+        RenderNodeRecursive(context, child, mb);
+    }
 }
 
 void RenderPipeline::RenderVolumetricPass(ID3D11DeviceContext *context, const RenderContext &ctx)

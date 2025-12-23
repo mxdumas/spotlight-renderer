@@ -1,3 +1,8 @@
+/**
+ * @file Node.h
+ * @brief Base node class for the hierarchical scene graph.
+ */
+
 #pragma once
 
 #include <DirectXMath.h>
@@ -42,12 +47,21 @@ public:
     void updateWorldMatrix(const DirectX::XMMATRIX &parent_world = DirectX::XMMatrixIdentity());
 
     /**
+     * @brief Gets the list of child nodes.
+     * @return Const reference to the vector of child shared pointers.
+     */
+    const std::vector<std::shared_ptr<Node>> &getChildren() const
+    {
+        return m_children;
+    }
+
+    /**
      * @brief Gets the debug name of the node.
      * @return Const reference to the name string.
      */
     const std::string &getName() const
     {
-        return name_;
+        return m_name;
     }
 
     /**
@@ -56,7 +70,7 @@ public:
      */
     const DirectX::XMMATRIX &getWorldMatrix() const
     {
-        return world_matrix_;
+        return m_worldMatrix;
     }
 
     /**
@@ -65,7 +79,7 @@ public:
      */
     const DirectX::XMMATRIX &getLocalMatrix() const
     {
-        return local_matrix_;
+        return m_localMatrix;
     }
 
     /**
@@ -93,26 +107,28 @@ public:
     void setScale(float x, float y, float z);
 
     /**
-     * @brief Directly sets the local transformation matrix.
+     * @brief Directly sets the local transformation matrix and disables auto-recomputation.
      * @param matrix The new local XMMATRIX.
      */
     void setLocalMatrix(const DirectX::XMMATRIX &matrix)
     {
-        local_matrix_ = matrix;
+        m_localMatrix = matrix;
+        m_useComponents = false;
     }
 
 protected:
-    std::string name_; ///< Debug name of the node.
+    std::string m_name; ///< Debug name of the node.
 
-    DirectX::XMMATRIX local_matrix_; ///< Relative transform to parent.
-    DirectX::XMMATRIX world_matrix_; ///< Absolute transform in world space.
+    DirectX::XMMATRIX m_localMatrix; ///< Relative transform to parent.
+    DirectX::XMMATRIX m_worldMatrix; ///< Absolute transform in world space.
 
-    DirectX::XMFLOAT3 translation_ = {0.0f, 0.0f, 0.0f}; ///< Local translation vector.
-    DirectX::XMFLOAT3 rotation_ = {0.0f, 0.0f, 0.0f};    ///< Local Euler angles.
-    DirectX::XMFLOAT3 scale_ = {1.0f, 1.0f, 1.0f};       ///< Local scale vector.
+    bool m_useComponents = true;                         ///< Whether to recompute local matrix from T/R/S.
+    DirectX::XMFLOAT3 m_translation = {0.0f, 0.0f, 0.0f}; ///< Local translation vector.
+    DirectX::XMFLOAT3 m_rotation = {0.0f, 0.0f, 0.0f};    ///< Local Euler angles.
+    DirectX::XMFLOAT3 m_scale = {1.0f, 1.0f, 1.0f};       ///< Local scale vector.
 
-    std::weak_ptr<Node> parent_;                  ///< Weak pointer to parent to avoid cycles.
-    std::vector<std::shared_ptr<Node>> children_; ///< List of owned child nodes.
+    std::weak_ptr<Node> m_parent;                  ///< Weak pointer to parent to avoid cycles.
+    std::vector<std::shared_ptr<Node>> m_children; ///< List of owned child nodes.
 };
 
 } // namespace SceneGraph

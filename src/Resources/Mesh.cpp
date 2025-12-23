@@ -15,7 +15,7 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
 
     // Extract directory path for MTL file loading
     std::string mtlBaseDir;
-    size_t lastSlash = fileName.find_last_of("/\\");
+    size_t lastSlash = fileName.find_last_of("/\\\\");
     if (lastSlash != std::string::npos)
     {
         mtlBaseDir = fileName.substr(0, lastSlash + 1);
@@ -105,6 +105,11 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
     }
 
     m_minY = globalMinY;
+    return Create(device, vertices, indices);
+}
+
+bool Mesh::Create(ID3D11Device *device, const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
+{
     m_indexCount = (UINT)indices.size();
 
     // Create vertex buffer

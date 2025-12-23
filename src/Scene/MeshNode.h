@@ -1,3 +1,8 @@
+/**
+ * @file MeshNode.h
+ * @brief Scene graph node that holds a renderable mesh resource.
+ */
+
 #pragma once
 
 #include "../Resources/Mesh.h"
@@ -21,7 +26,7 @@ public:
      * @param mesh A shared pointer to the Mesh resource.
      * @param name The debug name for this node.
      */
-    MeshNode(std::shared_ptr<Mesh> mesh, const std::string &name = "MeshNode") : Node(name), mesh_(mesh)
+    MeshNode(std::shared_ptr<Mesh> mesh, const std::string &name = "MeshNode") : Node(name), m_mesh(mesh)
     {
     }
 
@@ -36,7 +41,7 @@ public:
      */
     std::shared_ptr<Mesh> getMesh() const
     {
-        return mesh_;
+        return m_mesh;
     }
 
     /**
@@ -45,11 +50,11 @@ public:
      */
     void setMesh(std::shared_ptr<Mesh> mesh)
     {
-        mesh_ = mesh;
+        m_mesh = mesh;
     }
 
 private:
-    std::shared_ptr<Mesh> mesh_; ///< The Mesh resource to be rendered at this node's position.
+    std::shared_ptr<Mesh> m_mesh; ///< The Mesh resource to be rendered at this node's position.
 };
 
 } // namespace SceneGraph

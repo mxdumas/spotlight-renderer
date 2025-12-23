@@ -74,6 +74,25 @@ public:
     bool LoadFromOBJ(ID3D11Device *device, const std::string &fileName);
 
     /**
+     * @brief Creates a mesh from raw vertex and index data.
+     *
+     * @param device Pointer to the ID3D11Device.
+     * @param vertices Vector of vertices.
+     * @param indices Vector of indices.
+     * @return true if successful.
+     */
+    bool Create(ID3D11Device *device, const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+
+    /**
+     * @brief Adds a shape to the mesh.
+     * @param info Shape metadata.
+     */
+    void AddShape(const ShapeInfo &info)
+    {
+        m_shapes.push_back(info);
+    }
+
+    /**
      * @brief Binds the vertex and index buffers and issues a draw call for entire mesh.
      *
      * @param context Pointer to the ID3D11DeviceContext.

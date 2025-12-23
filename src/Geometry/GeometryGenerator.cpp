@@ -434,4 +434,46 @@ bool CreateFullScreenQuad(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVB)
     return true;
 }
 
+void CreateBox(float width, float height, float depth, std::vector<Vertex> &outVertices,
+               std::vector<uint32_t> &outIndices)
+{
+    float w2 = width * 0.5f;
+    float h2 = height * 0.5f;
+    float d2 = depth * 0.5f;
+
+    outVertices.clear();
+    outIndices.clear();
+
+    struct RawVert { float p[3]; float n[3]; float u[2]; };
+    
+    RawVert rv[] = {
+        // Front
+        {{-w2, -h2,  d2}, {0,0,1}, {0,1}}, {{ w2, -h2,  d2}, {0,0,1}, {1,1}}, {{ w2,  h2,  d2}, {0,0,1}, {1,0}}, {{-w2,  h2,  d2}, {0,0,1}, {0,0}},
+        // Back
+        {{ w2, -h2, -d2}, {0,0,-1}, {0,1}}, {{-w2, -h2, -d2}, {0,0,-1}, {1,1}}, {{-w2,  h2, -d2}, {0,0,-1}, {1,0}}, {{ w2,  h2, -d2}, {0,0,-1}, {0,0}},
+        // Top
+        {{-w2,  h2,  d2}, {0,1,0}, {0,1}}, {{ w2,  h2,  d2}, {0,1,0}, {1,1}}, {{ w2,  h2, -d2}, {0,1,0}, {1,0}}, {{-w2,  h2, -d2}, {0,1,0}, {0,0}},
+        // Bottom
+        {{-w2, -h2, -d2}, {0,-1,0}, {0,1}}, {{ w2, -h2, -d2}, {0,-1,0}, {1,1}}, {{ w2, -h2,  d2}, {0,-1,0}, {1,0}}, {{-w2, -h2,  d2}, {0,-1,0}, {0,0}},
+        // Left
+        {{-w2, -h2, -d2}, {-1,0,0}, {0,1}}, {{-w2, -h2,  d2}, {-1,0,0}, {1,1}}, {{-w2,  h2,  d2}, {-1,0,0}, {1,0}}, {{-w2,  h2, -d2}, {-1,0,0}, {0,0}},
+        // Right
+        {{ w2, -h2,  d2}, {1,0,0}, {0,1}}, {{ w2, -h2, -d2}, {1,0,0}, {1,1}}, {{ w2,  h2, -d2}, {1,0,0}, {1,0}}, {{ w2,  h2,  d2}, {1,0,0}, {0,0}},
+    };
+
+    for(int i=0; i<24; ++i) {
+        Vertex v;
+        v.position = {rv[i].p[0], rv[i].p[1], rv[i].p[2]};
+        v.normal = {rv[i].n[0], rv[i].n[1], rv[i].n[2]};
+        v.uv = {rv[i].u[0], rv[i].u[1]};
+        outVertices.push_back(v);
+    }
+
+    for(uint32_t i=0; i<6; ++i) {
+        uint32_t base = i*4;
+        outIndices.push_back(base); outIndices.push_back(base+1); outIndices.push_back(base+2);
+        outIndices.push_back(base); outIndices.push_back(base+2); outIndices.push_back(base+3);
+    }
+}
+
 } // namespace GeometryGenerator

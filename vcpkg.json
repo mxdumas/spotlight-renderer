@@ -3,6 +3,7 @@
   "name": "spotlight-renderer",
   "version": "1.0.0",
   "dependencies": [
-    "miniz"
+    "miniz",
+    "assimp"
   ]
 }

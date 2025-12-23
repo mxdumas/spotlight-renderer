@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 #include "../Core/Config.h"
+#include "../GDTF/GDTFLoader.h"
+#include "../GDTF/GDTFParser.h"
 #include "../Resources/Mesh.h"
 #include "../Resources/Texture.h"
 #include "Camera.h"
@@ -234,6 +236,15 @@ public:
     }
 
     /**
+     * @brief Gets the list of GDTF fixture root nodes.
+     * @return Const reference to the vector of node shared pointers.
+     */
+    const std::vector<std::shared_ptr<SceneGraph::Node>> &GetFixtureNodes() const
+    {
+        return m_fixtureNodes;
+    }
+
+    /**
      * @brief Gets the vertical offset of the stage.
      * @return The stage offset value.
      */
@@ -343,6 +354,9 @@ private:
     std::vector<DirectX::XMFLOAT3> m_anchorPositions;
     DirectX::XMFLOAT3 m_fixturePos;
     float m_stageOffset{0.0f};
+
+    // GDTF Fixtures
+    std::vector<std::shared_ptr<SceneGraph::Node>> m_fixtureNodes;
 
     // Room materials
     float m_roomSpecular;

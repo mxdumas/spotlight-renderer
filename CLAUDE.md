@@ -64,7 +64,8 @@ Each frame executes these passes in sequence:
 - `src/Core/` - GraphicsDevice, ConstantBuffer template, Config.h (all magic numbers)
 - `src/Scene/` - Scene container, Camera, Spotlight, CeilingLights, SceneGraph (Node hierarchy)
 - `src/Rendering/Passes/` - Individual render pass implementations (IRenderPass interface)
-- `src/Resources/` - Mesh (OBJ+MTL loader), Shader (HLSL compilation), Texture, GDTFLoader/Parser
+- `src/Resources/` - Mesh (OBJ+MTL loader), Shader (HLSL compilation), Texture
+- `src/GDTF/` - GDTFParser, GDTFLoader, GLBLoader (GDTF fixture loading)
 - `shaders/` - HLSL Shader Model 5.0 files
 
 ### GDTF Loading
@@ -85,7 +86,7 @@ All constants are centralized in `src/Core/Config.h` with namespaces: `Config::D
 - Classes/Structs: PascalCase (`class NetworkScanner`)
 - Functions/Methods: camelCase (`void sendMessage()`)
 - Local variables: snake_case (`auto retry_count = 0`)
-- Private members: snake_case with trailing underscore (`int connection_id_`)
+- Private/protected members: m_ prefix with camelCase (`int m_connectionId`)
 - Constants/Enums: SCREAMING_SNAKE (`static constexpr int MAX_BUFFER`)
 - Use `ComPtr<T>` for all DirectX COM objects, never raw pointers
 - Constant buffer structs must be 16-byte aligned: `static_assert(sizeof(T) % 16 == 0)`
