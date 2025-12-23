@@ -4,22 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Spotlight Renderer is a DirectX 11 volumetric lighting simulator implementing physically-based stage lighting with real-time ray-marching, shadow mapping, and Mie scattering effects.
+Spotlight Renderer is a DirectX 11 volumetric lighting simulator implementing physically-based stage lighting with real-time ray-marching, shadow mapping, and Mie scattering effects. Supports GDTF fixture loading with hierarchical scene graphs.
 
 ## Build Commands
 
 ```powershell
-# Configure
-cmake -B build -S .
+# Setup vcpkg (first time only)
+git clone https://github.com/Microsoft/vcpkg.git
+.\vcpkg\bootstrap-vcpkg.bat
 
-# Build
+# Configure (generates compile_commands.json for clang-tidy)
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+# Build Release
 cmake --build build --config Release
+
+# Build Debug
+cmake --build build --config Debug
 
 # Run
 .\build\Release\SpotlightRenderer.exe
 
-# Run tests
-ctest --build-dir ./build
+# Run all tests
+ctest --test-dir ./build -C Release
+
+# Run single test
+.\build\Release\TestRayMath.exe
+.\build\Release\TestVolumetricJitter.exe
+
+# Lint (requires VS 2022+ with clang tools)
+.\scripts\lint.ps1
 ```
 
 ## Architecture
@@ -48,10 +62,18 @@ Each frame executes these passes in sequence:
 ### Key Directories
 
 - `src/Core/` - GraphicsDevice, ConstantBuffer template, Config.h (all magic numbers)
-- `src/Scene/` - Scene container, Camera, Spotlight, CeilingLights
+- `src/Scene/` - Scene container, Camera, Spotlight, CeilingLights, SceneGraph (Node hierarchy)
 - `src/Rendering/Passes/` - Individual render pass implementations (IRenderPass interface)
-- `src/Resources/` - Mesh (OBJ+MTL loader), Shader (HLSL compilation), Texture
+- `src/Resources/` - Mesh (OBJ+MTL loader), Shader (HLSL compilation), Texture, GDTFLoader/Parser
 - `shaders/` - HLSL Shader Model 5.0 files
+
+### GDTF Loading
+
+GDTF fixtures are loaded via a two-stage process:
+1. **GDTFParser** - Extracts and parses the `.gdtf` archive (ZIP containing `description.xml` + 3D models)
+2. **GDTFLoader** - Converts parsed geometry into a `SceneGraph::Node` hierarchy
+
+The scene graph uses `Node` as a base class with `MeshNode` for renderable geometry. Transforms propagate parent→child via `updateWorldMatrix()`.
 
 ### Configuration
 
@@ -81,3 +103,6 @@ All constants are centralized in `src/Core/Config.h` with namespaces: `Config::D
 - **ImGui** (`external/imgui/`) - UI
 - **tinyobjloader** (`external/tiny_obj_loader.h`) - OBJ parsing
 - **stb_image** (`external/stb_image.h`) - Texture loading
+- **pugixml** (`external/pugixml/`) - XML parsing for GDTF description.xml
+- **miniz** (via vcpkg) - ZIP extraction for .gdtf archives
+- **tinygltf** (`external/tinygltf/`) - glTF/GLB model loading

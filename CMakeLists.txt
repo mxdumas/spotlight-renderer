@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(SpotlightRenderer LANGUAGES CXX)
+project(SpotlightRenderer LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -18,9 +18,11 @@ file(GLOB IMGUI_SOURCES
     external/imgui/imgui_impl_dx11.cpp
 )
 
+# External dependencies via vcpkg
+find_package(miniz CONFIG REQUIRED)
+
 set(EXTERNAL_SOURCES
     external/pugixml/pugixml.cpp
-    external/miniz/miniz.c
 )
 
 add_executable(${PROJECT_NAME} WIN32 src/main.cpp ${SOURCES} ${IMGUI_SOURCES} ${EXTERNAL_SOURCES})
@@ -31,20 +33,20 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # Standard Libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE 
+target_link_libraries(${PROJECT_NAME} PRIVATE
     d3d11
     d3dcompiler
     dxgi
     dxguid
+    miniz::miniz
 )
 
 # Include directories
-target_include_directories(${PROJECT_NAME} PRIVATE 
+target_include_directories(${PROJECT_NAME} PRIVATE
     src
     external
     external/imgui
     external/pugixml
-    external/miniz
     external/tinygltf
 )
 

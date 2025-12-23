@@ -35,3 +35,7 @@ Makefile
 
 # Conductor
 conductor/
+
+# vcpkg
+vcpkg/
+vcpkg_installed/
