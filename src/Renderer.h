@@ -8,6 +8,7 @@
 #include "Geometry/GeometryGenerator.h"
 #include "Scene/Spotlight.h"
 #include "Scene/CeilingLights.h"
+#include "UI/UIRenderer.h"
 #include "Mesh.h"
 #include "Camera.h"
 #include "Texture.h"
@@ -30,10 +31,11 @@ public:
     void Log(const std::string& message);
 
 private:
-    void InitImGui(HWND hwnd);
-
     // Graphics device (owns device, context, swap chain, back buffer)
     GraphicsDevice m_graphics;
+
+    // UI renderer (owns ImGui initialization and rendering)
+    UIRenderer m_ui;
 
     // Render pipeline (owns all render passes and shared resources)
     RenderPipeline m_pipeline;

@@ -1,7 +1,4 @@
 #include "Renderer.h"
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx11.h"
 #include <iostream>
 #include <fstream>
 
@@ -128,46 +125,21 @@ bool Renderer::Initialize(HWND hwnd) {
     m_camera.SetPerspective(Config::CameraDefaults::FOV, Config::Display::ASPECT_RATIO,
                             Config::CameraDefaults::CLIP_NEAR, Config::CameraDefaults::CLIP_FAR);
 
-    InitImGui(hwnd);
+    if (!m_ui.Initialize(hwnd, m_device.Get(), m_context.Get())) {
+        Log("ImGui initialization failed");
+        return false;
+    }
     Log("ImGui Initialized Successfully");
 
     Log("Renderer::Initialize Completed Successfully");
     return true;
 }
 
-void Renderer::InitImGui(HWND hwnd) {
-    Log("InitImGui Started");
-    IMGUI_CHECKVERSION();
-    Log("ImGui Check Version OK");
-    ImGui::CreateContext();
-    Log("ImGui Context Created");
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
-
-    Log("Initializing ImGui Win32 Backend...");
-    if (!ImGui_ImplWin32_Init(hwnd)) {
-        Log("ImGui_ImplWin32_Init Failed");
-    }
-    Log("ImGui Win32 Init Done");
-
-    Log("Initializing ImGui DX11 Backend...");
-    if (!m_device || !m_context) {
-        Log("CRITICAL: Device or Context is NULL before ImGui DX11 Init!");
-    }
-    if (!ImGui_ImplDX11_Init(m_device.Get(), m_context.Get())) {
-        Log("ImGui_ImplDX11_Init Failed");
-    }
-    Log("ImGui DX11 Init Done");
-}
-
 void Renderer::Shutdown() {
-    if (ImGui::GetCurrentContext()) {
-        ImGui_ImplDX11_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-        ImGui::DestroyContext();
-    }
+    // Shutdown UI first
+    m_ui.Shutdown();
 
-    // Shutdown pipeline first (releases pass resources)
+    // Shutdown pipeline (releases pass resources)
     m_pipeline.Shutdown();
 
     // Release renderer-specific resources
@@ -194,9 +166,7 @@ void Renderer::BeginFrame() {
     m_time += Config::PostProcess::FRAME_DELTA;
 
     // Start ImGui frame
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
+    m_ui.BeginFrame();
 
     // Update Camera position
     float camX = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
@@ -227,102 +197,25 @@ void Renderer::BeginFrame() {
 }
 
 void Renderer::RenderUI() {
-    // Main Window
-    ImGui::SetNextWindowPos(ImVec2(Config::UI::WINDOW_POS_X, Config::UI::WINDOW_POS_Y), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(Config::UI::WINDOW_WIDTH, Config::UI::WINDOW_HEIGHT), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Spotlight Renderer Controls");
+    // Build UI context with mutable references to scene state
+    UIContext ctx;
+    ctx.camDistance = &m_camDistance;
+    ctx.camPitch = &m_camPitch;
+    ctx.camYaw = &m_camYaw;
+    ctx.camTarget = &m_camTarget;
+    ctx.spotlight = &m_spotlight;
+    ctx.fixturePos = &m_fixturePos;
+    ctx.useCMY = &m_useCMY;
+    ctx.cmy = &m_cmy;
+    ctx.ceilingLights = &m_ceilingLights;
+    ctx.roomSpecular = &m_roomSpecular;
+    ctx.roomShininess = &m_roomShininess;
+    ctx.pipeline = &m_pipeline;
 
-    // Performance Section
-    ImGui::Text("Application Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::Separator();
-
-    if (ImGui::CollapsingHeader("Camera Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::DragFloat("Distance", &m_camDistance, 0.1f, 1.0f, 200.0f);
-        ImGui::SliderAngle("Pitch", &m_camPitch, -89.0f, 89.0f);
-        ImGui::SliderAngle("Yaw", &m_camYaw, -180.0f, 180.0f);
-        ImGui::DragFloat3("Target", &m_camTarget.x, 0.1f);
-    }
-
-    if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
-        // Get mutable reference to spotlight data for ImGui controls
-        SpotlightData& spotData = m_spotlight.GetGPUDataMutable();
-
-        ImGui::Text("Environment");
-        float ceilingInt = m_ceilingLights.GetIntensity();
-        if (ImGui::SliderFloat("Ceiling Light Intensity", &ceilingInt, 1.0f, 100.0f)) {
-            m_ceilingLights.SetIntensity(ceilingInt);
-        }
-        float ambFill = m_ceilingLights.GetAmbient();
-        if (ImGui::SliderFloat("Ambient Fill", &ambFill, 0.0f, 100.0f)) {
-            m_ceilingLights.SetAmbient(ambFill);
-        }
-        ImGui::SliderFloat("Room Specular", &m_roomSpecular, 0.0f, 1.0f);
-        ImGui::SliderFloat("Room Shininess", &m_roomShininess, 1.0f, 128.0f);
-        ImGui::Separator();
-
-        ImGui::Text("Transform");
-        ImGui::DragFloat3("Position", &spotData.posRange.x, 0.1f);
-        ImGui::DragFloat3("Direction", &spotData.dirAngle.x, 0.01f);
-        if (ImGui::Button("Reset to Fixture")) {
-            m_spotlight.SetPosition(m_fixturePos);
-        }
-
-        ImGui::Separator();
-        ImGui::Text("Color & Intensity");
-        ImGui::Checkbox("Use CMY Mixing", &m_useCMY);
-        if (m_useCMY) {
-            if (ImGui::ColorEdit3("CMY", &m_cmy.x)) {
-                m_spotlight.SetColorFromCMY(m_cmy.x, m_cmy.y, m_cmy.z);
-            }
-        } else {
-            ImGui::ColorEdit3("RGB Color", &spotData.colorInt.x);
-        }
-        ImGui::DragFloat("Intensity", &spotData.colorInt.w, 1.0f, 0.0f, 5000.0f);
-        ImGui::DragFloat("Range", &spotData.posRange.w, 1.0f, 10.0f, 1000.0f);
-
-        ImGui::Separator();
-        ImGui::Text("Beam Shape");
-        ImGui::SliderFloat("Beam Angle", &spotData.coneGobo.x, 0.0f, 1.0f);
-        ImGui::SliderFloat("Field Angle", &spotData.coneGobo.y, 0.0f, 1.0f);
-    }
-
-    if (ImGui::CollapsingHeader("Gobo Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-        SpotlightData& spotData = m_spotlight.GetGPUDataMutable();
-        ImGui::DragFloat("Rotation", &spotData.coneGobo.z, 0.01f);
-        float shake = m_spotlight.GetGoboShake();
-        if (ImGui::SliderFloat("Shake Amount", &shake, 0.0f, 1.0f)) {
-            m_spotlight.SetGoboShake(shake);
-        }
-    }
-
-    if (ImGui::CollapsingHeader("Volumetric Quality")) {
-        VolumetricBuffer& volParams = m_pipeline.GetVolumetricParams();
-        ImGui::DragFloat("Step Count", &volParams.params.x, 1.0f, Config::Volumetric::MIN_STEP_COUNT, Config::Volumetric::MAX_STEP_COUNT);
-        ImGui::SliderFloat("Density", &volParams.params.y, 0.0f, 1.0f);
-        ImGui::SliderFloat("Light Intensity Multiplier", &volParams.params.z, 0.0f, Config::Volumetric::DEFAULT_INTENSITY);
-        ImGui::SliderFloat("Anisotropy (G)", &volParams.params.w, Config::Volumetric::MIN_ANISOTROPY, Config::Volumetric::MAX_ANISOTROPY);
-    }
-
-    if (ImGui::CollapsingHeader("Post Processing")) {
-        bool fxaaEnabled = m_pipeline.IsFXAAEnabled();
-        if (ImGui::Checkbox("Enable FXAA", &fxaaEnabled)) {
-            m_pipeline.SetFXAAEnabled(fxaaEnabled);
-        }
-        bool blurEnabled = m_pipeline.IsVolumetricBlurEnabled();
-        if (ImGui::Checkbox("Enable Volumetric Blur", &blurEnabled)) {
-            m_pipeline.SetVolumetricBlurEnabled(blurEnabled);
-        }
-        int blurPasses = m_pipeline.GetBlurPasses();
-        if (ImGui::SliderInt("Blur Passes", &blurPasses, Config::PostProcess::MIN_BLUR_PASSES, Config::PostProcess::MAX_BLUR_PASSES)) {
-            m_pipeline.SetBlurPasses(blurPasses);
-        }
-    }
-
-    ImGui::End();
+    m_ui.RenderControls(ctx);
 }
 
 void Renderer::EndFrame() {
-    ImGui::Render();
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+    m_ui.EndFrame();
     m_graphics.Present(true);
 }
