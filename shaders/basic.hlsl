@@ -2,6 +2,8 @@ cbuffer MatrixBuffer : register(b0) {
     matrix world;
     matrix view;
     matrix projection;
+    matrix invViewProj;
+    float4 cameraPos;
 };
 
 cbuffer SpotlightBuffer : register(b1) {
@@ -14,7 +16,9 @@ cbuffer SpotlightBuffer : register(b1) {
 };
 
 Texture2D goboTexture : register(t0);
+Texture2D shadowMap : register(t1);
 SamplerState samLinear : register(s0);
+SamplerComparisonState shadowSampler : register(s1);
 
 struct VS_INPUT {
     float3 pos : POSITION;
@@ -58,11 +62,13 @@ float4 PS(PS_INPUT input) : SV_Target {
     float field = coneGobo.y;
     float spotEffect = saturate((cosAngle - field) / (max(0.001f, beam - field)));
     
-    // Gobo
+    // Gobo & Shadow
     float3 goboColor = float3(0,0,0);
+    float shadowFactor = 1.0f;
     float4 lightSpacePos = mul(float4(input.worldPos, 1.0f), lightViewProj);
     if (lightSpacePos.w > 0.0f) {
-        float2 gUV = lightSpacePos.xy / lightSpacePos.w;
+        float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+        float2 gUV = projCoords.xy;
         
         float s, c;
         sincos(coneGobo.z, s, c);
@@ -74,10 +80,19 @@ float4 PS(PS_INPUT input) : SV_Target {
         float2 finalUV = rUV * 0.5f + 0.5f;
         finalUV.y = 1.0f - finalUV.y;
         goboColor = goboTexture.Sample(samLinear, finalUV).rgb;
+
+        // Shadow mapping
+        float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
+        shadowUV.y = 1.0f - shadowUV.y;
+        float depth = projCoords.z;
+        
+        if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
+            shadowFactor = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, depth - 0.0005f).r;
+        }
     }
 
     float diff = max(dot(normal, toLight), 0.0f);
-    float3 lighting = diff * colorInt.xyz * attenuation * spotEffect * goboColor;
+    float3 lighting = diff * colorInt.xyz * attenuation * spotEffect * goboColor * shadowFactor;
     float3 ambient = float3(0.01, 0.01, 0.01);
     
     return float4(lighting + ambient, 1.0f);

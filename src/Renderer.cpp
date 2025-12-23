@@ -76,16 +76,26 @@ bool Renderer::Initialize(HWND hwnd) {
     depthDesc.Height = 1080;
     depthDesc.MipLevels = 1;
     depthDesc.ArraySize = 1;
-    depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
     depthDesc.SampleDesc.Count = 1;
     depthDesc.SampleDesc.Quality = 0;
     depthDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
     hr = m_device->CreateTexture2D(&depthDesc, nullptr, &m_depthStencilBuffer);
     if (FAILED(hr)) return false;
 
-    hr = m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), nullptr, &m_depthStencilView);
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    hr = m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, &m_depthStencilView);
+    if (FAILED(hr)) return false;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc = {};
+    depthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    depthSRVDesc.Texture2D.MipLevels = 1;
+    hr = m_device->CreateShaderResourceView(m_depthStencilBuffer.Get(), &depthSRVDesc, &m_depthSRV);
     if (FAILED(hr)) return false;
 
     m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
@@ -158,6 +168,50 @@ bool Renderer::Initialize(HWND hwnd) {
     hr = m_device->CreateSamplerState(&sampDesc, &m_samplerState);
     if (FAILED(hr)) return false;
 
+    // Create Shadow Mapping Resources
+    D3D11_TEXTURE2D_DESC smDesc = {};
+    smDesc.Width = SHADOW_MAP_SIZE;
+    smDesc.Height = SHADOW_MAP_SIZE;
+    smDesc.MipLevels = 1;
+    smDesc.ArraySize = 1;
+    smDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+    smDesc.SampleDesc.Count = 1;
+    smDesc.Usage = D3D11_USAGE_DEFAULT;
+    smDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+
+    hr = m_device->CreateTexture2D(&smDesc, nullptr, &m_shadowMap);
+    if (FAILED(hr)) return false;
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC sdsvDesc = {};
+    sdsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    sdsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    hr = m_device->CreateDepthStencilView(m_shadowMap.Get(), &sdsvDesc, &m_shadowDSV);
+    if (FAILED(hr)) return false;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC ssrvDesc = {};
+    ssrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    ssrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    ssrvDesc.Texture2D.MipLevels = 1;
+    hr = m_device->CreateShaderResourceView(m_shadowMap.Get(), &ssrvDesc, &m_shadowSRV);
+    if (FAILED(hr)) return false;
+
+    D3D11_SAMPLER_DESC shadowSampDesc = {};
+    shadowSampDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    shadowSampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    shadowSampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    shadowSampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    shadowSampDesc.BorderColor[0] = 1.0f;
+    shadowSampDesc.BorderColor[1] = 1.0f;
+    shadowSampDesc.BorderColor[2] = 1.0f;
+    shadowSampDesc.BorderColor[3] = 1.0f;
+    shadowSampDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+    hr = m_device->CreateSamplerState(&shadowSampDesc, &m_shadowSampler);
+    if (FAILED(hr)) return false;
+
+    Log("Loading shadow.hlsl...");
+    if (!m_shadowShader.LoadVertexShader(m_device.Get(), L"shaders/shadow.hlsl", "VS", layout)) return false;
+    if (!m_shadowShader.LoadPixelShader(m_device.Get(), L"shaders/shadow.hlsl", "PS")) return false;
+
     m_fixturePos = { 0.0f, 15.0f, 0.0f };
     for (const auto& shape : m_stageMesh->GetShapes()) {
         if (shape.name == "Cylinder.000") {
@@ -190,6 +244,24 @@ bool Renderer::Initialize(HWND hwnd) {
     m_device->CreateBuffer(&ibd, &iinit, &m_debugBoxIB);
     Log("Debug Buffers Created");
 
+    // Create full screen quad
+    float fsVertices[] = {
+        -1.0f, -1.0f, 0.0f,  -1.0f,  1.0f, 0.0f,   1.0f, -1.0f, 0.0f,
+         1.0f, -1.0f, 0.0f,  -1.0f,  1.0f, 0.0f,   1.0f,  1.0f, 0.0f
+    };
+    D3D11_BUFFER_DESC fsVbd = {};
+    fsVbd.Usage = D3D11_USAGE_DEFAULT;
+    fsVbd.ByteWidth = sizeof(fsVertices);
+    fsVbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    D3D11_SUBRESOURCE_DATA fsVinit = { fsVertices };
+    m_device->CreateBuffer(&fsVbd, &fsVinit, &m_fullScreenVB);
+
+    std::vector<D3D11_INPUT_ELEMENT_DESC> fsLayout = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+    if (!m_volumetricShader.LoadVertexShader(m_device.Get(), L"shaders/volumetric.hlsl", "VS", fsLayout)) return false;
+    if (!m_volumetricShader.LoadPixelShader(m_device.Get(), L"shaders/volumetric.hlsl", "PS")) return false;
+
     // Initial spotlight data
     memset(&m_spotlightData, 0, sizeof(m_spotlightData));
     m_spotlightData.posRange = { m_fixturePos.x, m_fixturePos.y, m_fixturePos.z, 100.0f };
@@ -198,6 +270,7 @@ bool Renderer::Initialize(HWND hwnd) {
     m_spotlightData.coneGobo = { 0.98f, 0.71f, 0.0f, 0.0f };
     m_spotlightData.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
 
+    m_volumetricData.params = { 64.0f, 0.1f, 1.0f, 0.5f };
 
     m_time = 0.0f;
     m_goboShakeAmount = 0.0f;
@@ -220,6 +293,24 @@ bool Renderer::Initialize(HWND hwnd) {
         Log("Failed to initialize spotlight constant buffer");
         return false;
     }
+    if (!m_volumetricBuffer.Initialize(m_device.Get())) {
+        Log("Failed to initialize volumetric constant buffer");
+        return false;
+    }
+
+    // Create Blend State
+    D3D11_BLEND_DESC blendDesc = {};
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    hr = m_device->CreateBlendState(&blendDesc, &m_additiveBlendState);
+    if (FAILED(hr)) return false;
 
     InitImGui(hwnd);
     Log("ImGui Initialized Successfully");
@@ -259,6 +350,15 @@ void Renderer::Shutdown() {
         ImGui::DestroyContext();
     }
 
+    m_shadowSRV.Reset();
+    m_shadowDSV.Reset();
+    m_shadowMap.Reset();
+    m_shadowSampler.Reset();
+
+    m_depthSRV.Reset();
+    m_additiveBlendState.Reset();
+
+    m_fullScreenVB.Reset();
     m_debugBoxIB.Reset();
     m_debugBoxVB.Reset();
     m_depthStencilView.Reset();
@@ -271,37 +371,51 @@ void Renderer::Shutdown() {
     m_device.Reset();
 }
 
+void Renderer::RenderShadowMap() {
+    m_context->ClearDepthStencilView(m_shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+    m_context->OMSetRenderTargets(0, nullptr, m_shadowDSV.Get());
+
+    D3D11_VIEWPORT vp = {};
+    vp.Width = (float)SHADOW_MAP_SIZE;
+    vp.Height = (float)SHADOW_MAP_SIZE;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    m_context->RSSetViewports(1, &vp);
+
+    // The light matrices are already in m_spotlightData.lightViewProj (transposed)
+    // We need untransposed for the MatrixBuffer used by shadow shader
+    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(m_spotlightData.posRange.x, m_spotlightData.posRange.y, m_spotlightData.posRange.z, 1.0f);
+    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(DirectX::XMVectorSet(m_spotlightData.dirAngle.x, m_spotlightData.dirAngle.y, m_spotlightData.dirAngle.z, 0.0f));
+    DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    if (fabsf(DirectX::XMVectorGetY(lDir)) > 0.99f) lUp = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+    
+    DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
+    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, 100.0f);
+
+    MatrixBuffer mb;
+    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
+    mb.view = DirectX::XMMatrixTranspose(lView);
+    mb.projection = DirectX::XMMatrixTranspose(lProj);
+    mb.invViewProj = DirectX::XMMatrixIdentity();
+    mb.cameraPos = { 0,0,0,0 };
+    m_matrixBuffer.Update(m_context.Get(), mb);
+
+    m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
+    
+    m_shadowShader.Bind(m_context.Get());
+    if (m_stageMesh) {
+        m_stageMesh->Draw(m_context.Get());
+    }
+
+    // Restore viewport and render targets is handled in BeginFrame
+}
+
 void Renderer::BeginFrame() {
     m_time += 0.016f; // Approx 60fps for now
     static bool firstFrame = true;
     if (firstFrame) Log("First BeginFrame Started");
 
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-    
-    if (firstFrame) Log("ImGui NewFrame Done");
-
-    float clearColor[] = { 0.1f, 0.2f, 0.4f, 1.0f };
-    m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
-    m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-    if (firstFrame) Log("Clear Views Done");
-
-    // Update Camera
-    float camX = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
-    float camY = m_camDistance * sinf(m_camPitch);
-    float camZ = -m_camDistance * cosf(m_camPitch) * cosf(m_camYaw);
-    m_camera.SetLookAt({ camX, camY, camZ }, m_camTarget, { 0.0f, 1.0f, 0.0f });
-
-    // Update matrices
-    MatrixBuffer mb;
-    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
-    mb.view = DirectX::XMMatrixTranspose(m_camera.GetViewMatrix());
-    mb.projection = DirectX::XMMatrixTranspose(m_camera.GetProjectionMatrix());
-    m_matrixBuffer.Update(m_context.Get(), mb);
-
-    // Calculate light matrices for projection
+    // Update spotlight matrices first
     DirectX::XMVECTOR lPos = DirectX::XMVectorSet(m_spotlightData.posRange.x, m_spotlightData.posRange.y, m_spotlightData.posRange.z, 1.0f);
     DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(DirectX::XMVectorSet(m_spotlightData.dirAngle.x, m_spotlightData.dirAngle.y, m_spotlightData.dirAngle.z, 0.0f));
     DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -314,6 +428,47 @@ void Renderer::BeginFrame() {
     m_spotlightData.goboOff.x = sinf(m_time * 30.0f) * m_goboShakeAmount * 0.05f;
     m_spotlightData.goboOff.y = cosf(m_time * 35.0f) * m_goboShakeAmount * 0.05f;
 
+    // Render Shadow Map
+    RenderShadowMap();
+
+    ImGui_ImplDX11_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+    
+    if (firstFrame) Log("ImGui NewFrame Done");
+
+    float clearColor[] = { 0.1f, 0.2f, 0.4f, 1.0f };
+    m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
+    m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
+    m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+    D3D11_VIEWPORT viewport = {};
+    viewport.Width = 1920.0f;
+    viewport.Height = 1080.0f;
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    m_context->RSSetViewports(1, &viewport);
+
+    if (firstFrame) Log("Clear Views Done");
+
+    // Update Camera
+    float camX = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
+    float camY = m_camDistance * sinf(m_camPitch);
+    float camZ = -m_camDistance * cosf(m_camPitch) * cosf(m_camYaw);
+    m_camera.SetLookAt({ camX, camY, camZ }, m_camTarget, { 0.0f, 1.0f, 0.0f });
+
+    // Update matrices for main pass
+    MatrixBuffer mb;
+    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
+    mb.view = DirectX::XMMatrixTranspose(m_camera.GetViewMatrix());
+    mb.projection = DirectX::XMMatrixTranspose(m_camera.GetProjectionMatrix());
+    
+    DirectX::XMMATRIX viewProj = m_camera.GetViewMatrix() * m_camera.GetProjectionMatrix();
+    mb.invViewProj = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, viewProj));
+    mb.cameraPos = { camX, camY, camZ, 1.0f };
+
     m_matrixBuffer.Update(m_context.Get(), mb);
     m_spotlightBuffer.Update(m_context.Get(), m_spotlightData);
 
@@ -323,9 +478,11 @@ void Renderer::BeginFrame() {
     m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
     
     if (m_goboTexture) {
-        ID3D11ShaderResourceView* srv = m_goboTexture->GetSRV();
-        m_context->PSSetShaderResources(0, 1, &srv);
-        m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
+        ID3D11ShaderResourceView* srvs[] = { m_goboTexture->GetSRV(), m_shadowSRV.Get() };
+        m_context->PSSetShaderResources(0, 2, srvs);
+        
+        ID3D11SamplerState* samplers[] = { m_samplerState.Get(), m_shadowSampler.Get() };
+        m_context->PSSetSamplers(0, 2, samplers);
     }
 
     m_basicShader.Bind(m_context.Get());
@@ -335,8 +492,38 @@ void Renderer::BeginFrame() {
 
     if (firstFrame) Log("Stage Drawn");
 
+    // Volumetric Pass
+    m_volumetricBuffer.Update(m_context.Get(), m_volumetricData);
+    
+    m_context->OMSetBlendState(m_additiveBlendState.Get(), nullptr, 0xFFFFFFFF);
+    // Unbind depth SRV from output to allow sampling it (already handled by OMSetRenderTargets but being safe)
+    
+    m_context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
+    m_context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
+    m_context->PSSetConstantBuffers(2, 1, m_volumetricBuffer.GetAddressOf());
+
+    ID3D11ShaderResourceView* volSRVs[] = { m_depthSRV.Get(), m_goboTexture ? m_goboTexture->GetSRV() : nullptr, m_shadowSRV.Get() };
+    m_context->PSSetShaderResources(0, 3, volSRVs);
+    
+    ID3D11SamplerState* volSamplers[] = { m_samplerState.Get(), m_shadowSampler.Get() };
+    m_context->PSSetSamplers(0, 2, volSamplers);
+
+    m_volumetricShader.Bind(m_context.Get());
+    UINT strideFS = 12;
+    UINT offsetFS = 0;
+    m_context->IASetVertexBuffers(0, 1, m_fullScreenVB.GetAddressOf(), &strideFS, &offsetFS);
+    m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_context->Draw(6, 0);
+
+    // Restore state
+    m_context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+    ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr, nullptr };
+    m_context->PSSetShaderResources(0, 3, nullSRVs);
+
     // Render debug box
-    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(m_fixturePos.x, m_fixturePos.y, m_fixturePos.z));
+    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(m_spotlightData.posRange.x, m_spotlightData.posRange.y, m_spotlightData.posRange.z));
+    mb.invViewProj = DirectX::XMMatrixIdentity();
+    mb.cameraPos = { 0,0,0,0 };
     m_matrixBuffer.Update(m_context.Get(), mb);
     
     m_debugShader.Bind(m_context.Get());
@@ -391,6 +578,13 @@ void Renderer::RenderUI() {
         m_spotlightData.posRange.y = m_fixturePos.y;
         m_spotlightData.posRange.z = m_fixturePos.z;
     }
+    
+    ImGui::Separator();
+    ImGui::Text("Volumetric Controls");
+    ImGui::DragFloat("Step Count", &m_volumetricData.params.x, 1.0f, 1.0f, 256.0f);
+    ImGui::DragFloat("Density", &m_volumetricData.params.y, 0.001f, 0.0f, 1.0f);
+    ImGui::DragFloat("Vol Intensity", &m_volumetricData.params.z, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat("Anisotropy (G)", &m_volumetricData.params.w, 0.01f, -0.99f, 0.99f);
     
     ImGui::End();
 
