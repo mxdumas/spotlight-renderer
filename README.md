@@ -1,6 +1,6 @@
 # Spotlight Renderer
 
-A DirectX 11 volumetric spotlight renderer implementing physical light behavior, shadow mapping, and Mie scattering.
+A basic DirectX 11 volumetric spotlight renderer implementing physical light behavior, shadow mapping, and Mie scattering.
 
 ## Features
 
