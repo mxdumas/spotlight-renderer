@@ -6,7 +6,8 @@
  * @class Camera
  * @brief Simple camera class for managing view and projection matrices.
  */
-class Camera {
+class Camera
+{
 public:
     /**
      * @brief Default constructor for the Camera class.
@@ -16,7 +17,7 @@ public:
 
     /**
      * @brief Sets the camera's view matrix using eye, target, and up vectors.
-     * 
+     *
      * @param eye The position of the camera.
      * @param at The point the camera is looking at.
      * @param up The up vector (usually 0, 1, 0).
@@ -25,7 +26,7 @@ public:
 
     /**
      * @brief Sets the camera's perspective projection matrix.
-     * 
+     *
      * @param fovY Vertical field of view in radians.
      * @param aspect Aspect ratio (width / height).
      * @param nearZ Near clipping plane distance.
@@ -37,13 +38,19 @@ public:
      * @brief Gets the current view matrix.
      * @return 4x4 view matrix.
      */
-    DirectX::XMMATRIX GetViewMatrix() const { return DirectX::XMLoadFloat4x4(&m_view); }
+    DirectX::XMMATRIX GetViewMatrix() const
+    {
+        return DirectX::XMLoadFloat4x4(&m_view);
+    }
 
     /**
      * @brief Gets the current projection matrix.
      * @return 4x4 projection matrix.
      */
-    DirectX::XMMATRIX GetProjectionMatrix() const { return DirectX::XMLoadFloat4x4(&m_projection); }
+    DirectX::XMMATRIX GetProjectionMatrix() const
+    {
+        return DirectX::XMLoadFloat4x4(&m_projection);
+    }
 
 private:
     DirectX::XMFLOAT4X4 m_view;

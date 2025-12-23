@@ -3,8 +3,7 @@
 namespace SceneGraph
 {
 
-Node::Node(const std::string& name)
-    : name_(name)
+Node::Node(const std::string &name) : name_(name)
 {
     local_matrix_ = DirectX::XMMatrixIdentity();
     world_matrix_ = DirectX::XMMatrixIdentity();
@@ -19,7 +18,7 @@ void Node::addChild(std::shared_ptr<Node> child)
     }
 }
 
-void Node::updateWorldMatrix(const DirectX::XMMATRIX& parent_world)
+void Node::updateWorldMatrix(const DirectX::XMMATRIX &parent_world)
 {
     // Recompute local matrix from T, R, S components
     local_matrix_ = DirectX::XMMatrixScaling(scale_.x, scale_.y, scale_.z) *
@@ -28,7 +27,7 @@ void Node::updateWorldMatrix(const DirectX::XMMATRIX& parent_world)
 
     world_matrix_ = local_matrix_ * parent_world;
 
-    for (auto& child : children_)
+    for (auto &child : children_)
     {
         child->updateWorldMatrix(world_matrix_);
     }

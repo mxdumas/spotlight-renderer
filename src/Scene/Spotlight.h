@@ -7,7 +7,8 @@
  * @struct SpotlightData
  * @brief GPU-aligned structure for the spotlight constant buffer.
  */
-__declspec(align(16)) struct SpotlightData {
+__declspec(align(16)) struct SpotlightData
+{
     DirectX::XMMATRIX lightViewProj; ///< Light's view-projection matrix for shadow mapping.
     DirectX::XMFLOAT4 posRange;      ///< xyz: position, w: range.
     DirectX::XMFLOAT4 dirAngle;      ///< xyz: direction, w: spot angle (not used in current shader).
@@ -19,11 +20,12 @@ __declspec(align(16)) struct SpotlightData {
 /**
  * @class Spotlight
  * @brief Represents a high-end stage lighting fixture (spotlight).
- * 
+ *
  * Manages position, orientation, color (RGB or CMY), beam angles, and gobo properties
  * for a single spotlight source.
  */
-class Spotlight {
+class Spotlight
+{
 public:
     /**
      * @brief Constructor for the Spotlight class.
@@ -35,11 +37,11 @@ public:
      * @brief Sets the world position of the spotlight.
      * @param pos The position as XMFLOAT3.
      */
-    void SetPosition(const DirectX::XMFLOAT3& pos);
+    void SetPosition(const DirectX::XMFLOAT3 &pos);
 
     /**
      * @brief Sets the world position of the spotlight using individual coordinates.
-     * 
+     *
      * @param x X coordinate.
      * @param y Y coordinate.
      * @param z Z coordinate.
@@ -50,11 +52,11 @@ public:
      * @brief Sets the direction vector of the spotlight.
      * @param dir The normalized direction vector.
      */
-    void SetDirection(const DirectX::XMFLOAT3& dir);
+    void SetDirection(const DirectX::XMFLOAT3 &dir);
 
     /**
      * @brief Sets the RGB color of the light.
-     * 
+     *
      * @param r Red (0-1).
      * @param g Green (0-1).
      * @param b Blue (0-1).
@@ -63,7 +65,7 @@ public:
 
     /**
      * @brief Sets the color using CMY (Cyan, Magenta, Yellow) subtractive mixing.
-     * 
+     *
      * @param c Cyan (0-1).
      * @param m Magenta (0-1).
      * @param y Yellow (0-1).
@@ -122,37 +124,55 @@ public:
      * @brief Gets the maximum range.
      * @return Range value.
      */
-    float GetRange() const { return m_data.posRange.w; }
+    float GetRange() const
+    {
+        return m_data.posRange.w;
+    }
 
     /**
      * @brief Gets the current intensity.
      * @return Intensity value.
      */
-    float GetIntensity() const { return m_data.colorInt.w; }
+    float GetIntensity() const
+    {
+        return m_data.colorInt.w;
+    }
 
     /**
      * @brief Gets the beam angle.
      * @return Beam angle in radians.
      */
-    float GetBeamAngle() const { return m_data.coneGobo.x; }
+    float GetBeamAngle() const
+    {
+        return m_data.coneGobo.x;
+    }
 
     /**
      * @brief Gets the field angle.
      * @return Field angle in radians.
      */
-    float GetFieldAngle() const { return m_data.coneGobo.y; }
+    float GetFieldAngle() const
+    {
+        return m_data.coneGobo.y;
+    }
 
     /**
      * @brief Gets the gobo rotation.
      * @return Rotation in radians.
      */
-    float GetGoboRotation() const { return m_data.coneGobo.z; }
+    float GetGoboRotation() const
+    {
+        return m_data.coneGobo.z;
+    }
 
     /**
      * @brief Gets the current gobo shake intensity.
      * @return Shake amount.
      */
-    float GetGoboShake() const { return m_goboShakeAmount; }
+    float GetGoboShake() const
+    {
+        return m_goboShakeAmount;
+    }
 
     /**
      * @brief Updates the gobo shake animation based on elapsed time.
@@ -169,15 +189,21 @@ public:
      * @brief Gets the GPU-ready data structure for constant buffer updates.
      * @return Const reference to SpotlightData.
      */
-    const SpotlightData& GetGPUData() const { return m_data; }
+    const SpotlightData &GetGPUData() const
+    {
+        return m_data;
+    }
 
     /**
      * @brief Gets a mutable reference to the GPU data structure.
      * @return Reference to SpotlightData.
      */
-    SpotlightData& GetGPUDataMutable() { return m_data; }
+    SpotlightData &GetGPUDataMutable()
+    {
+        return m_data;
+    }
 
 private:
     SpotlightData m_data;
-    float m_goboShakeAmount;
+    float m_goboShakeAmount{0.0f};
 };

@@ -1,40 +1,42 @@
 #include "FXAAPass.h"
 #include "../RenderTarget.h"
 
-bool FXAAPass::Initialize(ID3D11Device* device) {
+bool FXAAPass::Initialize(ID3D11Device *device)
+{
     // Load FXAA shader with position-only layout
     std::vector<D3D11_INPUT_ELEMENT_DESC> fsLayout = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    if (!m_fxaaShader.LoadVertexShader(device, L"shaders/fxaa.hlsl", "VS", fsLayout)) return false;
-    if (!m_fxaaShader.LoadPixelShader(device, L"shaders/fxaa.hlsl", "PS")) return false;
+    if (!m_fxaaShader.LoadVertexShader(device, L"shaders/fxaa.hlsl", "VS", fsLayout))
+        return false;
+    if (!m_fxaaShader.LoadPixelShader(device, L"shaders/fxaa.hlsl", "PS"))
+        return false;
 
     // Initialize constant buffer
-    if (!m_fxaaBuffer.Initialize(device)) return false;
+    if (!m_fxaaBuffer.Initialize(device))
+        return false;
 
     return true;
 }
 
-void FXAAPass::Shutdown() {
+void FXAAPass::Shutdown()
+{
     // Shader cleans up automatically via ComPtr
 }
 
-void FXAAPass::Execute(ID3D11DeviceContext* context,
-                       ID3D11RenderTargetView* destRTV,
-                       RenderTarget* sceneRT,
-                       ID3D11Buffer* fullScreenVB,
-                       ID3D11SamplerState* sampler) {
+void FXAAPass::Execute(ID3D11DeviceContext *context, ID3D11RenderTargetView *destRTV, RenderTarget *sceneRT,
+                       ID3D11Buffer *fullScreenVB, ID3D11SamplerState *sampler)
+{
     // Clear and bind destination (swap chain back buffer)
-    float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
     context->OMSetRenderTargets(1, &destRTV, nullptr);
     context->ClearRenderTargetView(destRTV, clearColor);
 
     // Update FXAA constant buffer
     FXAABuffer fb;
-    fb.rcpFrame = { 1.0f / Config::Display::WINDOW_WIDTH,
-                    1.0f / Config::Display::WINDOW_HEIGHT };
-    fb.padding = { 0.0f, 0.0f };
+    fb.rcpFrame = {1.0f / Config::Display::WINDOW_WIDTH, 1.0f / Config::Display::WINDOW_HEIGHT};
+    fb.padding = {0.0f, 0.0f};
     m_fxaaBuffer.Update(context, fb);
 
     // Bind constant buffers to both VS and PS
@@ -54,6 +56,6 @@ void FXAAPass::Execute(ID3D11DeviceContext* context,
     context->Draw(6, 0);
 
     // Unbind SRV
-    ID3D11ShaderResourceView* nullSRV = nullptr;
+    ID3D11ShaderResourceView *nullSRV = nullptr;
     context->PSSetShaderResources(0, 1, &nullSRV);
 }

@@ -1,28 +1,35 @@
 #include "Application.h"
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
-Application::~Application() {
+Application::~Application()
+{
     Shutdown();
 }
 
-void Application::Log(const std::string& message) {
+void Application::Log(const std::string &message)
+{
     std::ofstream logFile("debug.log", std::ios::app);
-    if (logFile.is_open()) {
+    if (logFile.is_open())
+    {
         logFile << message << std::endl;
     }
     OutputDebugStringA((message + "\n").c_str());
 }
 
-bool Application::Initialize(HWND hwnd) {
+bool Application::Initialize(HWND hwnd)
+{
     // Clear previous log
-    { std::ofstream logFile("debug.log", std::ios::trunc); }
+    {
+        std::ofstream logFile("debug.log", std::ios::trunc);
+    }
 
     Log("Application::Initialize Started");
 
     // Initialize graphics device (handles device, swap chain, depth buffer)
     Log("Initializing GraphicsDevice...");
-    if (!m_graphics.Initialize(hwnd)) {
+    if (!m_graphics.Initialize(hwnd))
+    {
         Log("GraphicsDevice initialization failed");
         return false;
     }
@@ -30,7 +37,8 @@ bool Application::Initialize(HWND hwnd) {
 
     // Initialize render pipeline
     Log("Initializing RenderPipeline...");
-    if (!m_pipeline.Initialize(m_graphics.GetDevice())) {
+    if (!m_pipeline.Initialize(m_graphics.GetDevice()))
+    {
         Log("RenderPipeline initialization failed");
         return false;
     }
@@ -38,7 +46,8 @@ bool Application::Initialize(HWND hwnd) {
 
     // Initialize scene (loads meshes, textures, sets up camera and lights)
     Log("Initializing Scene...");
-    if (!m_scene.Initialize(m_graphics.GetDevice())) {
+    if (!m_scene.Initialize(m_graphics.GetDevice()))
+    {
         Log("Scene initialization failed");
         return false;
     }
@@ -46,14 +55,16 @@ bool Application::Initialize(HWND hwnd) {
 
     // Create room geometry
     Log("Creating room geometry...");
-    if (!GeometryGenerator::CreateRoomCube(m_graphics.GetDevice(), m_roomVB, m_roomIB)) {
+    if (!GeometryGenerator::CreateRoomCube(m_graphics.GetDevice(), m_roomVB, m_roomIB))
+    {
         Log("Failed to create room cube");
         return false;
     }
     Log("Room Cube Created");
 
     // Initialize UI
-    if (!m_ui.Initialize(hwnd, m_graphics.GetDevice(), m_graphics.GetContext())) {
+    if (!m_ui.Initialize(hwnd, m_graphics.GetDevice(), m_graphics.GetContext()))
+    {
         Log("ImGui initialization failed");
         return false;
     }
@@ -63,7 +74,8 @@ bool Application::Initialize(HWND hwnd) {
     return true;
 }
 
-void Application::Shutdown() {
+void Application::Shutdown()
+{
     // Shutdown UI first
     m_ui.Shutdown();
 
@@ -78,7 +90,8 @@ void Application::Shutdown() {
     m_graphics.Shutdown();
 }
 
-void Application::BeginFrame() {
+void Application::BeginFrame()
+{
     // Update scene
     m_scene.Update(Config::PostProcess::FRAME_DELTA);
     m_scene.UpdateCamera();
@@ -109,7 +122,8 @@ void Application::BeginFrame() {
     m_pipeline.Render(m_graphics.GetContext(), ctx);
 }
 
-void Application::RenderUI() {
+void Application::RenderUI()
+{
     UIContext ctx;
     ctx.scene = &m_scene;
     ctx.pipeline = &m_pipeline;
@@ -117,7 +131,8 @@ void Application::RenderUI() {
     m_ui.RenderControls(ctx);
 }
 
-void Application::EndFrame() {
+void Application::EndFrame()
+{
     m_ui.EndFrame();
     m_graphics.Present(true);
 }

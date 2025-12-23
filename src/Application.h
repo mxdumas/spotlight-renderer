@@ -1,18 +1,19 @@
 #pragma once
 
 #include <d3d11.h>
+#include <memory>
 #include <wrl/client.h>
 #include "Core/Config.h"
 #include "Core/GraphicsDevice.h"
-#include "Rendering/RenderPipeline.h"
 #include "Geometry/GeometryGenerator.h"
+#include "Rendering/RenderPipeline.h"
 #include "Scene/Scene.h"
 #include "UI/UIRenderer.h"
-#include <memory>
 
 using Microsoft::WRL::ComPtr;
 
-class Application {
+class Application
+{
 public:
     /**
      * @brief Default constructor for the Application class.
@@ -27,7 +28,7 @@ public:
 
     /**
      * @brief Initializes the application, including the graphics device, scene, UI, and render pipeline.
-     * 
+     *
      * @param hwnd The handle to the window where the application will be rendered.
      * @return true if initialization was successful, false otherwise.
      * @throws std::runtime_exception if critical resources fail to initialize.
@@ -56,10 +57,10 @@ public:
 
     /**
      * @brief Logs a message to the application's logging system.
-     * 
+     *
      * @param message The string message to be logged.
      */
-    void Log(const std::string& message);
+    void Log(const std::string &message);
 
 private:
     // Graphics device (owns device, context, swap chain, back buffer)
@@ -75,8 +76,14 @@ private:
     RenderPipeline m_pipeline;
 
     // Convenience accessors (delegate to GraphicsDevice)
-    ID3D11Device* GetDevice() const { return m_graphics.GetDevice(); }
-    ID3D11DeviceContext* GetContext() const { return m_graphics.GetContext(); }
+    ID3D11Device *GetDevice() const
+    {
+        return m_graphics.GetDevice();
+    }
+    ID3D11DeviceContext *GetContext() const
+    {
+        return m_graphics.GetContext();
+    }
 
     // Room geometry (GPU resource, owned by Application)
     ComPtr<ID3D11Buffer> m_roomVB;

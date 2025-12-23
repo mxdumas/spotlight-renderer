@@ -1,14 +1,14 @@
 #include "GDTFParser.h"
-#include "miniz.h"
 #include <iostream>
+#include <miniz/miniz.h>
 
 namespace GDTF
 {
 
-bool GDTFParser::load(const std::string& file_name)
+bool GDTFParser::load(const std::string &file_name)
 {
     gdtf_path_ = file_name;
-    
+
     std::vector<uint8_t> xml_data;
     if (!extractFile("description.xml", xml_data))
     {
@@ -20,7 +20,7 @@ bool GDTFParser::load(const std::string& file_name)
     return parseXML(xml_content);
 }
 
-bool GDTFParser::extractFile(const std::string& internal_path, std::vector<uint8_t>& out_data)
+bool GDTFParser::extractFile(const std::string &internal_path, std::vector<uint8_t> &out_data)
 {
     mz_zip_archive zip_archive;
     memset(&zip_archive, 0, sizeof(zip_archive));
@@ -55,7 +55,7 @@ bool GDTFParser::extractFile(const std::string& internal_path, std::vector<uint8
     return true;
 }
 
-bool GDTFParser::parseXML(const std::string& xml_content)
+bool GDTFParser::parseXML(const std::string &xml_content)
 {
     pugi::xml_parse_result result = doc_.load_string(xml_content.c_str());
     if (!result)
@@ -72,7 +72,8 @@ bool GDTFParser::parseXML(const std::string& xml_content)
     for (pugi::xml_node child : geometries.children())
     {
         geometry_root_ = parseGeometry(child);
-        if (geometry_root_) break;
+        if (geometry_root_)
+            break;
     }
 
     // Parse DMX Modes (take the first one for simplicity)
@@ -85,26 +86,28 @@ bool GDTFParser::parseXML(const std::string& xml_content)
         {
             DMXChannel dc;
             dc.name = chan.attribute("Geometry").as_string();
-            if (dc.name.empty()) dc.name = chan.attribute("Attribute").as_string();
-            
+            if (dc.name.empty())
+                dc.name = chan.attribute("Attribute").as_string();
+
             // DMX offset
             dc.offset = current_offset;
-            
+
             // Byte count from coarse/fine/etc.
             dc.byte_count = 0;
             for ([[maybe_unused]] pugi::xml_node logical : chan.children("LogicalChannel"))
             {
                 dc.byte_count++;
             }
-            if (dc.byte_count == 0) dc.byte_count = 1;
+            if (dc.byte_count == 0)
+                dc.byte_count = 1;
 
             dc.default_value = chan.attribute("Default").as_float();
             dmx_channels_.push_back(dc);
-            
+
             current_offset += dc.byte_count;
         }
     }
-    
+
     return true;
 }
 
@@ -121,7 +124,7 @@ std::shared_ptr<GeometryNode> GDTFParser::parseGeometry(pugi::xml_node node)
         // Matrix parsing (GDTF stores 4x4 matrices as space-separated floats)
         // For simplicity, we'll just extract position for now
         // This would need a full matrix parser for real-world GDTF
-        
+
         for (pugi::xml_node child : node.children())
         {
             auto childNode = parseGeometry(child);

@@ -2,42 +2,44 @@
 #include "../../Resources/Mesh.h"
 #include "../RenderTarget.h"
 
-bool ScenePass::Initialize(ID3D11Device* device) {
+bool ScenePass::Initialize(ID3D11Device *device)
+{
     // Load basic shader
     std::vector<D3D11_INPUT_ELEMENT_DESC> layout = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    if (!m_basicShader.LoadVertexShader(device, L"shaders/basic.hlsl", "VS", layout)) return false;
-    if (!m_basicShader.LoadPixelShader(device, L"shaders/basic.hlsl", "PS")) return false;
+    if (!m_basicShader.LoadVertexShader(device, L"shaders/basic.hlsl", "VS", layout))
+        return false;
+    if (!m_basicShader.LoadPixelShader(device, L"shaders/basic.hlsl", "PS"))
+        return false;
 
     // Initialize material buffer
-    if (!m_materialBuffer.Initialize(device)) return false;
+    if (!m_materialBuffer.Initialize(device))
+        return false;
 
     // Create no-cull rasterizer state for room rendering
     D3D11_RASTERIZER_DESC rd = {};
     rd.FillMode = D3D11_FILL_SOLID;
     rd.CullMode = D3D11_CULL_NONE;
     HRESULT hr = device->CreateRasterizerState(&rd, &m_noCullState);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     return true;
 }
 
-void ScenePass::Shutdown() {
+void ScenePass::Shutdown()
+{
     m_noCullState.Reset();
 }
 
-void ScenePass::Execute(ID3D11DeviceContext* context,
-                        ID3D11DepthStencilView* dsv,
-                        ID3D11Buffer* roomVB,
-                        ID3D11Buffer* roomIB,
-                        Mesh* stageMesh,
-                        float stageOffset,
-                        float roomSpecular,
-                        float roomShininess) {
+void ScenePass::Execute(ID3D11DeviceContext *context, ID3D11DepthStencilView *dsv, ID3D11Buffer *roomVB,
+                        ID3D11Buffer *roomIB, Mesh *stageMesh, float stageOffset, float roomSpecular,
+                        float roomShininess)
+{
     // Set viewport
     D3D11_VIEWPORT viewport = {};
     viewport.Width = static_cast<float>(Config::Display::WINDOW_WIDTH);
@@ -52,9 +54,8 @@ void ScenePass::Execute(ID3D11DeviceContext* context,
     // Render Room with dark gray material
     {
         MaterialBuffer mb = {};
-        mb.color = { Config::Materials::ROOM_COLOR, Config::Materials::ROOM_COLOR,
-                     Config::Materials::ROOM_COLOR, 1.0f };
-        mb.specParams = { roomSpecular, roomShininess, 0.0f, 0.0f };
+        mb.color = {Config::Materials::ROOM_COLOR, Config::Materials::ROOM_COLOR, Config::Materials::ROOM_COLOR, 1.0f};
+        mb.specParams = {roomSpecular, roomShininess, 0.0f, 0.0f};
         m_materialBuffer.Update(context, mb);
         context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
 
@@ -72,17 +73,18 @@ void ScenePass::Execute(ID3D11DeviceContext* context,
     }
 
     // Render Stage Mesh with per-shape materials from MTL
-    if (stageMesh) {
-        const auto& shapes = stageMesh->GetShapes();
-        for (size_t i = 0; i < shapes.size(); ++i) {
-            const auto& shape = shapes[i];
+    if (stageMesh)
+    {
+        const auto &shapes = stageMesh->GetShapes();
+        for (size_t i = 0; i < shapes.size(); ++i)
+        {
+            const auto &shape = shapes[i];
 
             MaterialBuffer mbMat = {};
-            mbMat.color = { shape.material.diffuse.x, shape.material.diffuse.y,
-                            shape.material.diffuse.z, 1.0f };
-            float specIntensity = (shape.material.specular.x + shape.material.specular.y +
-                                   shape.material.specular.z) / 3.0f;
-            mbMat.specParams = { specIntensity, shape.material.shininess, 0.0f, 0.0f };
+            mbMat.color = {shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f};
+            float specIntensity =
+                (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
+            mbMat.specParams = {specIntensity, shape.material.shininess, 0.0f, 0.0f};
             m_materialBuffer.Update(context, mbMat);
             context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
 

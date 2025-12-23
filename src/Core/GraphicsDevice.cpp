@@ -1,11 +1,13 @@
 #include "GraphicsDevice.h"
 #include <iostream>
 
-GraphicsDevice::~GraphicsDevice() {
+GraphicsDevice::~GraphicsDevice()
+{
     Shutdown();
 }
 
-bool GraphicsDevice::Initialize(HWND hwnd) {
+bool GraphicsDevice::Initialize(HWND hwnd)
+{
     // Create swap chain description
     DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferCount = 1;
@@ -25,35 +27,27 @@ bool GraphicsDevice::Initialize(HWND hwnd) {
     createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
+    D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_11_0};
     D3D_FEATURE_LEVEL featureLevel;
 
-    HRESULT hr = D3D11CreateDeviceAndSwapChain(
-        nullptr,
-        D3D_DRIVER_TYPE_HARDWARE,
-        nullptr,
-        createDeviceFlags,
-        featureLevels,
-        1,
-        D3D11_SDK_VERSION,
-        &sd,
-        &m_swapChain,
-        &m_device,
-        &featureLevel,
-        &m_context
-    );
+    HRESULT hr =
+        D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevels, 1,
+                                      D3D11_SDK_VERSION, &sd, &m_swapChain, &m_device, &featureLevel, &m_context);
 
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         return false;
     }
 
     // Get back buffer and create RTV
     ComPtr<ID3D11Texture2D> backBuffer;
     hr = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     hr = m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_backBufferRTV);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     // Create depth/stencil buffer
     D3D11_TEXTURE2D_DESC depthDesc = {};
@@ -68,14 +62,16 @@ bool GraphicsDevice::Initialize(HWND hwnd) {
     depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
     hr = m_device->CreateTexture2D(&depthDesc, nullptr, &m_depthStencilBuffer);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     // Create DSV
     D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
     dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     hr = m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, &m_depthStencilView);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     // Create depth SRV for reading depth in shaders
     D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc = {};
@@ -83,7 +79,8 @@ bool GraphicsDevice::Initialize(HWND hwnd) {
     depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     depthSRVDesc.Texture2D.MipLevels = 1;
     hr = m_device->CreateShaderResourceView(m_depthStencilBuffer.Get(), &depthSRVDesc, &m_depthSRV);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     // Set initial render target and viewport
     SetBackBufferAsRenderTarget();
@@ -92,7 +89,8 @@ bool GraphicsDevice::Initialize(HWND hwnd) {
     return true;
 }
 
-void GraphicsDevice::Shutdown() {
+void GraphicsDevice::Shutdown()
+{
     m_depthSRV.Reset();
     m_depthStencilView.Reset();
     m_depthStencilBuffer.Reset();
@@ -102,23 +100,28 @@ void GraphicsDevice::Shutdown() {
     m_device.Reset();
 }
 
-void GraphicsDevice::Present(bool vsync) {
+void GraphicsDevice::Present(bool vsync)
+{
     m_swapChain->Present(vsync ? 1 : 0, 0);
 }
 
-void GraphicsDevice::ClearBackBuffer(const float* color) {
+void GraphicsDevice::ClearBackBuffer(const float *color)
+{
     m_context->ClearRenderTargetView(m_backBufferRTV.Get(), color);
 }
 
-void GraphicsDevice::ClearDepthStencil() {
+void GraphicsDevice::ClearDepthStencil()
+{
     m_context->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
-void GraphicsDevice::SetBackBufferAsRenderTarget() {
+void GraphicsDevice::SetBackBufferAsRenderTarget()
+{
     m_context->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
 }
 
-void GraphicsDevice::SetViewport(float width, float height) {
+void GraphicsDevice::SetViewport(float width, float height)
+{
     D3D11_VIEWPORT viewport = {};
     viewport.Width = width;
     viewport.Height = height;
@@ -129,7 +132,7 @@ void GraphicsDevice::SetViewport(float width, float height) {
     m_context->RSSetViewports(1, &viewport);
 }
 
-void GraphicsDevice::SetDefaultViewport() {
-    SetViewport(static_cast<float>(Config::Display::WINDOW_WIDTH),
-                static_cast<float>(Config::Display::WINDOW_HEIGHT));
+void GraphicsDevice::SetDefaultViewport()
+{
+    SetViewport(static_cast<float>(Config::Display::WINDOW_WIDTH), static_cast<float>(Config::Display::WINDOW_HEIGHT));
 }
