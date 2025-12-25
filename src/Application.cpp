@@ -106,6 +106,7 @@ void Application::BeginFrame()
     ctx.anchorPositions = m_scene.GetAnchorPositions();
     ctx.fixtureNodes = m_scene.GetFixtureNodes();
     ctx.spotlight = &m_scene.GetSpotlight();
+    ctx.spotlights = &m_scene.GetSpotlights();
     ctx.ceilingLights = &m_scene.GetCeilingLights();
     ctx.stageMesh = m_scene.GetStageMesh();
     ctx.goboTexture = m_scene.GetGoboTexture();

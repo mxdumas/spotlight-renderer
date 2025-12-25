@@ -1,7 +1,13 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <memory>
 #include "../Core/Config.h"
+
+namespace SceneGraph
+{
+class Node;
+}
 
 /**
  * @struct SpotlightData
@@ -109,6 +115,50 @@ public:
     void SetGoboShake(float amount);
 
     /**
+     * @brief Sets the pan angle in degrees.
+     * @param degrees Pan angle.
+     */
+    void SetPan(float degrees);
+
+    /**
+     * @brief Sets the tilt angle in degrees.
+     * @param degrees Tilt angle.
+     */
+    void SetTilt(float degrees);
+
+    /**
+     * @brief Gets the current pan angle.
+     * @return Pan in degrees.
+     */
+    float GetPan() const
+    {
+        return m_pan;
+    }
+
+    /**
+     * @brief Gets the current tilt angle.
+     * @return Tilt in degrees.
+     */
+    float GetTilt() const
+    {
+        return m_tilt;
+    }
+
+    /**
+     * @brief Links scene graph nodes to this spotlight for hierarchical animation.
+     * @param pan Node responsible for panning (usually Yoke).
+     * @param tilt Node responsible for tilting (usually Head).
+     * @param beam Node representing the light emission point.
+     */
+    void LinkNodes(std::shared_ptr<SceneGraph::Node> pan, std::shared_ptr<SceneGraph::Node> tilt,
+                   std::shared_ptr<SceneGraph::Node> beam);
+
+    /**
+     * @brief Synchronizes the spotlight's position and direction with its linked scene graph nodes.     
+     */
+    void UpdateFromNodes();
+
+    /**
      * @brief Gets the current world position.
      * @return Position as XMFLOAT3.
      */
@@ -206,4 +256,11 @@ public:
 private:
     SpotlightData m_data;
     float m_goboShakeAmount{0.0f};
+
+    // GDTF Animation
+    float m_pan{0.0f};
+    float m_tilt{0.0f};
+    std::shared_ptr<SceneGraph::Node> m_panNode;
+    std::shared_ptr<SceneGraph::Node> m_tiltNode;
+    std::shared_ptr<SceneGraph::Node> m_beamNode;
 };

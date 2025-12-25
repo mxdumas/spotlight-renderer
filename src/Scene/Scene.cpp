@@ -107,21 +107,31 @@ bool Scene::Initialize(ID3D11Device *device)
                 // Orientation node handles the flip (so the fixture hangs correctly)
                 auto orientationNode = std::make_shared<SceneGraph::Node>("Orientation");
                 // Rotate 90 degrees around X (Pitch) to make GDTF "Forward" point down (-Y)
-                orientationNode->setRotation(0.0f, DirectX::XM_PIDIV2, 0.0f);
+                orientationNode->setRotation(DirectX::XM_PIDIV2, 0.0f, 0.0f);
                 // Scale 2x
                 orientationNode->setScale(2.0f, 2.0f, 2.0f);
                 
                 // Bring it up a little to touch the truss
                 placementNode->setTranslation(pos.x, pos.y + 0.45f, pos.z);
                 
-                placementNode->addChild(orientationNode);
-                orientationNode->addChild(instanceRoot);
+                                placementNode->addChild(orientationNode);
+                                orientationNode->addChild(instanceRoot);
                 
-                m_fixtureNodes.push_back(placementNode);
-            }
-        }
-    }
-
+                                // Link spotlight to nodes for animation
+                                auto panNode = instanceRoot->findChild("Yoke");
+                                auto tiltNode = instanceRoot->findChild("Head");
+                                auto beamNode = instanceRoot->findChild("Beam");
+                
+                                // Fallback: search for nodes containing the names if exact match fails
+                                if (!panNode) panNode = instanceRoot->findChild("Pan");
+                                if (!tiltNode) tiltNode = instanceRoot->findChild("Tilt");
+                
+                                m_spotlights.back().LinkNodes(panNode, tiltNode, beamNode);
+                
+                                m_fixtureNodes.push_back(placementNode);
+                            }
+                        }
+                    }
     // Initialize camera
     m_camera.SetPerspective(Config::CameraDefaults::FOV, Config::Display::ASPECT_RATIO,
                             Config::CameraDefaults::CLIP_NEAR, Config::CameraDefaults::CLIP_FAR);
@@ -138,6 +148,48 @@ void Scene::Update(float deltaTime)
     for (auto &node : m_fixtureNodes)
     {
         node->updateWorldMatrix();
+    }
+
+    // Demo Mode Logic
+    if (m_demoMode)
+    {
+        for (size_t i = 0; i < m_spotlights.size(); ++i)
+        {
+            auto &light = m_spotlights[i];
+            float phase = static_cast<float>(i) * 0.5f;
+            
+            // Phased Sine Pan/Tilt
+            float pan = std::sin(m_time * 0.8f + phase) * 45.0f;
+            float tilt = std::cos(m_time * 1.2f + phase) * 30.0f - 20.0f;
+            light.SetPan(pan);
+            light.SetTilt(tilt);
+
+            // Rainbow color chase
+            float hue = fmodf(m_time * 0.2f + static_cast<float>(i) * 0.25f, 1.0f);
+            
+            // HSV to RGB (simplified)
+            float r = 0, g = 0, b = 0;
+            float h = hue * 6.0f;
+            float x = 1.0f - std::abs(fmodf(h, 2.0f) - 1.0f);
+            if (h < 1.0f) { r = 1; g = x; }
+            else if (h < 2.0f) { r = x; g = 1; }
+            else if (h < 3.0f) { g = 1; b = x; }
+            else if (h < 4.0f) { g = x; b = 1; }
+            else if (h < 5.0f) { r = x; b = 1; }
+            else { r = 1; b = x; }
+            
+            light.SetColor(r, g, b);
+
+            // Add smooth gobo rotation
+            light.SetGoboRotation(m_time * 0.5f + phase);
+        }
+    }
+
+    // Sync spotlights with their respective nodes
+    for (auto &light : m_spotlights)
+    {
+        light.UpdateFromNodes();
+        // light.UpdateLightMatrix(); // Removed: UpdateFromNodes now handles matrix smoothly
     }
 }
 

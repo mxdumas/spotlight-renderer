@@ -6,13 +6,19 @@ cbuffer MatrixBuffer : register(b0) {
     float4 cameraPos;
 };
 
+struct SpotlightData {
+    matrix lightViewProj;
+    float4 posRange;      // xyz: pos, w: range
+    float4 dirAngle;      // xyz: dir, w: spotAngle
+    float4 colorInt;      // xyz: color, w: intensity
+    float4 coneGobo;      // x: beam, y: field, z: rotation
+    float4 goboOff;       // xy: offset
+};
+
+#define MAX_LIGHTS 4
+
 cbuffer SpotlightBuffer : register(b1) {
-    matrix lightViewProj : packoffset(c0);
-    float4 posRange      : packoffset(c4); // xyz: pos, w: range
-    float4 dirAngle      : packoffset(c5); // xyz: dir, w: spotAngle
-    float4 colorInt      : packoffset(c6); // xyz: color, w: intensity
-    float4 coneGobo      : packoffset(c7); // x: beam, y: field, z: rotation
-    float4 goboOff       : packoffset(c8); // xy: offset
+    SpotlightData lights[MAX_LIGHTS];
 };
 
 cbuffer VolumetricBuffer : register(b2) {
@@ -64,10 +70,10 @@ float4 PS(PS_INPUT input) : SV_Target {
 
     uint2 pixelPos = uint2(input.pos.xy);
     float depth = depthTexture.Load(uint3(pixelPos, 0)).r;
-    
+
     float3 worldPos = ScreenToWorld(uv, depth);
     float3 camPos = cameraPos.xyz;
-    
+
     if (depth >= 1.0f) {
         worldPos = ScreenToWorld(uv, 1.0f);
     }
@@ -76,70 +82,69 @@ float4 PS(PS_INPUT input) : SV_Target {
     float rayLen = length(rayDirVec);
     float3 rayDir = rayDirVec / max(rayLen, 0.0001f);
 
-    float3 LPos = posRange.xyz;
-    float3 LDir = normalize(dirAngle.xyz);
-    float beam = coneGobo.x;
-    float field = coneGobo.y;
     float g = volParams.w;
-    float range = posRange.w;
+    float stepCount = volParams.x;
+    float3 accumulatedLight = float3(0, 0, 0);
 
-    // Ray-Sphere intersection for optimization
+    float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
+
+    // To optimize, we find the global t_min/t_max that covers ALL active lights.
+    // Ideally we would march per light, but that's expensive.
+    // Instead, we march the full ray length (up to max range of any light) or just geometry depth.
+    // For simplicity: March from 0 to rayLen.
+    
     float t_min = 0.0f;
     float t_max = rayLen;
-
-    float3 L = LPos - camPos;
-    float tca = dot(L, rayDir);
-    float d2 = dot(L, L) - tca * tca;
-    float r2 = range * range;
-    if (d2 <= r2) {
-        float thc = sqrt(r2 - d2);
-        float t0 = tca - thc;
-        float t1 = tca + thc;
-        t_min = max(t_min, t0);
-        t_max = min(t_max, t1);
-    } else {
-        // Ray misses the sphere entirely
-        return float4(0, 0, 0, 1);
-    }
-
-    if (t_min >= t_max) {
-        return float4(0, 0, 0, 1);
-    }
-
     float marchDist = t_max - t_min;
-    float stepCount = volParams.x;
     float stepLen = marchDist / max(stepCount, 1.0f);
     float3 stepVec = rayDir * stepLen;
 
-    float3 accumulatedLight = float3(0, 0, 0);
-    
-    float noise = frac(sin(dot(uv + volJitter.x, float2(12.9898, 78.233))) * 43758.5453);
     float3 rayStart = camPos + rayDir * t_min;
     float3 currentPos = rayStart + stepVec * noise;
 
-    float4 lightSpaceStart = mul(float4(currentPos, 1.0f), lightViewProj);
-    float4 lightSpaceStep = mul(float4(stepVec, 0.0f), lightViewProj);
-    float4 currentLightSpacePos = lightSpaceStart;
+    // Optimization: Pre-calculate light vectors for active lights? 
+    // No, we need to do it per step.
 
-    for (int i = 0; i < (int)stepCount; ++i) {
-        float3 toLight = LPos - currentPos;
-        float dist = length(toLight);
-        float3 toLightNorm = toLight / max(dist, 0.0001f);
+    for (int s = 0; s < (int)stepCount; ++s) {
+        
+        float3 stepContribution = float3(0,0,0);
 
-        float attenuation = colorInt.w / (dist * dist + 1.0f);
-        if (dist < posRange.w) {
-            float cosAngle = dot(-toLightNorm, LDir);
-            float spotEffect = saturate((cosAngle - field) / (max(0.001f, beam - field)));
+        [unroll]
+        for (int i = 0; i < MAX_LIGHTS; ++i) {
+            // Check if light is active (intensity > 0)
+            if (lights[i].colorInt.w <= 0.0f) continue;
 
-            if (spotEffect > 0) {
-                float shadow = 1.0f;
-                if (currentLightSpacePos.w > 0.0f) {
-                    float3 projCoords = currentLightSpacePos.xyz / currentLightSpacePos.w;
-                    float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
-                    shadowUV.y = 1.0f - shadowUV.y;
+            float3 LPos = lights[i].posRange.xyz;
+            float range = lights[i].posRange.w;
+
+            float3 toLight = LPos - currentPos;
+            float dist = length(toLight);
+            
+            if (dist < range) {
+                float attenuation = lights[i].colorInt.w / (dist * dist + 1.0f);
+                float3 LDir = normalize(lights[i].dirAngle.xyz);
+                float beam = lights[i].coneGobo.x;
+                float field = lights[i].coneGobo.y;
+                float3 toLightNorm = toLight / max(dist, 0.0001f);
+
+                float cosAngle = dot(-toLightNorm, LDir);
+                float spotEffect = saturate((cosAngle - field) / (max(0.001f, beam - field)));
+
+                if (spotEffect > 0) {
+                    float shadow = 1.0f;
                     
-                    if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
-                        shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, projCoords.z - 0.01f).r;
+                    // Shadow mapping only for the first light for now
+                    if (i == 0) {
+                        float4 lightSpacePos = mul(float4(currentPos, 1.0f), lights[i].lightViewProj);
+                        if (lightSpacePos.w > 0.0f) {
+                            float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+                            float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
+                            shadowUV.y = 1.0f - shadowUV.y;
+
+                            if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
+                                shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, projCoords.z - 0.01f).r;
+                            }
+                        }
                     }
 
                     if (shadow > 0) {
@@ -147,23 +152,37 @@ float4 PS(PS_INPUT input) : SV_Target {
                         float phase = HenyeyGreenstein(cosTheta, g);
 
                         // Gobo sampling
-                        float s, c;
-                        sincos(coneGobo.z, s, c);
-                        float2 rUV;
-                        rUV.x = projCoords.x * c - projCoords.y * s;
-                        rUV.y = projCoords.x * s + projCoords.y * c;
-                        rUV += goboOff.xy;
-                        float2 goboUV = rUV * 0.5f + 0.5f;
-                        goboUV.y = 1.0f - goboUV.y;
-                        float3 goboColor = goboTexture.SampleLevel(samLinear, goboUV, 0).rgb;
+                        float3 goboColor = float3(1,1,1);
+                        // Project texture
+                        float4 lightSpacePos = mul(float4(currentPos, 1.0f), lights[i].lightViewProj);
+                         if (lightSpacePos.w > 0.0f) {
+                            float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+                             // Gobo rotation
+                            float s, c;
+                            sincos(lights[i].coneGobo.z, s, c);
+                            float2 rUV;
+                            rUV.x = projCoords.x * c - projCoords.y * s;
+                            rUV.y = projCoords.x * s + projCoords.y * c;
+                            rUV += lights[i].goboOff.xy;
+                            float2 goboUV = rUV * 0.5f + 0.5f;
+                            goboUV.y = 1.0f - goboUV.y;
+                            
+                            // Using Clamp to avoid bleeding
+                            // Ensure gobo is only inside the cone effectively
+                            if (goboUV.x >= 0 && goboUV.x <= 1 && goboUV.y >= 0 && goboUV.y <= 1)
+                                goboColor = goboTexture.SampleLevel(samLinear, goboUV, 0).rgb;
+                            else
+                                goboColor = float3(0,0,0);
+                         }
 
-                        accumulatedLight += colorInt.xyz * attenuation * spotEffect * shadow * goboColor * phase * volParams.y * stepLen;
+                        stepContribution += lights[i].colorInt.xyz * attenuation * spotEffect * shadow * goboColor * phase;
                     }
                 }
             }
         }
+        
+        accumulatedLight += stepContribution * volParams.y * stepLen;
         currentPos += stepVec;
-        currentLightSpacePos += lightSpaceStep;
     }
 
     return float4(accumulatedLight * volParams.z, 1.0f);

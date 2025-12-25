@@ -71,8 +71,7 @@ bool RenderPipeline::Initialize(ID3D11Device *device)
     // Initialize constant buffers
     if (!m_matrixBuffer.Initialize(device))
         return false;
-    if (!m_spotlightBuffer.Initialize(device))
-        return false;
+    // m_spotlightBuffer is now managed by individual passes (ScenePass, VolumetricPass)
     if (!m_ceilingLightsBuffer.Initialize(device))
         return false;
 
@@ -131,9 +130,20 @@ void RenderPipeline::Render(ID3D11DeviceContext *context, const RenderContext &c
     // Clear all SRVs to prevent D3D warnings
     ClearShaderResources(context);
 
-    // Update spotlight data
-    ctx.spotlight->UpdateLightMatrix();
-    ctx.spotlight->UpdateGoboShake(ctx.time);
+    // Update all spotlights
+    if (ctx.spotlights)
+    {
+        for (auto &light : *ctx.spotlights)
+        {
+            // Matrices are already updated in Scene::Update
+            light.UpdateGoboShake(ctx.time);
+        }
+    }
+    // Fallback if vector is missing but single pointer exists
+    else if (ctx.spotlight)
+    {
+        ctx.spotlight->UpdateGoboShake(ctx.time);
+    }
 
     // 1. Shadow Pass
     RenderShadowPass(context, ctx);
@@ -159,7 +169,11 @@ void RenderPipeline::Render(ID3D11DeviceContext *context, const RenderContext &c
 
 void RenderPipeline::RenderShadowPass(ID3D11DeviceContext *context, const RenderContext &ctx)
 {
-    m_shadowPass->Execute(context, ctx.spotlight->GetGPUData(), ctx.stageMesh, ctx.stageOffset);
+    if (ctx.spotlights && !ctx.spotlights->empty())
+    {
+        // For now, ShadowPass only supports one shadow map. We use the first spotlight.
+        m_shadowPass->Execute(context, ctx.spotlights->at(0).GetGPUData(), ctx.stageMesh, ctx.stageOffset);
+    }
 }
 
 void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderContext &ctx)
@@ -189,15 +203,13 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
     mb.cameraPos = {ctx.cameraPos.x, ctx.cameraPos.y, ctx.cameraPos.z, 1.0f};
 
     m_matrixBuffer.Update(context, mb);
-    m_spotlightBuffer.Update(context, ctx.spotlight->GetGPUData());
-
+    
     // Update ceiling lights
     ctx.ceilingLights->Update();
     m_ceilingLightsBuffer.Update(context, ctx.ceilingLights->GetGPUData());
 
-    // Bind constant buffers
+    // Bind constant buffers (Matrix and Ceiling Lights)
     context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
     context->PSSetConstantBuffers(3, 1, m_ceilingLightsBuffer.GetAddressOf());
 
     // Bind textures
@@ -208,8 +220,12 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
     ID3D11SamplerState *samplers[] = {m_linearSampler.Get(), m_shadowPass->GetShadowSampler()};
     context->PSSetSamplers(0, 2, samplers);
 
+    // Prepare spotlight list
+    const std::vector<Spotlight> emptyLights;
+    const std::vector<Spotlight>& lights = ctx.spotlights ? *ctx.spotlights : emptyLights;
+
     // Execute scene pass (room with identity world)
-    m_scenePass->Execute(context, ctx.depthStencilView, ctx.roomVB, ctx.roomIB,
+    m_scenePass->Execute(context, lights, ctx.depthStencilView, ctx.roomVB, ctx.roomIB,
                          nullptr, // Skip stage in scene pass for now
                          ctx.stageOffset, ctx.roomSpecular, ctx.roomShininess);
 
@@ -291,11 +307,16 @@ void RenderPipeline::RenderVolumetricPass(ID3D11DeviceContext *context, const Re
     // Bind matrix and spotlight buffers for volumetric pass
     context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
+    
+    // Note: Spotlight buffer (b1) is now handled internally by VolumetricPass::Execute 
+    // using the provided spotlights vector.
 
     ID3D11ShaderResourceView *goboSRV = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
 
-    m_volumetricPass->Execute(context, &m_volRT, m_fullScreenVB.Get(), ctx.depthSRV, goboSRV,
+    const std::vector<Spotlight> emptyLights;
+    const std::vector<Spotlight>& lights = ctx.spotlights ? *ctx.spotlights : emptyLights;
+
+    m_volumetricPass->Execute(context, lights, &m_volRT, m_fullScreenVB.Get(), ctx.depthSRV, goboSRV,
                               m_shadowPass->GetShadowSRV(), m_linearSampler.Get(), m_shadowPass->GetShadowSampler(),
                               ctx.time);
 

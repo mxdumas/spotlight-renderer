@@ -66,11 +66,31 @@ void TestRotationPropagation() {
     std::cout << "Rotation propagation passed." << std::endl;
 }
 
+void TestFindChild() {
+    std::cout << "Testing findChild..." << std::endl;
+    auto root = std::make_shared<SceneGraph::Node>("Root");
+    auto child1 = std::make_shared<SceneGraph::Node>("Child1");
+    auto child2 = std::make_shared<SceneGraph::Node>("Child2");
+    auto grandchild = std::make_shared<SceneGraph::Node>("Grandchild");
+
+    root->addChild(child1);
+    root->addChild(child2);
+    child1->addChild(grandchild);
+
+    assert(root->findChild("Root") == root);
+    assert(root->findChild("Child1") == child1);
+    assert(root->findChild("Child2") == child2);
+    assert(root->findChild("Grandchild") == grandchild);
+    assert(root->findChild("NonExistent") == nullptr);
+    std::cout << "findChild passed." << std::endl;
+}
+
 int main() {
     try {
         TestSimpleTransform();
         TestHierarchyTransform();
         TestRotationPropagation();
+        TestFindChild();
         std::cout << "All SceneGraph tests passed!" << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Test failed: " << e.what() << std::endl;

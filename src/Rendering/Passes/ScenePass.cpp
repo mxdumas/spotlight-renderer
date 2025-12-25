@@ -20,6 +20,10 @@ bool ScenePass::Initialize(ID3D11Device *device)
     if (!m_materialBuffer.Initialize(device))
         return false;
 
+    // Initialize spotlight array buffer
+    if (!m_spotlightArrayBuffer.Initialize(device))
+        return false;
+
     // Create no-cull rasterizer state for room rendering
     D3D11_RASTERIZER_DESC rd = {};
     rd.FillMode = D3D11_FILL_SOLID;
@@ -36,10 +40,21 @@ void ScenePass::Shutdown()
     m_noCullState.Reset();
 }
 
-void ScenePass::Execute(ID3D11DeviceContext *context, ID3D11DepthStencilView *dsv, ID3D11Buffer *roomVB,
-                        ID3D11Buffer *roomIB, Mesh *stageMesh, float stageOffset, float roomSpecular,
-                        float roomShininess)
+void ScenePass::Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights,
+                        ID3D11DepthStencilView *dsv, ID3D11Buffer *roomVB, ID3D11Buffer *roomIB, Mesh *stageMesh,
+                        float stageOffset, float roomSpecular, float roomShininess)
 {
+    // Update spotlight buffer
+    SpotlightArrayBuffer spotData;
+    std::memset(&spotData, 0, sizeof(spotData));
+
+    size_t count = (std::min)(spotlights.size(), static_cast<size_t>(Config::Spotlight::MAX_SPOTLIGHTS));
+    for (size_t i = 0; i < count; ++i)
+    {
+        spotData.lights[i] = spotlights[i].GetGPUData();
+    }
+    m_spotlightArrayBuffer.Update(context, spotData);
+
     // Set viewport
     D3D11_VIEWPORT viewport = {};
     viewport.Width = static_cast<float>(Config::Display::WINDOW_WIDTH);
@@ -50,6 +65,9 @@ void ScenePass::Execute(ID3D11DeviceContext *context, ID3D11DepthStencilView *ds
 
     // Bind shader
     m_basicShader.Bind(context);
+
+    // Bind spotlight buffer to slot 1 (matching b1 in shader)
+    context->PSSetConstantBuffers(1, 1, m_spotlightArrayBuffer.GetAddressOf());
 
     // Render Room with dark gray material
     {

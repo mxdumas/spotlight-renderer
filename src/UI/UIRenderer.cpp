@@ -100,12 +100,12 @@ void UIRenderer::RenderControls(UIContext &ctx)
         ImGui::DragFloat3("Target", &scene.CamTarget().x, 0.1f);
     }
 
-    if (ImGui::CollapsingHeader("Spotlight Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::CollapsingHeader("Global Scene Parameters", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        // Get mutable reference to spotlight data for ImGui controls
-        Spotlight &spotlight = scene.GetSpotlight();
-        SpotlightData &spotData = spotlight.GetGPUDataMutable();
         CeilingLights &ceilingLights = scene.GetCeilingLights();
+
+        ImGui::Checkbox("Demo Mode (Pan/Tilt/Color Chase)", &scene.DemoMode());
+        ImGui::Separator();
 
         ImGui::Text("Environment");
         float ceilingInt = ceilingLights.GetIntensity();
@@ -120,48 +120,56 @@ void UIRenderer::RenderControls(UIContext &ctx)
         }
         ImGui::SliderFloat("Room Specular", &scene.RoomSpecular(), 0.0f, 1.0f);
         ImGui::SliderFloat("Room Shininess", &scene.RoomShininess(), 1.0f, 128.0f);
-        ImGui::Separator();
-
-        ImGui::Text("Transform");
-        ImGui::DragFloat3("Position", &spotData.posRange.x, 0.1f);
-        ImGui::DragFloat3("Direction", &spotData.dirAngle.x, 0.01f);
-        if (ImGui::Button("Reset to Fixture"))
-        {
-            spotlight.SetPosition(scene.GetFixturePosition());
-        }
-
-        ImGui::Separator();
-        ImGui::Text("Color & Intensity");
-        ImGui::Checkbox("Use CMY Mixing", &scene.UseCMY());
-        if (scene.GetUseCMY())
-        {
-            if (ImGui::ColorEdit3("CMY", &scene.CMY().x))
-            {
-                spotlight.SetColorFromCMY(scene.CMY().x, scene.CMY().y, scene.CMY().z);
-            }
-        }
-        else
-        {
-            ImGui::ColorEdit3("RGB Color", &spotData.colorInt.x);
-        }
-        ImGui::DragFloat("Intensity", &spotData.colorInt.w, 1.0f, 0.0f, 5000.0f);
-        ImGui::DragFloat("Range", &spotData.posRange.w, 1.0f, 10.0f, 1000.0f);
-
-        ImGui::Separator();
-        ImGui::Text("Beam Shape");
-        ImGui::SliderFloat("Beam Angle", &spotData.coneGobo.x, 0.0f, 1.0f);
-        ImGui::SliderFloat("Field Angle", &spotData.coneGobo.y, 0.0f, 1.0f);
     }
 
-    if (ImGui::CollapsingHeader("Gobo Settings", ImGuiTreeNodeFlags_DefaultOpen))
+    auto &spotlights = scene.GetSpotlights();
+    for (size_t i = 0; i < spotlights.size(); ++i)
     {
-        Spotlight &spotlight = scene.GetSpotlight();
-        SpotlightData &spotData = spotlight.GetGPUDataMutable();
-        ImGui::DragFloat("Rotation", &spotData.coneGobo.z, 0.01f);
-        float shake = spotlight.GetGoboShake();
-        if (ImGui::SliderFloat("Shake Amount", &shake, 0.0f, 1.0f))
+        char label[32];
+        sprintf_s(label, "Spotlight %zu", i + 1);
+        if (ImGui::CollapsingHeader(label))
         {
-            spotlight.SetGoboShake(shake);
+            Spotlight &spotlight = spotlights[i];
+            SpotlightData &spotData = spotlight.GetGPUDataMutable();
+
+            ImGui::PushID(static_cast<int>(i));
+
+            ImGui::Text("GDTF Orientation");
+            float pan = spotlight.GetPan();
+            if (ImGui::SliderFloat("Pan", &pan, -180.0f, 180.0f))
+            {
+                spotlight.SetPan(pan);
+            }
+            float tilt = spotlight.GetTilt();
+            if (ImGui::SliderFloat("Tilt", &tilt, -90.0f, 90.0f))
+            {
+                spotlight.SetTilt(tilt);
+            }
+
+            ImGui::Separator();
+            ImGui::Text("Color & Intensity");
+            if (ImGui::ColorEdit3("Color", &spotData.colorInt.x))
+            {
+                // Sync CMY if needed or just use RGB
+            }
+            ImGui::DragFloat("Intensity", &spotData.colorInt.w, 1.0f, 0.0f, 5000.0f);
+            ImGui::DragFloat("Range", &spotData.posRange.w, 1.0f, 10.0f, 1000.0f);
+
+            ImGui::Separator();
+            ImGui::Text("Beam Shape");
+            ImGui::SliderFloat("Beam Angle", &spotData.coneGobo.x, 0.0f, 1.0f);
+            ImGui::SliderFloat("Field Angle", &spotData.coneGobo.y, 0.0f, 1.0f);
+
+            ImGui::Separator();
+            ImGui::Text("Gobo Settings");
+            ImGui::DragFloat("Gobo Rotation", &spotData.coneGobo.z, 0.01f);
+            float shake = spotlight.GetGoboShake();
+            if (ImGui::SliderFloat("Shake Amount", &shake, 0.0f, 1.0f))
+            {
+                spotlight.SetGoboShake(shake);
+            }
+
+            ImGui::PopID();
         }
     }
 

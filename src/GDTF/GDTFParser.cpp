@@ -149,23 +149,33 @@ std::shared_ptr<GeometryNode> GDTFParser::parseGeometry(pugi::xml_node node)
                 if (!(ss >> m[i])) m[i] = (i % 5 == 0) ? 1.0f : 0.0f;
             }
 
-            // GDTF is Row-Major with translation in 4th column.
-            // Transpose to move translation to 4th row for DirectX.
-            DirectX::XMFLOAT4X4 raw(m);
-            DirectX::XMMATRIX gdtfMat = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&raw));
-            
-            // USER REQUEST: Translate on the opposite side.
-            // This suggests the relative offsets are inverted.
-            DirectX::XMFLOAT4X4 finalMat;
-            DirectX::XMStoreFloat4x4(&finalMat, gdtfMat);
-            finalMat._41 = -finalMat._41;
-            finalMat._42 = -finalMat._42;
-            finalMat._43 = -finalMat._43;
-            
-            gn->matrix = finalMat;
-        }
+                                                            // GDTF is Row-Major with translation in 4th column.
 
-        for (pugi::xml_node child : node.children())
+                                                            // Transpose to move translation to 4th row for DirectX.
+
+                                                            DirectX::XMFLOAT4X4 raw(m);
+
+                                                            DirectX::XMMATRIX gdtfMat = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&raw));
+
+                                                
+
+                                                            // Apply translation inversion to match the physical model offsets
+
+                                                            DirectX::XMFLOAT4X4 finalMat;
+
+                                                            DirectX::XMStoreFloat4x4(&finalMat, gdtfMat);
+
+                                                            finalMat._41 = -finalMat._41;
+
+                                                            finalMat._42 = -finalMat._42;
+
+                                                            finalMat._43 = -finalMat._43;
+
+                                                
+
+                                                            gn->matrix = finalMat;
+
+                                                        }        for (pugi::xml_node child : node.children())
         {
             auto childNode = parseGeometry(child);
             if (childNode)

@@ -48,6 +48,7 @@ struct RenderContext
     std::vector<DirectX::XMFLOAT3> anchorPositions; ///< Positions of fixture anchors.
     std::vector<std::shared_ptr<SceneGraph::Node>> fixtureNodes; ///< Fixture hierarchies.
     Spotlight *spotlight;                           ///< Pointer to the main spotlight.
+    std::vector<Spotlight> *spotlights;             ///< Pointer to the list of all spotlights.
     CeilingLights *ceilingLights;                   ///< Pointer to the ceiling lights collection.
     Mesh *stageMesh;                                ///< Pointer to the stage geometry mesh.
     Texture *goboTexture;                           ///< Pointer to the gobo texture for the spotlight.

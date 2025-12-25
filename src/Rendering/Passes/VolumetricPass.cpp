@@ -17,6 +17,10 @@ bool VolumetricPass::Initialize(ID3D11Device *device)
     if (!m_volumetricBuffer.Initialize(device))
         return false;
 
+    // Initialize spotlight array buffer
+    if (!m_spotlightArrayBuffer.Initialize(device))
+        return false;
+
     // Set default parameters
     m_params.params = {Config::Volumetric::DEFAULT_STEP_COUNT, Config::Volumetric::DEFAULT_DENSITY,
                        Config::Volumetric::DEFAULT_INTENSITY, Config::Volumetric::DEFAULT_ANISOTROPY};
@@ -30,14 +34,25 @@ void VolumetricPass::Shutdown()
     // Shader cleans up automatically via ComPtr
 }
 
-void VolumetricPass::Execute(ID3D11DeviceContext *context, RenderTarget *volumetricRT, ID3D11Buffer *fullScreenVB,
-                             ID3D11ShaderResourceView *depthSRV, ID3D11ShaderResourceView *goboSRV,
-                             ID3D11ShaderResourceView *shadowSRV, ID3D11SamplerState *sampler,
-                             ID3D11SamplerState *shadowSampler, float time)
+void VolumetricPass::Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights,
+                             RenderTarget *volumetricRT, ID3D11Buffer *fullScreenVB, ID3D11ShaderResourceView *depthSRV,
+                             ID3D11ShaderResourceView *goboSRV, ID3D11ShaderResourceView *shadowSRV,
+                             ID3D11SamplerState *sampler, ID3D11SamplerState *shadowSampler, float time)
 {
     // Update jitter time
     m_params.jitter.x = time * Config::Volumetric::JITTER_SCALE;
     m_volumetricBuffer.Update(context, m_params);
+
+    // Update spotlight buffer
+    SpotlightArrayBuffer spotData;
+    std::memset(&spotData, 0, sizeof(spotData)); // Clear potentially unused slots
+
+    size_t count = (std::min)(spotlights.size(), static_cast<size_t>(Config::Spotlight::MAX_SPOTLIGHTS));
+    for (size_t i = 0; i < count; ++i)
+    {
+        spotData.lights[i] = spotlights[i].GetGPUData();
+    }
+    m_spotlightArrayBuffer.Update(context, spotData);
 
     // Clear and bind volumetric render target
     float blackColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -52,8 +67,9 @@ void VolumetricPass::Execute(ID3D11DeviceContext *context, RenderTarget *volumet
     viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
 
-    // Bind constant buffer
-    context->PSSetConstantBuffers(2, 1, m_volumetricBuffer.GetAddressOf());
+    // Bind constant buffers
+    ID3D11Buffer *buffers[] = {m_spotlightArrayBuffer.Get(), m_volumetricBuffer.Get()};
+    context->PSSetConstantBuffers(1, 2, buffers); // Start at slot 1 (SpotlightBuffer)
 
     // Bind textures: depth, gobo, shadow
     ID3D11ShaderResourceView *srvs[] = {depthSRV, goboSRV, shadowSRV};

@@ -76,6 +76,7 @@ constexpr float CLIP_FAR = 1000.0f;
  */
 namespace Spotlight
 {
+constexpr int MAX_SPOTLIGHTS = 4;
 constexpr float DEFAULT_RANGE = 500.0f;
 constexpr float DEFAULT_INTENSITY = 100.0f;
 constexpr float DEFAULT_BEAM_ANGLE = 0.98f;

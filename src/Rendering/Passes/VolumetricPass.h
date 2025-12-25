@@ -1,10 +1,12 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <vector>
 #include <wrl/client.h>
 #include "../../Core/Config.h"
 #include "../../Core/ConstantBuffer.h"
 #include "../../Resources/Shader.h"
+#include "../../Scene/Spotlight.h"
 #include "IRenderPass.h"
 
 using Microsoft::WRL::ComPtr;
@@ -19,6 +21,15 @@ __declspec(align(16)) struct VolumetricBuffer
 {
     DirectX::XMFLOAT4 params; ///< x: stepCount, y: density, z: intensity, w: anisotropy.
     DirectX::XMFLOAT4 jitter; ///< x: time-based jitter offset, yzw: unused.
+};
+
+/**
+ * @struct SpotlightArrayBuffer
+ * @brief Array of spotlights for the volumetric shader.
+ */
+__declspec(align(16)) struct SpotlightArrayBuffer
+{
+    SpotlightData lights[Config::Spotlight::MAX_SPOTLIGHTS];
 };
 
 /**
@@ -58,6 +69,7 @@ public:
      * @brief Executes the volumetric lighting rendering.
      *
      * @param context Pointer to the ID3D11DeviceContext.
+     * @param spotlights List of active spotlights in the scene.
      * @param volumetricRT The render target where the volumetric effect will be rendered.
      * @param fullScreenVB Vertex buffer for a full-screen quad.
      * @param depthSRV Shader resource view of the scene's depth buffer.
@@ -67,8 +79,8 @@ public:
      * @param shadowSampler Comparison sampler for shadow map sampling.
      * @param time Total elapsed time used for jittering.
      */
-    void Execute(ID3D11DeviceContext *context, RenderTarget *volumetricRT, ID3D11Buffer *fullScreenVB,
-                 ID3D11ShaderResourceView *depthSRV, ID3D11ShaderResourceView *goboSRV,
+    void Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights, RenderTarget *volumetricRT,
+                 ID3D11Buffer *fullScreenVB, ID3D11ShaderResourceView *depthSRV, ID3D11ShaderResourceView *goboSRV,
                  ID3D11ShaderResourceView *shadowSRV, ID3D11SamplerState *sampler, ID3D11SamplerState *shadowSampler,
                  float time);
 
@@ -102,5 +114,6 @@ public:
 private:
     Shader m_volumetricShader;
     ConstantBuffer<VolumetricBuffer> m_volumetricBuffer;
+    ConstantBuffer<SpotlightArrayBuffer> m_spotlightArrayBuffer;
     VolumetricBuffer m_params;
 };

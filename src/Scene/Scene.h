@@ -334,6 +334,15 @@ public:
         return m_time;
     }
 
+    /**
+     * @brief Checks if Demo Mode is active.
+     * @return true if demo mode is enabled.
+     */
+    bool &DemoMode()
+    {
+        return m_demoMode;
+    }
+
 private:
     // Camera
     Camera m_camera;
@@ -365,6 +374,9 @@ private:
     // CMY color state
     bool m_useCMY{false};
     DirectX::XMFLOAT3 m_cmy;
+
+    // Demo Mode
+    bool m_demoMode{true};
 
     // Time
     float m_time{0.0f};

@@ -56,6 +56,13 @@ public:
     }
 
     /**
+     * @brief Finds a child node by name recursively.
+     * @param name The name of the node to find.
+     * @return A shared pointer to the found node, or nullptr.
+     */
+    std::shared_ptr<Node> findChild(const std::string &name);
+
+    /**
      * @brief Gets the debug name of the node.
      * @return Const reference to the name string.
      */
@@ -91,12 +98,12 @@ public:
     void setTranslation(float x, float y, float z);
 
     /**
-     * @brief Sets the local rotation using Euler angles.
+     * @brief Sets the animation rotation (combined with base matrix).
+     * @param pitch Rotation around X axis (tilt).
+     * @param yaw Rotation around Y axis (pan).
      * @param roll Rotation around Z axis.
-     * @param pitch Rotation around X axis.
-     * @param yaw Rotation around Y axis.
      */
-    void setRotation(float roll, float pitch, float yaw);
+    void setRotation(float pitch, float yaw, float roll);
 
     /**
      * @brief Sets the local scale components.
@@ -107,25 +114,28 @@ public:
     void setScale(float x, float y, float z);
 
     /**
-     * @brief Directly sets the local transformation matrix and disables auto-recomputation.
-     * @param matrix The new local XMMATRIX.
+     * @brief Sets the base transformation matrix (e.g., GDTF placement).
+     *        Rotation can still be applied on top via setRotation().
+     * @param matrix The base XMMATRIX.
      */
     void setLocalMatrix(const DirectX::XMMATRIX &matrix)
     {
-        m_localMatrix = matrix;
-        m_useComponents = false;
+        m_baseMatrix = matrix;
+        m_hasBaseMatrix = true;
     }
 
 protected:
     std::string m_name; ///< Debug name of the node.
 
-    DirectX::XMMATRIX m_localMatrix; ///< Relative transform to parent.
+    DirectX::XMMATRIX m_baseMatrix;  ///< Base transform from GDTF placement.
+    DirectX::XMMATRIX m_localMatrix; ///< Final local transform.
     DirectX::XMMATRIX m_worldMatrix; ///< Absolute transform in world space.
 
-    bool m_useComponents = true;                         ///< Whether to recompute local matrix from T/R/S.
-    DirectX::XMFLOAT3 m_translation = {0.0f, 0.0f, 0.0f}; ///< Local translation vector.
-    DirectX::XMFLOAT3 m_rotation = {0.0f, 0.0f, 0.0f};    ///< Local Euler angles.
-    DirectX::XMFLOAT3 m_scale = {1.0f, 1.0f, 1.0f};       ///< Local scale vector.
+    bool m_hasBaseMatrix = false;                         ///< Whether base matrix was set (GDTF mode).
+    bool m_useComponents = false;                         ///< Whether T/R/S components are used.
+    DirectX::XMFLOAT3 m_translation = {0.0f, 0.0f, 0.0f}; ///< Translation for wrapper nodes.
+    DirectX::XMFLOAT3 m_rotation = {0.0f, 0.0f, 0.0f};    ///< Rotation (animation or wrapper).
+    DirectX::XMFLOAT3 m_scale = {1.0f, 1.0f, 1.0f};       ///< Scale for wrapper nodes.
 
     std::weak_ptr<Node> m_parent;                  ///< Weak pointer to parent to avoid cycles.
     std::vector<std::shared_ptr<Node>> m_children; ///< List of owned child nodes.

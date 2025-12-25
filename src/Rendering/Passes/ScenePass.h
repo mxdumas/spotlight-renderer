@@ -1,11 +1,15 @@
 #pragma once
 
+#pragma once
+
 #include <DirectXMath.h>
 #include <wrl/client.h>
 #include "../../Core/Config.h"
 #include "../../Core/ConstantBuffer.h"
 #include "../../Resources/Shader.h"
+#include "../../Scene/Spotlight.h"
 #include "IRenderPass.h"
+#include "VolumetricPass.h" // For SpotlightArrayBuffer definition (or move definition to common header)
 
 using Microsoft::WRL::ComPtr;
 
@@ -71,6 +75,7 @@ public:
      * Renders both the room geometry and the stage mesh with the provided parameters.
      *
      * @param context Pointer to the ID3D11DeviceContext.
+     * @param spotlights List of active spotlights.
      * @param dsv Depth-stencil view to use for depth testing.
      * @param roomVB Vertex buffer for the room geometry.
      * @param roomIB Index buffer for the room geometry.
@@ -79,8 +84,9 @@ public:
      * @param roomSpecular Specular intensity for the room material.
      * @param roomShininess Shininess exponent for the room material.
      */
-    void Execute(ID3D11DeviceContext *context, ID3D11DepthStencilView *dsv, ID3D11Buffer *roomVB, ID3D11Buffer *roomIB,
-                 Mesh *stageMesh, float stageOffset, float roomSpecular, float roomShininess);
+    void Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights, ID3D11DepthStencilView *dsv,
+                 ID3D11Buffer *roomVB, ID3D11Buffer *roomIB, Mesh *stageMesh, float stageOffset, float roomSpecular,
+                 float roomShininess);
 
     /**
      * @brief Gets the internal shader used by this pass.
@@ -103,6 +109,7 @@ public:
 private:
     Shader m_basicShader;
     ConstantBuffer<MaterialBuffer> m_materialBuffer;
+    ConstantBuffer<SpotlightArrayBuffer> m_spotlightArrayBuffer;
     RenderTarget *m_renderTarget = nullptr;
 
     // Rasterizer state for room (no culling)

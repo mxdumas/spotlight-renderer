@@ -75,3 +75,8 @@ add_test(NAME RayMathTest COMMAND TestRayMath)
 add_executable(TestSceneGraph tests/test_scene_graph.cpp src/Scene/Node.cpp)
 target_include_directories(TestSceneGraph PRIVATE src)
 add_test(NAME SceneGraphTest COMMAND TestSceneGraph)
+
+add_executable(TestSpotlightNodes tests/test_spotlight_nodes.cpp src/Scene/Spotlight.cpp src/Scene/Node.cpp)
+target_include_directories(TestSpotlightNodes PRIVATE src external)
+target_link_libraries(TestSpotlightNodes PRIVATE d3d11 dxgi d3dcompiler)
+add_test(NAME SpotlightNodesTest COMMAND TestSpotlightNodes)

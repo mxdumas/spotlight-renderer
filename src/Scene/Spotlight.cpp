@@ -1,4 +1,5 @@
 #include "Spotlight.h"
+#include "Node.h"
 #include <cmath>
 #include <cstring>
 
@@ -83,6 +84,66 @@ void Spotlight::SetGoboRotation(float rotation)
 void Spotlight::SetGoboShake(float amount)
 {
     m_goboShakeAmount = amount;
+}
+
+void Spotlight::SetPan(float degrees)
+{
+    m_pan = degrees;
+    if (m_panNode)
+    {
+        // Pan = rotation around Z axis (roll) because fixture is pitched 90°
+        float roll = DirectX::XMConvertToRadians(m_pan);
+        m_panNode->setRotation(0.0f, 0.0f, roll);
+    }
+}
+
+void Spotlight::SetTilt(float degrees)
+{
+    m_tilt = degrees;
+    if (m_tiltNode)
+    {
+        // Tilt = rotation around X axis (pitch), negated to point at stage
+        float pitch = -DirectX::XMConvertToRadians(m_tilt);
+        m_tiltNode->setRotation(pitch, 0.0f, 0.0f);
+    }
+}
+
+void Spotlight::LinkNodes(std::shared_ptr<SceneGraph::Node> pan, std::shared_ptr<SceneGraph::Node> tilt,
+                          std::shared_ptr<SceneGraph::Node> beam)
+{
+    m_panNode = pan;
+    m_tiltNode = tilt;
+    m_beamNode = beam;
+}
+
+void Spotlight::UpdateFromNodes()
+{
+    if (m_beamNode)
+    {
+        // Extract world transform from beam node
+        DirectX::XMMATRIX world = m_beamNode->getWorldMatrix();
+
+        // Update position and direction for CPU/UI
+        DirectX::XMFLOAT4X4 m;
+        DirectX::XMStoreFloat4x4(&m, world);
+        m_data.posRange.x = m._41;
+        m_data.posRange.y = m._42;
+        m_data.posRange.z = m._43;
+
+        // Direction is the Forward vector (Z-axis) of the world matrix
+        DirectX::XMVECTOR forward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+        DirectX::XMVECTOR worldForward = DirectX::XMVector3TransformNormal(forward, world);
+        DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3 *>(&m_data.dirAngle),
+                               DirectX::XMVector3Normalize(worldForward));
+
+        // LIGHT MATRIX: Use the inverse of the world matrix as the View matrix.
+        // This is perfectly smooth and follows the hierarchy exactly.
+        DirectX::XMVECTOR det;
+        DirectX::XMMATRIX view = DirectX::XMMatrixInverse(&det, world);
+        DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_data.posRange.w);
+
+        m_data.lightViewProj = DirectX::XMMatrixTranspose(view * proj);
+    }
 }
 
 DirectX::XMFLOAT3 Spotlight::GetPosition() const
