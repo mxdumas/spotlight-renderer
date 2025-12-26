@@ -9,6 +9,7 @@
 #include "../Resources/Texture.h"
 #include "Camera.h"
 #include "CeilingLights.h"
+#include "EffectsEngine.h"
 #include "Spotlight.h"
 
 // Scene container class
@@ -344,13 +345,10 @@ public:
     }
 
     /**
-     * @brief Checks if Demo Mode is active.
-     * @return true if demo mode is enabled.
+     * @brief Gets the effects engine for demo animations.
+     * @return Reference to the EffectsEngine.
      */
-    bool &DemoMode()
-    {
-        return m_demoMode;
-    }
+    EffectsEngine &GetEffectsEngine() { return m_effectsEngine; }
 
 private:
     // Camera
@@ -385,8 +383,8 @@ private:
     bool m_useCMY{false};
     DirectX::XMFLOAT3 m_cmy;
 
-    // Demo Mode
-    bool m_demoMode{true};
+    // Effects Engine
+    EffectsEngine m_effectsEngine;
 
     // Time
     float m_time{0.0f};

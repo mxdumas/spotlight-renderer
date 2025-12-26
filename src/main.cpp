@@ -3,6 +3,11 @@
 #endif
 
 #include <windows.h>
+#include <timeapi.h>
+#include <chrono>
+#include <thread>
+
+#pragma comment(lib, "winmm.lib")
 #include "Application.h"
 #include "Core/Config.h"
 #include "imgui_impl_win32.h"
@@ -81,8 +86,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     MSG msg = {};
     bool running = true;
+
+    // Frame limiter: target 60 FPS (~16.67ms per frame)
+    using clock = std::chrono::steady_clock;
+    constexpr auto target_frame_time = std::chrono::microseconds(16667);
+    constexpr auto spin_threshold = std::chrono::milliseconds(2);
+
+    // Improve Windows timer resolution
+    timeBeginPeriod(1);
+
     while (running)
     {
+        auto frame_start = clock::now();
+
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
             if (msg.message == WM_QUIT)
@@ -98,8 +114,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             app.BeginFrame();
             app.RenderUI();
             app.EndFrame();
+
+            // Hybrid wait: sleep for bulk, spin for precision
+            auto remaining = target_frame_time - (clock::now() - frame_start);
+            if (remaining > spin_threshold)
+            {
+                std::this_thread::sleep_for(remaining - spin_threshold);
+            }
+            while (clock::now() - frame_start < target_frame_time)
+            {
+                // Spin-wait for remaining time
+            }
         }
     }
+
+    timeEndPeriod(1);
 
     return 0;
 }

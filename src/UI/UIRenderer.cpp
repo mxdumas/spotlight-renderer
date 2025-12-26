@@ -100,12 +100,27 @@ void UIRenderer::RenderControls(UIContext &ctx)
         ImGui::DragFloat3("Target", &scene.CamTarget().x, 0.1f);
     }
 
+    if (ImGui::CollapsingHeader("Demo Effects", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        EffectsEngine &effects = scene.GetEffectsEngine();
+
+        ImGui::Checkbox("Enable Demo", &effects.Enabled());
+
+        if (effects.IsEnabled())
+        {
+            ImGui::SliderFloat("Speed", &effects.Speed(), 0.1f, 3.0f, "%.1fx");
+            ImGui::Checkbox("Pan", &effects.PanEnabled());
+            ImGui::SameLine();
+            ImGui::Checkbox("Tilt", &effects.TiltEnabled());
+            ImGui::SameLine();
+            ImGui::Checkbox("Rainbow", &effects.RainbowEnabled());
+            ImGui::Checkbox("Gobo Rotation", &effects.GoboRotationEnabled());
+        }
+    }
+
     if (ImGui::CollapsingHeader("Global Scene Parameters", ImGuiTreeNodeFlags_DefaultOpen))
     {
         CeilingLights &ceilingLights = scene.GetCeilingLights();
-
-        ImGui::Checkbox("Demo Mode (Pan/Tilt/Color Chase)", &scene.DemoMode());
-        ImGui::Separator();
 
         ImGui::Text("Environment");
         float ceilingInt = ceilingLights.GetIntensity();
