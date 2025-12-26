@@ -45,6 +45,26 @@ struct DMXChannel
 };
 
 /**
+ * @struct GoboSlot
+ * @brief Represents a single slot in a gobo wheel.
+ */
+struct GoboSlot
+{
+    std::string name;            ///< Name of the gobo slot.
+    std::string media_file_name; ///< Path to the image file in the archive.
+};
+
+/**
+ * @struct GoboWheel
+ * @brief Represents a gobo wheel containing multiple slots.
+ */
+struct GoboWheel
+{
+    std::string name;          ///< Name of the wheel.
+    std::vector<GoboSlot> slots; ///< List of slots on this wheel.
+};
+
+/**
  * @class GDTFParser
  * @brief Handles unzipping and XML parsing of GDTF (.gdtf) archives.
  *
@@ -109,6 +129,15 @@ public:
     }
 
     /**
+     * @brief Gets the list of Gobo Wheels.
+     * @return A const reference to the vector of GoboWheel structures.
+     */
+    const std::vector<GoboWheel> &getGoboWheels() const
+    {
+        return gobo_wheels_;
+    }
+
+    /**
      * @brief Gets the actual file name for a model name.
      * @param model_name The name of the model in the geometry tree.
      * @return The file name (usually GLB), or the model_name if not found.
@@ -134,6 +163,7 @@ private:
     std::string fixture_type_name_;               ///< Name extracted from the XML.
     std::shared_ptr<GeometryNode> geometry_root_; ///< Root of the logical geometry tree.
     std::vector<DMXChannel> dmx_channels_;        ///< List of DMX attributes.
+    std::vector<GoboWheel> gobo_wheels_;          ///< List of Gobo Wheels.
     std::map<std::string, std::string> model_to_file_; ///< Mapping from model name to file name.
 
     pugi::xml_document doc_; ///< Persistent XML document.

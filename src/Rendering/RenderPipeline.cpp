@@ -171,8 +171,15 @@ void RenderPipeline::RenderShadowPass(ID3D11DeviceContext *context, const Render
 {
     if (ctx.spotlights && !ctx.spotlights->empty())
     {
-        // For now, ShadowPass only supports one shadow map. We use the first spotlight.
-        m_shadowPass->Execute(context, ctx.spotlights->at(0).GetGPUData(), ctx.stageMesh, ctx.stageOffset);
+        // Render shadow map for each spotlight (up to MAX_SPOTLIGHTS)
+        int numLights = static_cast<int>(ctx.spotlights->size());
+        if (numLights > Config::Spotlight::MAX_SPOTLIGHTS)
+            numLights = Config::Spotlight::MAX_SPOTLIGHTS;
+
+        for (int i = 0; i < numLights; ++i)
+        {
+            m_shadowPass->Execute(context, ctx.spotlights->at(i).GetGPUData(), i, ctx.stageMesh, ctx.stageOffset);
+        }
     }
 }
 

@@ -236,12 +236,21 @@ public:
     }
 
     /**
-     * @brief Gets the list of GDTF fixture root nodes.
-     * @return Const reference to the vector of node shared pointers.
+     * @brief Gets the collection of GDTF fixture placement nodes.
+     * @return Const reference to the vector of shared pointers to SceneGraph::Nodes.
      */
     const std::vector<std::shared_ptr<SceneGraph::Node>> &GetFixtureNodes() const
     {
         return m_fixtureNodes;
+    }
+
+    /**
+     * @brief Gets the list of gobo slot names for the current wheel.
+     * @return Const reference to the vector of strings.
+     */
+    const std::vector<std::string> &GetGoboSlotNames() const
+    {
+        return m_goboSlotNames;
     }
 
     /**
@@ -366,6 +375,7 @@ private:
 
     // GDTF Fixtures
     std::vector<std::shared_ptr<SceneGraph::Node>> m_fixtureNodes;
+    std::vector<std::string> m_goboSlotNames;
 
     // Room materials
     float m_roomSpecular;

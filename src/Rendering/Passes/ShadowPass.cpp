@@ -1,16 +1,15 @@
 #include "ShadowPass.h"
-#include <cmath>
 #include "../../Resources/Mesh.h"
 #include "../../Scene/Spotlight.h"
 
 bool ShadowPass::Initialize(ID3D11Device *device)
 {
-    // Create shadow map texture
+    // Create shadow map texture array (one slice per spotlight)
     D3D11_TEXTURE2D_DESC smDesc = {};
     smDesc.Width = Config::Shadow::MAP_SIZE;
     smDesc.Height = Config::Shadow::MAP_SIZE;
     smDesc.MipLevels = 1;
-    smDesc.ArraySize = 1;
+    smDesc.ArraySize = Config::Spotlight::MAX_SPOTLIGHTS;
     smDesc.Format = DXGI_FORMAT_R32_TYPELESS;
     smDesc.SampleDesc.Count = 1;
     smDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -20,19 +19,28 @@ bool ShadowPass::Initialize(ID3D11Device *device)
     if (FAILED(hr))
         return false;
 
-    // Create depth stencil view
-    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-    dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    hr = device->CreateDepthStencilView(m_shadowMap.Get(), &dsvDesc, &m_shadowDSV);
-    if (FAILED(hr))
-        return false;
+    // Create depth stencil view for each array slice
+    for (int i = 0; i < Config::Spotlight::MAX_SPOTLIGHTS; ++i)
+    {
+        D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+        dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+        dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+        dsvDesc.Texture2DArray.MipSlice = 0;
+        dsvDesc.Texture2DArray.FirstArraySlice = i;
+        dsvDesc.Texture2DArray.ArraySize = 1;
+        hr = device->CreateDepthStencilView(m_shadowMap.Get(), &dsvDesc, &m_shadowDSV[i]);
+        if (FAILED(hr))
+            return false;
+    }
 
-    // Create shader resource view
+    // Create shader resource view for the entire array
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MipLevels = 1;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+    srvDesc.Texture2DArray.MostDetailedMip = 0;
+    srvDesc.Texture2DArray.MipLevels = 1;
+    srvDesc.Texture2DArray.FirstArraySlice = 0;
+    srvDesc.Texture2DArray.ArraySize = Config::Spotlight::MAX_SPOTLIGHTS;
     hr = device->CreateShaderResourceView(m_shadowMap.Get(), &srvDesc, &m_shadowSRV);
     if (FAILED(hr))
         return false;
@@ -67,27 +75,26 @@ bool ShadowPass::Initialize(ID3D11Device *device)
     if (!m_matrixBuffer.Initialize(device))
         return false;
 
-    m_lightViewProj = DirectX::XMMatrixIdentity();
-
     return true;
 }
 
 void ShadowPass::Shutdown()
 {
     m_shadowSRV.Reset();
-    m_shadowDSV.Reset();
+    for (int i = 0; i < Config::Spotlight::MAX_SPOTLIGHTS; ++i)
+        m_shadowDSV[i].Reset();
     m_shadowMap.Reset();
     m_shadowSampler.Reset();
 }
 
-void ShadowPass::Execute(ID3D11DeviceContext *context, const SpotlightData &spotData, Mesh *mesh, float stageOffset)
+void ShadowPass::Execute(ID3D11DeviceContext *context, const SpotlightData &spotData, int lightIndex, Mesh *mesh, float stageOffset)
 {
-    if (!mesh)
+    if (!mesh || lightIndex < 0 || lightIndex >= Config::Spotlight::MAX_SPOTLIGHTS)
         return;
 
-    // Clear shadow map depth
-    context->ClearDepthStencilView(m_shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-    context->OMSetRenderTargets(0, nullptr, m_shadowDSV.Get());
+    // Clear shadow map depth for this light's slice
+    context->ClearDepthStencilView(m_shadowDSV[lightIndex].Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+    context->OMSetRenderTargets(0, nullptr, m_shadowDSV[lightIndex].Get());
 
     // Set shadow map viewport
     D3D11_VIEWPORT vp = {};
@@ -97,29 +104,18 @@ void ShadowPass::Execute(ID3D11DeviceContext *context, const SpotlightData &spot
     vp.MaxDepth = 1.0f;
     context->RSSetViewports(1, &vp);
 
-    // Calculate light view/projection matrices
-    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(spotData.posRange.x, spotData.posRange.y, spotData.posRange.z, 1.0f);
-    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(
-        DirectX::XMVectorSet(spotData.dirAngle.x, spotData.dirAngle.y, spotData.dirAngle.z, 0.0f));
-    DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    // Use the pre-computed lightViewProj from SpotlightData to ensure consistency
+    // between shadow map rendering and shadow sampling in shaders.
+    // The matrix is stored transposed in SpotlightData, so we transpose it back.
+    DirectX::XMMATRIX lightViewProj = DirectX::XMMatrixTranspose(spotData.lightViewProj);
 
-    // Handle near-vertical directions
-    if (fabsf(DirectX::XMVectorGetY(lDir)) > 0.99f)
-    {
-        lUp = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-    }
-
-    DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
-    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, spotData.posRange.w);
-
-    m_lightViewProj = lView * lProj;
-
-    // Update matrix buffer with light matrices
+    // Update matrix buffer with combined light view-projection matrix
+    // The shader uses viewProj directly instead of separate view/projection
     ShadowMatrixBuffer mb;
     mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(0.0f, stageOffset, 0.0f));
-    mb.view = DirectX::XMMatrixTranspose(lView);
-    mb.projection = DirectX::XMMatrixTranspose(lProj);
-    mb.invViewProj = DirectX::XMMatrixIdentity();
+    mb.view = DirectX::XMMatrixTranspose(lightViewProj);  // viewProj in shader
+    mb.projection = DirectX::XMMatrixIdentity();            // padding (unused)
+    mb.invViewProj = DirectX::XMMatrixIdentity();           // padding (unused)
     mb.cameraPos = {0.0f, 0.0f, 0.0f, 0.0f};
     m_matrixBuffer.Update(context, mb);
 

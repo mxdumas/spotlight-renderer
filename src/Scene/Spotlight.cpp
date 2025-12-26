@@ -81,6 +81,11 @@ void Spotlight::SetGoboRotation(float rotation)
     m_data.coneGobo.z = rotation;
 }
 
+void Spotlight::SetGoboIndex(int index)
+{
+    m_data.coneGobo.w = static_cast<float>(index);
+}
+
 void Spotlight::SetGoboShake(float amount)
 {
     m_goboShakeAmount = amount;

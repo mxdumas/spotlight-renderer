@@ -62,9 +62,12 @@ constexpr int INDEX_COUNT = 36; // 6 faces * 2 triangles * 3 vertices
  */
 namespace CameraDefaults
 {
-constexpr float DISTANCE = 40.0f;
-constexpr float PITCH = 0.4f;
+constexpr float DISTANCE = 30.0f;
+constexpr float PITCH = Math::PI * 23.0f / 180.0f; // 23 degrees
 constexpr float YAW = 0.0f;
+constexpr float TARGET_X = 0.0f;
+constexpr float TARGET_Y = 4.8f;
+constexpr float TARGET_Z = 0.0f;
 constexpr float FOV = Math::PI_DIV_4; // 45 degrees
 constexpr float CLIP_NEAR = 0.1f;
 constexpr float CLIP_FAR = 1000.0f;
@@ -121,7 +124,7 @@ constexpr float Z_SPACING = 40.0f;
 constexpr int GRID_X = 4;
 constexpr int GRID_Z = 2;
 constexpr int TOTAL_LIGHTS = GRID_X * GRID_Z; // 8
-constexpr float DEFAULT_INTENSITY = 1.0f;
+constexpr float DEFAULT_INTENSITY = 2.5f;
 constexpr float INTENSITY_MULTIPLIER = 500.0f;
 } // namespace CeilingLights
 

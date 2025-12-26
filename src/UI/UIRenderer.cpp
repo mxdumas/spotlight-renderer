@@ -162,6 +162,31 @@ void UIRenderer::RenderControls(UIContext &ctx)
 
             ImGui::Separator();
             ImGui::Text("Gobo Settings");
+
+            const auto& goboNames = scene.GetGoboSlotNames();
+            if (!goboNames.empty())
+            {
+                int currentGobo = spotlight.GetGoboIndex();
+                std::string currentGoboName = (currentGobo < goboNames.size()) ? goboNames[currentGobo] : "Unknown";
+
+                if (ImGui::BeginCombo("Gobo", currentGoboName.c_str()))
+                {
+                    for (int n = 0; n < goboNames.size(); n++)
+                    {
+                        const bool is_selected = (currentGobo == n);
+                        if (ImGui::Selectable(goboNames[n].c_str(), is_selected))
+                        {
+                            spotlight.SetGoboIndex(n);
+                        }
+                        if (is_selected)
+                        {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+            }
+
             ImGui::DragFloat("Gobo Rotation", &spotData.coneGobo.z, 0.01f);
             float shake = spotlight.GetGoboShake();
             if (ImGui::SliderFloat("Shake Amount", &shake, 0.0f, 1.0f))

@@ -2,6 +2,8 @@
 
 #include <d3d11.h>
 #include <string>
+#include <vector>
+#include <cstdint>
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
@@ -35,6 +37,24 @@ public:
      * @return true if loading succeeded, false otherwise.
      */
     bool LoadFromFile(ID3D11Device *device, const std::string &fileName);
+
+    /**
+     * @brief Loads a texture from memory (e.g. from a ZIP archive).
+     *
+     * @param device Pointer to the ID3D11Device.
+     * @param data The raw file data (png/jpg bytes).
+     * @return true if loading succeeded, false otherwise.
+     */
+    bool LoadFromMemory(ID3D11Device *device, const std::vector<uint8_t> &data);
+
+    /**
+     * @brief Creates a Texture2DArray from multiple images.
+     * 
+     * @param device Pointer to the ID3D11Device.
+     * @param filesData List of raw file data buffers.
+     * @return true if creation succeeded.
+     */
+    bool CreateTextureArray(ID3D11Device *device, const std::vector<std::vector<uint8_t>> &filesData);
 
     /**
      * @brief Gets the shader resource view of the texture.

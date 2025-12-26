@@ -109,6 +109,12 @@ public:
     void SetGoboRotation(float rotation);
 
     /**
+     * @brief Sets the active gobo index (slot number).
+     * @param index 0-based index of the gobo in the texture array.
+     */
+    void SetGoboIndex(int index);
+
+    /**
      * @brief Sets the intensity of the gobo "shake" animation.
      * @param amount Maximum displacement for the shake effect.
      */
@@ -213,6 +219,15 @@ public:
     float GetGoboRotation() const
     {
         return m_data.coneGobo.z;
+    }
+
+    /**
+     * @brief Gets the gobo index.
+     * @return Index value.
+     */
+    int GetGoboIndex() const
+    {
+        return static_cast<int>(m_data.coneGobo.w);
     }
 
     /**

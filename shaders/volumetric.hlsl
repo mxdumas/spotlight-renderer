@@ -27,8 +27,8 @@ cbuffer VolumetricBuffer : register(b2) {
 };
 
 Texture2D depthTexture : register(t0);
-Texture2D goboTexture : register(t1);
-Texture2D shadowMap : register(t2);
+Texture2DArray goboTexture : register(t1);
+Texture2DArray shadowMap : register(t2);
 
 SamplerState samLinear : register(s0);
 SamplerComparisonState shadowSampler : register(s1);
@@ -132,18 +132,17 @@ float4 PS(PS_INPUT input) : SV_Target {
 
                 if (spotEffect > 0) {
                     float shadow = 1.0f;
-                    
-                    // Shadow mapping only for the first light for now
-                    if (i == 0) {
-                        float4 lightSpacePos = mul(float4(currentPos, 1.0f), lights[i].lightViewProj);
-                        if (lightSpacePos.w > 0.0f) {
-                            float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
-                            float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
-                            shadowUV.y = 1.0f - shadowUV.y;
 
-                            if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
-                                shadow = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, projCoords.z - 0.01f).r;
-                            }
+                    // Shadow mapping for each light
+                    float4 lightSpacePos = mul(float4(currentPos, 1.0f), lights[i].lightViewProj);
+                    float3 projCoords = float3(0, 0, 0);
+                    if (lightSpacePos.w > 0.0f) {
+                        projCoords = lightSpacePos.xyz / lightSpacePos.w;
+                        float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
+                        shadowUV.y = 1.0f - shadowUV.y;
+
+                        if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
+                            shadow = shadowMap.SampleCmpLevelZero(shadowSampler, float3(shadowUV, i), projCoords.z - 0.01f).r;
                         }
                     }
 
@@ -153,27 +152,25 @@ float4 PS(PS_INPUT input) : SV_Target {
 
                         // Gobo sampling
                         float3 goboColor = float3(1,1,1);
-                        // Project texture
-                        float4 lightSpacePos = mul(float4(currentPos, 1.0f), lights[i].lightViewProj);
-                         if (lightSpacePos.w > 0.0f) {
-                            float3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
-                             // Gobo rotation
-                            float s, c;
-                            sincos(lights[i].coneGobo.z, s, c);
+                        // Reuse lightSpacePos from shadow calculation
+                        {
+                            // Gobo rotation
+                            float gs, gc;
+                            sincos(lights[i].coneGobo.z, gs, gc);
                             float2 rUV;
-                            rUV.x = projCoords.x * c - projCoords.y * s;
-                            rUV.y = projCoords.x * s + projCoords.y * c;
+                            rUV.x = projCoords.x * gc - projCoords.y * gs;
+                            rUV.y = projCoords.x * gs + projCoords.y * gc;
                             rUV += lights[i].goboOff.xy;
                             float2 goboUV = rUV * 0.5f + 0.5f;
                             goboUV.y = 1.0f - goboUV.y;
-                            
+
                             // Using Clamp to avoid bleeding
                             // Ensure gobo is only inside the cone effectively
                             if (goboUV.x >= 0 && goboUV.x <= 1 && goboUV.y >= 0 && goboUV.y <= 1)
-                                goboColor = goboTexture.SampleLevel(samLinear, goboUV, 0).rgb;
+                                goboColor = goboTexture.SampleLevel(samLinear, float3(goboUV, lights[i].coneGobo.w), 0).rgb;
                             else
                                 goboColor = float3(0,0,0);
-                         }
+                        }
 
                         stepContribution += lights[i].colorInt.xyz * attenuation * spotEffect * shadow * goboColor * phase;
                     }

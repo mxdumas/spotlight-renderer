@@ -36,8 +36,8 @@ cbuffer CeilingLightsBuffer : register(b3) {
     float4 ambientColor;
 };
 
-Texture2D goboTexture : register(t0);
-Texture2D shadowMap : register(t1);
+Texture2DArray goboTexture : register(t0);
+Texture2DArray shadowMap : register(t1);
 SamplerState samLinear : register(s0);
 SamplerComparisonState shadowSampler : register(s1);
 
@@ -113,19 +113,17 @@ float4 PS(PS_INPUT input) : SV_Target {
                 float2 finalUV = rUV * 0.5f + 0.5f;
                 finalUV.y = 1.0f - finalUV.y;
                 
-                // Clamp gobo
+                // Clamp gobo - sample from texture array using gobo index
                 if (finalUV.x >= 0 && finalUV.x <= 1 && finalUV.y >= 0 && finalUV.y <= 1)
-                     goboColor = goboTexture.Sample(samLinear, finalUV).rgb;
+                     goboColor = goboTexture.Sample(samLinear, float3(finalUV, lights[i].coneGobo.w)).rgb;
 
-                // Shadow mapping (Only for first light for now)
-                if (i == 0) {
-                    float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
-                    shadowUV.y = 1.0f - shadowUV.y;
-                    float depth = projCoords.z;
+                // Shadow mapping for each light
+                float2 shadowUV = projCoords.xy * 0.5f + 0.5f;
+                shadowUV.y = 1.0f - shadowUV.y;
+                float depth = projCoords.z;
 
-                    if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
-                        shadowFactor = shadowMap.SampleCmpLevelZero(shadowSampler, shadowUV, depth - 0.0005f).r;
-                    }
+                if (shadowUV.x >= 0 && shadowUV.x <= 1 && shadowUV.y >= 0 && shadowUV.y <= 1) {
+                    shadowFactor = shadowMap.SampleCmpLevelZero(shadowSampler, float3(shadowUV, i), depth - 0.0005f).r;
                 }
             }
 

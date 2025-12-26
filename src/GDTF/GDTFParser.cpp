@@ -25,6 +25,9 @@ bool GDTFParser::load(const std::string &file_name)
 
 bool GDTFParser::extractFile(const std::string &internal_path, std::vector<uint8_t> &out_data)
 {
+    // std::ofstream log("debug.log", std::ios::app);
+    // log << "Extracting: " << internal_path << std::endl;
+
     mz_zip_archive zip_archive;
     memset(&zip_archive, 0, sizeof(zip_archive));
 
@@ -34,6 +37,30 @@ bool GDTFParser::extractFile(const std::string &internal_path, std::vector<uint8
     }
 
     int file_index = mz_zip_reader_locate_file(&zip_archive, internal_path.c_str(), nullptr, 0);
+    if (file_index < 0)
+    {
+        // Try to search case-insensitive if exact match fails
+        int num_files = (int)mz_zip_reader_get_num_files(&zip_archive);
+        for (int i = 0; i < num_files; i++)
+        {
+             mz_zip_archive_file_stat file_stat;
+             if (mz_zip_reader_file_stat(&zip_archive, i, &file_stat))
+             {
+                 std::string fname = file_stat.m_filename;
+                 std::string target = internal_path;
+                 
+                 // Simple lowercase compare
+                 std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
+                 std::transform(target.begin(), target.end(), target.begin(), ::tolower);
+                 
+                 if (fname == target) {
+                     file_index = i;
+                     break;
+                 }
+             }
+        }
+    }
+
     if (file_index < 0)
     {
         mz_zip_reader_end(&zip_archive);
@@ -89,6 +116,25 @@ bool GDTFParser::parseXML(const std::string &xml_content)
         geometry_root_ = parseGeometry(child);
         if (geometry_root_)
             break;
+    }
+
+    // Parse Wheels
+    gobo_wheels_.clear();
+    pugi::xml_node wheels_node = fixture_type.child("Wheels");
+    for (pugi::xml_node wheel_node : wheels_node.children("Wheel"))
+    {
+        GoboWheel wheel;
+        wheel.name = wheel_node.attribute("Name").as_string();
+
+        for (pugi::xml_node slot_node : wheel_node.children("Slot"))
+        {
+            GoboSlot slot;
+            slot.name = slot_node.attribute("Name").as_string();
+            slot.media_file_name = slot_node.attribute("MediaFileName").as_string();
+            
+            wheel.slots.push_back(slot);
+        }
+        gobo_wheels_.push_back(wheel);
     }
 
     // Parse DMX Modes (take the first one)
