@@ -100,7 +100,7 @@ namespace Volumetric
 {
 constexpr float DEFAULT_STEP_COUNT = 512.0f;
 constexpr float MIN_STEP_COUNT = 16.0f;
-constexpr float MAX_STEP_COUNT = 512.0f;
+constexpr float MAX_STEP_COUNT = 2048.0f;
 constexpr float DEFAULT_DENSITY = 0.065f;
 constexpr float DEFAULT_INTENSITY = 10.0f;
 constexpr float DEFAULT_ANISOTROPY = 0.509f;

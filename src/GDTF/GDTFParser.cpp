@@ -244,4 +244,104 @@ std::string GDTFParser::getModelFile(const std::string &model_name) const
     return model_name;
 }
 
+std::vector<std::vector<uint8_t>> GDTFParser::extractGoboImages()
+{
+    std::vector<std::vector<uint8_t>> images;
+
+    // First slot is always "Open" (radial gradient - bright center, soft falloff)
+    // Create a simple TGA in memory
+    {
+        const int size = 512;
+        std::vector<uint8_t> circle_data;
+        // Simple uncompressed TGA format (easier than PNG)
+        // TGA header (18 bytes)
+        circle_data.resize(18 + size * size * 4);
+        circle_data[2] = 2;  // Uncompressed true-color
+        circle_data[12] = size & 0xFF;
+        circle_data[13] = (size >> 8) & 0xFF;
+        circle_data[14] = size & 0xFF;
+        circle_data[15] = (size >> 8) & 0xFF;
+        circle_data[16] = 32; // 32 bits per pixel
+        circle_data[17] = 0x20; // Top-left origin
+        // Radial gradient with hard edge cutoff (like real gobos)
+        const float center = size / 2.0f;
+        const float radius = center * 0.40f; // Circle occupies 50% of diameter
+        const float edge_softness = radius * 0.1f; // Soft edge zone
+        for (int y = 0; y < size; ++y)
+        {
+            for (int x = 0; x < size; ++x)
+            {
+                float dx = x - center;
+                float dy = y - center;
+                float dist = std::sqrt(dx * dx + dy * dy);
+
+                float brightness = 0.0f;
+                if (dist < radius - edge_softness)
+                {
+                    // Inside: gradient from 100% center to 90% near edge
+                    float t = dist / radius;
+                    brightness = 1.0f - (t * t * 0.1f);
+                }
+                else if (dist < radius + edge_softness)
+                {
+                    // Soft edge transition
+                    float t = (dist - (radius - edge_softness)) / (2.0f * edge_softness);
+                    brightness = (1.0f - 0.1f) * (1.0f - t); // Fade from 90% to 0%
+                }
+                // else: black (brightness = 0)
+
+                unsigned char val = static_cast<unsigned char>(brightness * 255.0f);
+                int idx = 18 + (y * size + x) * 4;
+                circle_data[idx] = val;     // B
+                circle_data[idx + 1] = val; // G
+                circle_data[idx + 2] = val; // R
+                circle_data[idx + 3] = 255; // A
+            }
+        }
+        images.push_back(std::move(circle_data));
+    }
+
+    for (const auto &wheel : gobo_wheels_)
+    {
+        // Only process wheels that contain "Gobo" in the name
+        if (wheel.name.find("Gobo") == std::string::npos)
+            continue;
+
+        for (const auto &slot : wheel.slots)
+        {
+            // Skip empty slots (Open position already added above)
+            if (slot.media_file_name.empty())
+                continue;
+
+            // Try common paths and extensions
+            std::vector<std::string> paths_to_try = {
+                "wheels/" + slot.media_file_name + ".png",
+                "wheels/" + slot.media_file_name + ".PNG",
+                "wheels/" + slot.media_file_name + ".jpg",
+                "wheels/" + slot.media_file_name + ".jpeg",
+                slot.media_file_name + ".png",
+                slot.media_file_name
+            };
+
+            std::vector<uint8_t> data;
+            bool found = false;
+            for (const auto &path : paths_to_try)
+            {
+                if (extractFile(path, data))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found && !data.empty())
+            {
+                images.push_back(std::move(data));
+            }
+        }
+    }
+
+    return images;
+}
+
 } // namespace GDTF

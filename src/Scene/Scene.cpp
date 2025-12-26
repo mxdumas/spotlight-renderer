@@ -5,7 +5,7 @@
 
 Scene::Scene()
     : m_camDistance(Config::CameraDefaults::DISTANCE), m_camPitch(Config::CameraDefaults::PITCH),
-      m_camYaw(Config::CameraDefaults::YAW), m_camTarget(0.0f, 0.0f, 0.0f),
+      m_camYaw(Config::CameraDefaults::YAW), m_camTarget(Config::CameraDefaults::TARGET_X, Config::CameraDefaults::TARGET_Y, Config::CameraDefaults::TARGET_Z),
       m_fixturePos(0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f), m_roomSpecular(Config::Materials::ROOM_SPECULAR),
       m_roomShininess(Config::Materials::ROOM_SHININESS), m_cmy(0.0f, 0.0f, 0.0f)
 {
@@ -58,14 +58,6 @@ bool Scene::Initialize(ID3D11Device *device)
         m_fixturePos = m_anchorPositions[0];
     }
 
-    // Load gobo texture
-    m_goboTexture = std::make_unique<Texture>();
-    if (!m_goboTexture->LoadFromFile(device, "data/models/gobo.jpg"))
-    {
-        // Fallback to stage.png
-        m_goboTexture->LoadFromFile(device, "data/models/stage.png");
-    }
-
     // Initialize spotlights
     m_spotlights.clear();
     m_fixtureNodes.clear();
@@ -79,6 +71,44 @@ bool Scene::Initialize(ID3D11Device *device)
         gdtfRoot = loader.buildSceneGraph(device, parser);
     }
 
+    // Load gobo texture - prefer GDTF gobos if available
+    m_goboTexture = std::make_unique<Texture>();
+    m_goboSlotNames.clear();
+    auto gobo_images = parser.extractGoboImages();
+    if (!gobo_images.empty())
+    {
+        if (m_goboTexture->CreateTextureArray(device, gobo_images))
+        {
+            // Populate gobo slot names from GDTF
+            m_goboSlotNames.push_back("Open");
+            for (const auto &wheel : parser.getGoboWheels())
+            {
+                if (wheel.name.find("Gobo") == std::string::npos)
+                    continue;
+                for (const auto &slot : wheel.slots)
+                {
+                    if (!slot.media_file_name.empty())
+                        m_goboSlotNames.push_back(slot.name);
+                }
+            }
+        }
+        else
+        {
+            // Fallback to default gobo
+            m_goboTexture->LoadFromFile(device, "data/models/gobo.jpg");
+            m_goboSlotNames.push_back("Default");
+        }
+    }
+    else
+    {
+        // No GDTF gobos, use default
+        if (!m_goboTexture->LoadFromFile(device, "data/models/gobo.jpg"))
+        {
+            m_goboTexture->LoadFromFile(device, "data/models/stage.png");
+        }
+        m_goboSlotNames.push_back("Default");
+    }
+
     for (const auto &pos : m_anchorPositions)
     {
         Spotlight light;
@@ -90,6 +120,9 @@ bool Scene::Initialize(ID3D11Device *device)
         DirectX::XMFLOAT3 dir;
         DirectX::XMStoreFloat3(&dir, dirVec);
         light.SetDirection(dir);
+
+        // Default gobo (can be changed via UI)
+        light.SetGoboIndex(3);
 
         m_spotlights.push_back(light);
 

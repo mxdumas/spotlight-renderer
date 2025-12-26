@@ -138,6 +138,16 @@ public:
     }
 
     /**
+     * @brief Extracts all gobo images from the GDTF archive.
+     *
+     * Iterates through all gobo wheels and extracts images for slots
+     * that have a MediaFileName defined.
+     *
+     * @return Vector of raw image data (PNG/JPG bytes), one per gobo.
+     */
+    std::vector<std::vector<uint8_t>> extractGoboImages();
+
+    /**
      * @brief Gets the actual file name for a model name.
      * @param model_name The name of the model in the geometry tree.
      * @return The file name (usually GLB), or the model_name if not found.
