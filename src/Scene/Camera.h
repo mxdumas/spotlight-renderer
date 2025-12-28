@@ -27,18 +27,18 @@ public:
     /**
      * @brief Sets the camera's perspective projection matrix.
      *
-     * @param fovY Vertical field of view in radians.
+     * @param fov_y Vertical field of view in radians.
      * @param aspect Aspect ratio (width / height).
-     * @param nearZ Near clipping plane distance.
-     * @param farZ Far clipping plane distance.
+     * @param near_z Near clipping plane distance.
+     * @param far_z Far clipping plane distance.
      */
-    void SetPerspective(float fovY, float aspect, float nearZ, float farZ);
+    void SetPerspective(float fov_y, float aspect, float near_z, float far_z);
 
     /**
      * @brief Gets the current view matrix.
      * @return 4x4 view matrix.
      */
-    DirectX::XMMATRIX GetViewMatrix() const
+    [[nodiscard]] DirectX::XMMATRIX GetViewMatrix() const
     {
         return DirectX::XMLoadFloat4x4(&m_view);
     }
@@ -47,7 +47,7 @@ public:
      * @brief Gets the current projection matrix.
      * @return 4x4 projection matrix.
      */
-    DirectX::XMMATRIX GetProjectionMatrix() const
+    [[nodiscard]] DirectX::XMMATRIX GetProjectionMatrix() const
     {
         return DirectX::XMLoadFloat4x4(&m_projection);
     }

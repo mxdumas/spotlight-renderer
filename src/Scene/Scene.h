@@ -47,9 +47,9 @@ public:
     /**
      * @brief Updates the scene state for a single frame.
      *
-     * @param deltaTime The time elapsed since the last frame in seconds.
+     * @param delta_time The time elapsed since the last frame in seconds.
      */
-    void Update(float deltaTime);
+    void Update(float delta_time);
 
     /**
      * @brief Gets a reference to the active camera.
@@ -64,7 +64,7 @@ public:
      * @brief Gets a const reference to the active camera.
      * @return Const reference to the Camera object.
      */
-    const Camera &GetCamera() const
+    [[nodiscard]] const Camera &GetCamera() const
     {
         return m_camera;
     }
@@ -109,7 +109,7 @@ public:
      * @brief Computes the camera's world position based on orbit parameters.
      * @return The computed camera position as XMFLOAT3.
      */
-    DirectX::XMFLOAT3 GetCameraPosition() const;
+    [[nodiscard]] DirectX::XMFLOAT3 GetCameraPosition() const;
 
     /**
      * @brief Updates the camera's view matrix based on orbit parameters.
@@ -129,7 +129,7 @@ public:
      * @brief Gets a const reference to the primary spotlight.
      * @return Const reference to the first Spotlight in the collection.
      */
-    const Spotlight &GetSpotlight() const
+    [[nodiscard]] const Spotlight &GetSpotlight() const
     {
         return m_spotlights[0];
     }
@@ -147,7 +147,7 @@ public:
      * @brief Gets a const reference to the list of all spotlights in the scene.
      * @return Const reference to the vector of Spotlight objects.
      */
-    const std::vector<Spotlight> &GetSpotlights() const
+    [[nodiscard]] const std::vector<Spotlight> &GetSpotlights() const
     {
         return m_spotlights;
     }
@@ -177,7 +177,7 @@ public:
      * @brief Gets a const reference to the ceiling lights.
      * @return Const reference to the CeilingLights object.
      */
-    const CeilingLights &GetCeilingLights() const
+    [[nodiscard]] const CeilingLights &GetCeilingLights() const
     {
         return m_ceilingLights;
     }
@@ -195,7 +195,7 @@ public:
      * @brief Gets the stage mesh pointer (const).
      * @return Const pointer to the stage Mesh.
      */
-    const Mesh *GetStageMesh() const
+    [[nodiscard]] const Mesh *GetStageMesh() const
     {
         return m_stageMesh.get();
     }
@@ -213,7 +213,7 @@ public:
      * @brief Gets the gobo texture pointer (const).
      * @return Const pointer to the gobo Texture.
      */
-    const Texture *GetGoboTexture() const
+    [[nodiscard]] const Texture *GetGoboTexture() const
     {
         return m_goboTexture.get();
     }
@@ -222,7 +222,7 @@ public:
      * @brief Gets the list of anchor positions.
      * @return Const reference to the vector of anchor positions.
      */
-    const std::vector<DirectX::XMFLOAT3> &GetAnchorPositions() const
+    [[nodiscard]] const std::vector<DirectX::XMFLOAT3> &GetAnchorPositions() const
     {
         return m_anchorPositions;
     }
@@ -231,7 +231,7 @@ public:
      * @brief Gets the position where the spotlight fixture is mounted.
      * @return Reference to the fixture position XMFLOAT3.
      */
-    const DirectX::XMFLOAT3 &GetFixturePosition() const
+    [[nodiscard]] const DirectX::XMFLOAT3 &GetFixturePosition() const
     {
         return m_fixturePos;
     }
@@ -348,7 +348,10 @@ public:
      * @brief Gets the effects engine for demo animations.
      * @return Reference to the EffectsEngine.
      */
-    EffectsEngine &GetEffectsEngine() { return m_effectsEngine; }
+    EffectsEngine &GetEffectsEngine()
+    {
+        return m_effectsEngine;
+    }
 
 private:
     // Camera

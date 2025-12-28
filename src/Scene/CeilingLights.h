@@ -64,7 +64,7 @@ public:
      * @brief Gets the current intensity multiplier.
      * @return Intensity value.
      */
-    float GetIntensity() const
+    [[nodiscard]] float GetIntensity() const
     {
         return m_intensity;
     }
@@ -73,7 +73,7 @@ public:
      * @brief Gets the current ambient fill level.
      * @return Ambient fill value.
      */
-    float GetAmbient() const
+    [[nodiscard]] float GetAmbient() const
     {
         return m_ambientFill;
     }
@@ -88,7 +88,7 @@ public:
      * @brief Gets the GPU-ready data structure for constant buffer updates.
      * @return Const reference to CeilingLightsData.
      */
-    const CeilingLightsData &GetGPUData() const
+    [[nodiscard]] const CeilingLightsData &GetGPUData() const
     {
         return m_data;
     }

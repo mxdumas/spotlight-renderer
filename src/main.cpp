@@ -2,12 +2,13 @@
 #define UNICODE
 #endif
 
-#include <windows.h>
 #include <timeapi.h>
-#include <chrono>
-#include <thread>
+#include <windows.h>
 
 #pragma comment(lib, "winmm.lib")
+
+#include <chrono>
+#include <thread>
 #include "Application.h"
 #include "Core/Config.h"
 #include "imgui_impl_win32.h"

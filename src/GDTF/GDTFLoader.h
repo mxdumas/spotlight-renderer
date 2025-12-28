@@ -8,9 +8,9 @@
 #include <d3d11.h>
 #include <map>
 #include <memory>
+#include "../Resources/Mesh.h"
 #include "../Scene/Node.h"
 #include "GDTFParser.h"
-#include "../Resources/Mesh.h"
 
 namespace GDTF
 {
@@ -42,7 +42,7 @@ public:
      * @param parser A reference to a GDTFParser that has already successfully loaded a file.
      * @return A shared pointer to the root Node of the generated SceneGraph.
      */
-    std::shared_ptr<SceneGraph::Node> buildSceneGraph(ID3D11Device *device, GDTFParser &parser);
+    static std::shared_ptr<SceneGraph::Node> BuildSceneGraph(ID3D11Device *device, GDTFParser &parser);
 
 private:
     /**
@@ -51,12 +51,12 @@ private:
      * @param device Pointer to the ID3D11Device.
      * @param parser Reference to the GDTFParser.
      * @param gdtf_node The current GDTF logical node.
+     * @param mesh_cache Cache of loaded meshes.
      * @return A shared pointer to the created SceneGraph Node.
      */
-    std::shared_ptr<SceneGraph::Node> createNodeRecursive(ID3D11Device *device, GDTFParser &parser,
-                                                          std::shared_ptr<GeometryNode> gdtf_node);
-
-    std::map<std::string, std::shared_ptr<Mesh>> m_meshCache; ///< Cache of loaded meshes by model file name.
+    static std::shared_ptr<SceneGraph::Node>
+    CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, std::shared_ptr<GeometryNode> gdtf_node,
+                        std::map<std::string, std::shared_ptr<Mesh>> &mesh_cache);
 };
 
 } // namespace GDTF

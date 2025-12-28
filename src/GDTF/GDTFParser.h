@@ -27,7 +27,8 @@ struct GeometryNode
     DirectX::XMFLOAT4X4 matrix;                          ///< Local transformation matrix.
     std::vector<std::shared_ptr<GeometryNode>> children; ///< Child nodes in the hierarchy.
 
-    GeometryNode() {
+    GeometryNode()
+    {
         DirectX::XMStoreFloat4x4(&matrix, DirectX::XMMatrixIdentity());
     }
 };
@@ -60,7 +61,7 @@ struct GoboSlot
  */
 struct GoboWheel
 {
-    std::string name;          ///< Name of the wheel.
+    std::string name;            ///< Name of the wheel.
     std::vector<GoboSlot> slots; ///< List of slots on this wheel.
 };
 
@@ -90,7 +91,7 @@ public:
      * @param file_name The absolute or relative path to the .gdtf file.
      * @return true if the file was opened and parsed successfully, false otherwise.
      */
-    bool load(const std::string &file_name);
+    bool Load(const std::string &file_name);
 
     /**
      * @brief Extracts a specific file from the GDTF archive into memory.
@@ -99,42 +100,42 @@ public:
      * @param out_data Vector to store the raw binary data of the extracted file.
      * @return true if the file exists and was extracted, false otherwise.
      */
-    bool extractFile(const std::string &internal_path, std::vector<uint8_t> &out_data);
+    bool ExtractFile(const std::string &internal_path, std::vector<uint8_t> &out_data);
 
     /**
      * @brief Gets the name of the fixture type defined in the GDTF.
      * @return A const reference to the fixture type name string.
      */
-    const std::string &getFixtureTypeName() const
+    [[nodiscard]] const std::string &GetFixtureTypeName() const
     {
-        return fixture_type_name_;
+        return m_fixtureTypeName;
     }
 
     /**
      * @brief Gets the root of the parsed geometry hierarchy.
      * @return A shared pointer to the root GeometryNode.
      */
-    std::shared_ptr<GeometryNode> getGeometryRoot() const
+    [[nodiscard]] std::shared_ptr<GeometryNode> GetGeometryRoot() const
     {
-        return geometry_root_;
+        return m_geometryRoot;
     }
 
     /**
      * @brief Gets the list of DMX channels for the primary mode.
      * @return A const reference to the vector of DMXChannel structures.
      */
-    const std::vector<DMXChannel> &getDMXChannels() const
+    [[nodiscard]] const std::vector<DMXChannel> &GetDMXChannels() const
     {
-        return dmx_channels_;
+        return m_dmxChannels;
     }
 
     /**
      * @brief Gets the list of Gobo Wheels.
      * @return A const reference to the vector of GoboWheel structures.
      */
-    const std::vector<GoboWheel> &getGoboWheels() const
+    [[nodiscard]] const std::vector<GoboWheel> &GetGoboWheels() const
     {
-        return gobo_wheels_;
+        return m_goboWheels;
     }
 
     /**
@@ -145,14 +146,14 @@ public:
      *
      * @return Vector of raw image data (PNG/JPG bytes), one per gobo.
      */
-    std::vector<std::vector<uint8_t>> extractGoboImages();
+    std::vector<std::vector<uint8_t>> ExtractGoboImages();
 
     /**
      * @brief Gets the actual file name for a model name.
      * @param model_name The name of the model in the geometry tree.
      * @return The file name (usually GLB), or the model_name if not found.
      */
-    std::string getModelFile(const std::string &model_name) const;
+    [[nodiscard]] std::string GetModelFile(const std::string &model_name) const;
 
 private:
     /**
@@ -160,23 +161,23 @@ private:
      * @param xml_content The raw XML string.
      * @return true if parsing succeeded.
      */
-    bool parseXML(const std::string &xml_content);
+    bool ParseXML(const std::string &xml_content);
 
     /**
      * @brief Recursively parses geometry nodes from the XML.
      * @param node The current XML node in the Geometries section.
      * @return A shared pointer to the created GeometryNode, or nullptr if invalid.
      */
-    std::shared_ptr<GeometryNode> parseGeometry(pugi::xml_node node);
+    static std::shared_ptr<GeometryNode> ParseGeometry(pugi::xml_node node);
 
-    std::string gdtf_path_;                       ///< Path to the source .gdtf archive.
-    std::string fixture_type_name_;               ///< Name extracted from the XML.
-    std::shared_ptr<GeometryNode> geometry_root_; ///< Root of the logical geometry tree.
-    std::vector<DMXChannel> dmx_channels_;        ///< List of DMX attributes.
-    std::vector<GoboWheel> gobo_wheels_;          ///< List of Gobo Wheels.
-    std::map<std::string, std::string> model_to_file_; ///< Mapping from model name to file name.
+    std::string m_gdtfPath;                           ///< Path to the source .gdtf archive.
+    std::string m_fixtureTypeName;                    ///< Name extracted from the XML.
+    std::shared_ptr<GeometryNode> m_geometryRoot;     ///< Root of the logical geometry tree.
+    std::vector<DMXChannel> m_dmxChannels;            ///< List of DMX attributes.
+    std::vector<GoboWheel> m_goboWheels;              ///< List of Gobo Wheels.
+    std::map<std::string, std::string> m_modelToFile; ///< Mapping from model name to file name.
 
-    pugi::xml_document doc_; ///< Persistent XML document.
+    pugi::xml_document m_doc; ///< Persistent XML document.
 };
 
 } // namespace GDTF

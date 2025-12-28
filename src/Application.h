@@ -76,11 +76,11 @@ private:
     RenderPipeline m_pipeline;
 
     // Convenience accessors (delegate to GraphicsDevice)
-    ID3D11Device *GetDevice() const
+    [[nodiscard]] ID3D11Device *GetDevice() const
     {
         return m_graphics.GetDevice();
     }
-    ID3D11DeviceContext *GetContext() const
+    [[nodiscard]] ID3D11DeviceContext *GetContext() const
     {
         return m_graphics.GetContext();
     }

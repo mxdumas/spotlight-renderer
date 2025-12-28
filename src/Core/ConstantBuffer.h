@@ -64,7 +64,7 @@ public:
      * @brief Gets the underlying ID3D11Buffer pointer.
      * @return Pointer to the D3D11 buffer.
      */
-    ID3D11Buffer *Get() const
+    [[nodiscard]] ID3D11Buffer *Get() const
     {
         return m_buffer.Get();
     }
@@ -74,7 +74,7 @@ public:
      * Useful for binding calls like VSSetConstantBuffers.
      * @return Address of the buffer pointer.
      */
-    ID3D11Buffer *const *GetAddressOf() const
+    [[nodiscard]] ID3D11Buffer *const *GetAddressOf() const
     {
         return m_buffer.GetAddressOf();
     }

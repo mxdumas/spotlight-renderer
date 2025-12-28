@@ -15,7 +15,7 @@ Node::Node(const std::string &name) : m_name(name)
     m_worldMatrix = DirectX::XMMatrixIdentity();
 }
 
-void Node::addChild(std::shared_ptr<Node> child)
+void Node::AddChild(std::shared_ptr<Node> child)
 {
     if (child)
     {
@@ -24,7 +24,7 @@ void Node::addChild(std::shared_ptr<Node> child)
     }
 }
 
-std::shared_ptr<Node> Node::findChild(const std::string &name)
+std::shared_ptr<Node> Node::FindChild(const std::string &name)
 {
     if (m_name == name)
     {
@@ -33,7 +33,7 @@ std::shared_ptr<Node> Node::findChild(const std::string &name)
 
     for (auto &child : m_children)
     {
-        auto found = child->findChild(name);
+        auto found = child->FindChild(name);
         if (found)
         {
             return found;
@@ -43,15 +43,14 @@ std::shared_ptr<Node> Node::findChild(const std::string &name)
     return nullptr;
 }
 
-void Node::updateWorldMatrix(const DirectX::XMMATRIX &parent_world)
+void Node::UpdateWorldMatrix(const DirectX::XMMATRIX &parent_world)
 {
     if (m_hasBaseMatrix)
     {
         // GDTF mode: combine animation rotation with base matrix
-        DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(
-            m_rotation.x,  // pitch (X axis) - for tilt
-            m_rotation.y,  // yaw (Y axis) - for pan
-            m_rotation.z); // roll (Z axis)
+        DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(m_rotation.x,  // pitch (X axis) - for tilt
+                                                                           m_rotation.y,  // yaw (Y axis) - for pan
+                                                                           m_rotation.z); // roll (Z axis)
         m_localMatrix = rotation * m_baseMatrix;
     }
     else if (m_useComponents)
@@ -67,27 +66,30 @@ void Node::updateWorldMatrix(const DirectX::XMMATRIX &parent_world)
 
     for (auto &child : m_children)
     {
-        child->updateWorldMatrix(m_worldMatrix);
+        child->UpdateWorldMatrix(m_worldMatrix);
     }
 }
 
-void Node::setTranslation(float x, float y, float z)
+void Node::SetTranslation(float x, float y, float z)
 {
     m_translation = {x, y, z};
-    if (!m_hasBaseMatrix) m_useComponents = true;
+    if (!m_hasBaseMatrix)
+        m_useComponents = true;
 }
 
-void Node::setRotation(float pitch, float yaw, float roll)
+void Node::SetRotation(float pitch, float yaw, float roll)
 {
     // pitch = X axis (tilt), yaw = Y axis (pan), roll = Z axis
     m_rotation = {pitch, yaw, roll};
-    if (!m_hasBaseMatrix) m_useComponents = true;
+    if (!m_hasBaseMatrix)
+        m_useComponents = true;
 }
 
-void Node::setScale(float x, float y, float z)
+void Node::SetScale(float x, float y, float z)
 {
     m_scale = {x, y, z};
-    if (!m_hasBaseMatrix) m_useComponents = true;
+    if (!m_hasBaseMatrix)
+        m_useComponents = true;
 }
 
 } // namespace SceneGraph

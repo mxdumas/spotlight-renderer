@@ -61,14 +61,14 @@ public:
      * technique between the source and temporary render targets.
      *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param sourceRT The source render target (also receives the final result).
-     * @param tempRT A temporary render target used for intermediate blur steps.
-     * @param fullScreenVB Vertex buffer for a full-screen quad.
+     * @param source_rt The source render target (also receives the final result).
+     * @param temp_rt A temporary render target used for intermediate blur steps.
+     * @param full_screen_vb Vertex buffer for a full-screen quad.
      * @param sampler Sampler state for texture sampling.
      * @param passes The number of blur iterations to perform.
      */
-    void Execute(ID3D11DeviceContext *context, RenderTarget *sourceRT, RenderTarget *tempRT, ID3D11Buffer *fullScreenVB,
-                 ID3D11SamplerState *sampler, int passes);
+    void Execute(ID3D11DeviceContext *context, RenderTarget *source_rt, RenderTarget *temp_rt,
+                 ID3D11Buffer *full_screen_vb, ID3D11SamplerState *sampler, int passes);
 
 private:
     Shader m_blurShader;

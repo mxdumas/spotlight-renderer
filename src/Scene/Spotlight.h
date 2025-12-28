@@ -136,7 +136,7 @@ public:
      * @brief Gets the current pan angle.
      * @return Pan in degrees.
      */
-    float GetPan() const
+    [[nodiscard]] float GetPan() const
     {
         return m_pan;
     }
@@ -145,7 +145,7 @@ public:
      * @brief Gets the current tilt angle.
      * @return Tilt in degrees.
      */
-    float GetTilt() const
+    [[nodiscard]] float GetTilt() const
     {
         return m_tilt;
     }
@@ -160,7 +160,7 @@ public:
                    std::shared_ptr<SceneGraph::Node> beam);
 
     /**
-     * @brief Synchronizes the spotlight's position and direction with its linked scene graph nodes.     
+     * @brief Synchronizes the spotlight's position and direction with its linked scene graph nodes.
      */
     void UpdateFromNodes();
 
@@ -168,19 +168,19 @@ public:
      * @brief Gets the current world position.
      * @return Position as XMFLOAT3.
      */
-    DirectX::XMFLOAT3 GetPosition() const;
+    [[nodiscard]] DirectX::XMFLOAT3 GetPosition() const;
 
     /**
      * @brief Gets the current direction vector.
      * @return Normalized direction as XMFLOAT3.
      */
-    DirectX::XMFLOAT3 GetDirection() const;
+    [[nodiscard]] DirectX::XMFLOAT3 GetDirection() const;
 
     /**
      * @brief Gets the maximum range.
      * @return Range value.
      */
-    float GetRange() const
+    [[nodiscard]] float GetRange() const
     {
         return m_data.posRange.w;
     }
@@ -189,7 +189,7 @@ public:
      * @brief Gets the current intensity.
      * @return Intensity value.
      */
-    float GetIntensity() const
+    [[nodiscard]] float GetIntensity() const
     {
         return m_data.colorInt.w;
     }
@@ -198,7 +198,7 @@ public:
      * @brief Gets the beam angle.
      * @return Beam angle in radians.
      */
-    float GetBeamAngle() const
+    [[nodiscard]] float GetBeamAngle() const
     {
         return m_data.coneGobo.x;
     }
@@ -207,7 +207,7 @@ public:
      * @brief Gets the field angle.
      * @return Field angle in radians.
      */
-    float GetFieldAngle() const
+    [[nodiscard]] float GetFieldAngle() const
     {
         return m_data.coneGobo.y;
     }
@@ -216,7 +216,7 @@ public:
      * @brief Gets the gobo rotation.
      * @return Rotation in radians.
      */
-    float GetGoboRotation() const
+    [[nodiscard]] float GetGoboRotation() const
     {
         return m_data.coneGobo.z;
     }
@@ -225,7 +225,7 @@ public:
      * @brief Gets the gobo index.
      * @return Index value.
      */
-    int GetGoboIndex() const
+    [[nodiscard]] int GetGoboIndex() const
     {
         return static_cast<int>(m_data.coneGobo.w);
     }
@@ -234,7 +234,7 @@ public:
      * @brief Gets the current gobo shake intensity.
      * @return Shake amount.
      */
-    float GetGoboShake() const
+    [[nodiscard]] float GetGoboShake() const
     {
         return m_goboShakeAmount;
     }
@@ -254,7 +254,7 @@ public:
      * @brief Gets the GPU-ready data structure for constant buffer updates.
      * @return Const reference to SpotlightData.
      */
-    const SpotlightData &GetGPUData() const
+    [[nodiscard]] const SpotlightData &GetGPUData() const
     {
         return m_data;
     }

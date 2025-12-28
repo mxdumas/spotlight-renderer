@@ -68,7 +68,7 @@ public:
      * @brief Gets the underlying ID3D11Texture2D pointer.
      * @return Pointer to the texture.
      */
-    ID3D11Texture2D *GetTexture() const
+    [[nodiscard]] ID3D11Texture2D *GetTexture() const
     {
         return m_texture.Get();
     }
@@ -77,7 +77,7 @@ public:
      * @brief Gets the render target view (RTV).
      * @return Pointer to the RTV.
      */
-    ID3D11RenderTargetView *GetRTV() const
+    [[nodiscard]] ID3D11RenderTargetView *GetRTV() const
     {
         return m_rtv.Get();
     }
@@ -86,7 +86,7 @@ public:
      * @brief Gets the shader resource view (SRV) for sampling this target in a shader.
      * @return Pointer to the SRV.
      */
-    ID3D11ShaderResourceView *GetSRV() const
+    [[nodiscard]] ID3D11ShaderResourceView *GetSRV() const
     {
         return m_srv.Get();
     }
@@ -95,7 +95,7 @@ public:
      * @brief Gets the address of the RTV pointer.
      * @return Address of the RTV pointer.
      */
-    ID3D11RenderTargetView *const *GetRTVAddressOf() const
+    [[nodiscard]] ID3D11RenderTargetView *const *GetRTVAddressOf() const
     {
         return m_rtv.GetAddressOf();
     }
@@ -104,7 +104,7 @@ public:
      * @brief Gets the address of the SRV pointer.
      * @return Address of the SRV pointer.
      */
-    ID3D11ShaderResourceView *const *GetSRVAddressOf() const
+    [[nodiscard]] ID3D11ShaderResourceView *const *GetSRVAddressOf() const
     {
         return m_srv.GetAddressOf();
     }
@@ -113,7 +113,7 @@ public:
      * @brief Gets the width of the render target.
      * @return Width in pixels.
      */
-    int GetWidth() const
+    [[nodiscard]] int GetWidth() const
     {
         return m_width;
     }
@@ -122,7 +122,7 @@ public:
      * @brief Gets the height of the render target.
      * @return Height in pixels.
      */
-    int GetHeight() const
+    [[nodiscard]] int GetHeight() const
     {
         return m_height;
     }

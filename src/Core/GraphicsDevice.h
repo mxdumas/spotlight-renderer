@@ -59,7 +59,7 @@ public:
      * @brief Gets the ID3D11Device pointer.
      * @return Pointer to the D3D11 device.
      */
-    ID3D11Device *GetDevice() const
+    [[nodiscard]] ID3D11Device *GetDevice() const
     {
         return m_device.Get();
     }
@@ -68,7 +68,7 @@ public:
      * @brief Gets the ID3D11DeviceContext pointer.
      * @return Pointer to the D3D11 device context.
      */
-    ID3D11DeviceContext *GetContext() const
+    [[nodiscard]] ID3D11DeviceContext *GetContext() const
     {
         return m_context.Get();
     }
@@ -77,7 +77,7 @@ public:
      * @brief Gets the IDXGISwapChain pointer.
      * @return Pointer to the DXGI swap chain.
      */
-    IDXGISwapChain *GetSwapChain() const
+    [[nodiscard]] IDXGISwapChain *GetSwapChain() const
     {
         return m_swapChain.Get();
     }
@@ -86,7 +86,7 @@ public:
      * @brief Gets the back buffer's render target view.
      * @return Pointer to the back buffer RTV.
      */
-    ID3D11RenderTargetView *GetBackBufferRTV() const
+    [[nodiscard]] ID3D11RenderTargetView *GetBackBufferRTV() const
     {
         return m_backBufferRTV.Get();
     }
@@ -95,7 +95,7 @@ public:
      * @brief Gets the main depth-stencil view.
      * @return Pointer to the depth-stencil view.
      */
-    ID3D11DepthStencilView *GetDepthStencilView() const
+    [[nodiscard]] ID3D11DepthStencilView *GetDepthStencilView() const
     {
         return m_depthStencilView.Get();
     }
@@ -104,7 +104,7 @@ public:
      * @brief Gets the shader resource view of the depth buffer.
      * @return Pointer to the depth buffer SRV.
      */
-    ID3D11ShaderResourceView *GetDepthSRV() const
+    [[nodiscard]] ID3D11ShaderResourceView *GetDepthSRV() const
     {
         return m_depthSRV.Get();
     }

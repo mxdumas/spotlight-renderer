@@ -79,9 +79,9 @@ public:
      * @param shadowSampler Comparison sampler for shadow map sampling.
      * @param time Total elapsed time used for jittering.
      */
-    void Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights, RenderTarget *volumetricRT,
-                 ID3D11Buffer *fullScreenVB, ID3D11ShaderResourceView *depthSRV, ID3D11ShaderResourceView *goboSRV,
-                 ID3D11ShaderResourceView *shadowSRV, ID3D11SamplerState *sampler, ID3D11SamplerState *shadowSampler,
+    void Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights, RenderTarget *volumetric_rt,
+                 ID3D11Buffer *full_screen_vb, ID3D11ShaderResourceView *depth_srv, ID3D11ShaderResourceView *gobo_srv,
+                 ID3D11ShaderResourceView *shadow_srv, ID3D11SamplerState *sampler, ID3D11SamplerState *shadow_sampler,
                  float time);
 
     /**
@@ -97,7 +97,7 @@ public:
      * @brief Gets a const reference to the internal volumetric parameters.
      * @return Const reference to the VolumetricBuffer.
      */
-    const VolumetricBuffer &GetParams() const
+    [[nodiscard]] const VolumetricBuffer &GetParams() const
     {
         return m_params;
     }

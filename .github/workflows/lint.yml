@@ -65,9 +65,12 @@ jobs:
         with:
           vcpkgGitCommitId: 'a34c873a9717a888f58dc05268dea15592c2f0ff'
 
-      - name: Configure CMake (generate compile_commands.json)
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure CMake with Ninja (generate compile_commands.json)
         run: |
-          cmake -B build -S . `
+          cmake -B build -S . -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

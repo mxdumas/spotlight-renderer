@@ -19,18 +19,18 @@ bool RenderTarget::Create(ID3D11Device *device, int width, int height, DXGI_FORM
     m_height = height;
 
     // Create texture
-    D3D11_TEXTURE2D_DESC texDesc = {};
-    texDesc.Width = static_cast<UINT>(width);
-    texDesc.Height = static_cast<UINT>(height);
-    texDesc.MipLevels = 1;
-    texDesc.ArraySize = 1;
-    texDesc.Format = format;
-    texDesc.SampleDesc.Count = 1;
-    texDesc.SampleDesc.Quality = 0;
-    texDesc.Usage = D3D11_USAGE_DEFAULT;
-    texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    D3D11_TEXTURE2D_DESC tex_desc = {};
+    tex_desc.Width = static_cast<UINT>(width);
+    tex_desc.Height = static_cast<UINT>(height);
+    tex_desc.MipLevels = 1;
+    tex_desc.ArraySize = 1;
+    tex_desc.Format = format;
+    tex_desc.SampleDesc.Count = 1;
+    tex_desc.SampleDesc.Quality = 0;
+    tex_desc.Usage = D3D11_USAGE_DEFAULT;
+    tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-    HRESULT hr = device->CreateTexture2D(&texDesc, nullptr, &m_texture);
+    HRESULT hr = device->CreateTexture2D(&tex_desc, nullptr, &m_texture);
     if (FAILED(hr))
     {
         return false;

@@ -68,10 +68,10 @@ public:
      * @brief Loads a 3D model from an OBJ file and creates DirectX 11 buffers.
      *
      * @param device Pointer to the ID3D11Device.
-     * @param fileName Path to the .obj file.
+     * @param file_name Path to the .obj file.
      * @return true if loading succeeded, false otherwise.
      */
-    bool LoadFromOBJ(ID3D11Device *device, const std::string &fileName);
+    bool LoadFromOBJ(ID3D11Device *device, const std::string &file_name);
 
     /**
      * @brief Creates a mesh from raw vertex and index data.
@@ -103,15 +103,15 @@ public:
      * @brief Draws a single shape from the mesh by index.
      *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param shapeIndex Index of the shape to draw.
+     * @param shape_index Index of the shape to draw.
      */
-    void DrawShape(ID3D11DeviceContext *context, size_t shapeIndex);
+    void DrawShape(ID3D11DeviceContext *context, size_t shape_index);
 
     /**
      * @brief Gets the metadata for all shapes found in the mesh file.
      * @return Const reference to a vector of ShapeInfo.
      */
-    const std::vector<ShapeInfo> &GetShapes() const
+    [[nodiscard]] const std::vector<ShapeInfo> &GetShapes() const
     {
         return m_shapes;
     }
@@ -120,7 +120,7 @@ public:
      * @brief Gets the minimum Y coordinate found in the mesh (useful for floor placement).
      * @return The minimum Y value.
      */
-    float GetMinY() const
+    [[nodiscard]] float GetMinY() const
     {
         return m_minY;
     }
@@ -128,7 +128,7 @@ public:
 private:
     ComPtr<ID3D11Buffer> m_vertexBuffer;
     ComPtr<ID3D11Buffer> m_indexBuffer;
-    UINT m_indexCount;
+    UINT m_indexCount{0};
 
     std::vector<ShapeInfo> m_shapes;
     float m_minY{0.0f};

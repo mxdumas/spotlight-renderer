@@ -57,13 +57,13 @@ public:
      * @brief Executes the FXAA anti-aliasing pass.
      *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param destRTV The destination render target view (usually the back buffer).
-     * @param sceneRT The source scene render target to apply FXAA to.
-     * @param fullScreenVB Vertex buffer for a full-screen quad.
+     * @param dest_rtv The destination render target view (usually the back buffer).
+     * @param scene_rt The source scene render target to apply FXAA to.
+     * @param full_screen_vb Vertex buffer for a full-screen quad.
      * @param sampler Sampler state for texture sampling.
      */
-    void Execute(ID3D11DeviceContext *context, ID3D11RenderTargetView *destRTV, RenderTarget *sceneRT,
-                 ID3D11Buffer *fullScreenVB, ID3D11SamplerState *sampler);
+    void Execute(ID3D11DeviceContext *context, ID3D11RenderTargetView *dest_rtv, RenderTarget *scene_rt,
+                 ID3D11Buffer *full_screen_vb, ID3D11SamplerState *sampler);
 
 private:
     Shader m_fxaaShader;

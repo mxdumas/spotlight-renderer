@@ -85,8 +85,8 @@ public:
      * @param roomShininess Shininess exponent for the room material.
      */
     void Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights, ID3D11DepthStencilView *dsv,
-                 ID3D11Buffer *roomVB, ID3D11Buffer *roomIB, Mesh *stageMesh, float stageOffset, float roomSpecular,
-                 float roomShininess);
+                 ID3D11Buffer *room_vb, ID3D11Buffer *room_ib, Mesh *stage_mesh, float stage_offset,
+                 float room_specular, float room_shininess);
 
     /**
      * @brief Gets the internal shader used by this pass.

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <d3d11.h>
 #include <string>
 #include <vector>
-#include <cstdint>
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
@@ -33,10 +33,10 @@ public:
      * @brief Loads a texture from an image file.
      *
      * @param device Pointer to the ID3D11Device.
-     * @param fileName Path to the image file (e.g., .jpg, .png).
+     * @param file_name Path to the image file (e.g., .jpg, .png).
      * @return true if loading succeeded, false otherwise.
      */
-    bool LoadFromFile(ID3D11Device *device, const std::string &fileName);
+    bool LoadFromFile(ID3D11Device *device, const std::string &file_name);
 
     /**
      * @brief Loads a texture from memory (e.g. from a ZIP archive).
@@ -49,18 +49,18 @@ public:
 
     /**
      * @brief Creates a Texture2DArray from multiple images.
-     * 
+     *
      * @param device Pointer to the ID3D11Device.
-     * @param filesData List of raw file data buffers.
+     * @param files_data List of raw file data buffers.
      * @return true if creation succeeded.
      */
-    bool CreateTextureArray(ID3D11Device *device, const std::vector<std::vector<uint8_t>> &filesData);
+    bool CreateTextureArray(ID3D11Device *device, const std::vector<std::vector<uint8_t>> &files_data);
 
     /**
      * @brief Gets the shader resource view of the texture.
      * @return Pointer to the ID3D11ShaderResourceView.
      */
-    ID3D11ShaderResourceView *GetSRV() const
+    [[nodiscard]] ID3D11ShaderResourceView *GetSRV() const
     {
         return m_srv.Get();
     }

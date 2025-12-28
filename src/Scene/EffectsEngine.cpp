@@ -1,6 +1,6 @@
 #include "EffectsEngine.h"
-#include "Spotlight.h"
 #include <cmath>
+#include "Spotlight.h"
 
 void EffectsEngine::Update(std::vector<Spotlight> &spotlights, float time)
 {
@@ -37,12 +37,36 @@ void EffectsEngine::Update(std::vector<Spotlight> &spotlights, float time)
             float r = 0, g = 0, b = 0;
             float h = hue * 6.0f;
             float x = 1.0f - std::abs(std::fmod(h, 2.0f) - 1.0f);
-            if (h < 1.0f) { r = 1; g = x; }
-            else if (h < 2.0f) { r = x; g = 1; }
-            else if (h < 3.0f) { g = 1; b = x; }
-            else if (h < 4.0f) { g = x; b = 1; }
-            else if (h < 5.0f) { r = x; b = 1; }
-            else { r = 1; b = x; }
+            if (h < 1.0f)
+            {
+                r = 1;
+                g = x;
+            }
+            else if (h < 2.0f)
+            {
+                r = x;
+                g = 1;
+            }
+            else if (h < 3.0f)
+            {
+                g = 1;
+                b = x;
+            }
+            else if (h < 4.0f)
+            {
+                g = x;
+                b = 1;
+            }
+            else if (h < 5.0f)
+            {
+                r = x;
+                b = 1;
+            }
+            else
+            {
+                r = 1;
+                b = x;
+            }
 
             light.SetColor(r, g, b);
         }

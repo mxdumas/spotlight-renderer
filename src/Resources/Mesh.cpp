@@ -2,11 +2,9 @@
 #include "Mesh.h"
 #include "tiny_obj_loader.h"
 
-Mesh::Mesh() : m_indexCount(0)
-{
-}
+Mesh::Mesh() = default;
 
-bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
+bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &file_name)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -14,14 +12,14 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
     std::string warn, err;
 
     // Extract directory path for MTL file loading
-    std::string mtlBaseDir;
-    size_t lastSlash = fileName.find_last_of("/\\\\");
-    if (lastSlash != std::string::npos)
+    std::string mtl_base_dir;
+    size_t last_slash = file_name.find_last_of("/\\\\");
+    if (last_slash != std::string::npos)
     {
-        mtlBaseDir = fileName.substr(0, lastSlash + 1);
+        mtl_base_dir = file_name.substr(0, last_slash + 1);
     }
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str(), mtlBaseDir.c_str()))
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, file_name.c_str(), mtl_base_dir.c_str()))
     {
         return false;
     }
@@ -40,17 +38,17 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
-    float globalMinY = FLT_MAX;
-    uint32_t currentIndex = 0;
+    float global_min_y = FLT_MAX;
+    uint32_t current_index = 0;
 
     for (const auto &shape : shapes)
     {
         ShapeInfo info;
         info.name = shape.name;
-        info.startIndex = currentIndex;
+        info.startIndex = current_index;
 
-        float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
-        float maxX = -FLT_MAX, maxY = -FLT_MAX, maxZ = -FLT_MAX;
+        float min_x = FLT_MAX, min_y = FLT_MAX, min_z = FLT_MAX;
+        float max_x = -FLT_MAX, max_y = -FLT_MAX, max_z = -FLT_MAX;
 
         for (const auto &index : shape.mesh.indices)
         {
@@ -60,14 +58,14 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
             float vy = attrib.vertices[3 * index.vertex_index + 1];
             float vz = attrib.vertices[3 * index.vertex_index + 2];
 
-            minX = (std::min)(minX, vx);
-            minY = (std::min)(minY, vy);
-            minZ = (std::min)(minZ, vz);
-            maxX = (std::max)(maxX, vx);
-            maxY = (std::max)(maxY, vy);
-            maxZ = (std::max)(maxZ, vz);
+            min_x = (std::min)(min_x, vx);
+            min_y = (std::min)(min_y, vy);
+            min_z = (std::min)(min_z, vz);
+            max_x = (std::max)(max_x, vx);
+            max_y = (std::max)(max_y, vy);
+            max_z = (std::max)(max_z, vz);
 
-            globalMinY = (std::min)(globalMinY, vy);
+            global_min_y = (std::min)(global_min_y, vy);
 
             vertex.position = {vx, vy, vz};
 
@@ -88,23 +86,23 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
         }
 
         info.indexCount = (uint32_t)shape.mesh.indices.size();
-        currentIndex += info.indexCount;
+        current_index += info.indexCount;
 
         // Get material from first face (shapes typically use one material)
         if (!shape.mesh.material_ids.empty() && shape.mesh.material_ids[0] >= 0)
         {
-            size_t matId = (size_t)shape.mesh.material_ids[0];
-            if (matId < materialDataList.size())
+            size_t mat_id = (size_t)shape.mesh.material_ids[0];
+            if (mat_id < materialDataList.size())
             {
-                info.material = materialDataList[matId];
+                info.material = materialDataList[mat_id];
             }
         }
 
-        info.center = {(minX + maxX) * 0.5f, (minY + maxY) * 0.5f, (minZ + maxZ) * 0.5f};
+        info.center = {(min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, (min_z + max_z) * 0.5f};
         m_shapes.push_back(info);
     }
 
-    m_minY = globalMinY;
+    m_minY = global_min_y;
     return Create(device, vertices, indices);
 }
 
@@ -118,10 +116,10 @@ bool Mesh::Create(ID3D11Device *device, const std::vector<Vertex> &vertices, con
     vbd.ByteWidth = sizeof(Vertex) * (UINT)vertices.size();
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-    D3D11_SUBRESOURCE_DATA vinitData = {};
-    vinitData.pSysMem = vertices.data();
+    D3D11_SUBRESOURCE_DATA vinit_data = {};
+    vinit_data.pSysMem = vertices.data();
 
-    HRESULT hr = device->CreateBuffer(&vbd, &vinitData, &m_vertexBuffer);
+    HRESULT hr = device->CreateBuffer(&vbd, &vinit_data, &m_vertexBuffer);
     if (FAILED(hr))
         return false;
 
@@ -131,14 +129,11 @@ bool Mesh::Create(ID3D11Device *device, const std::vector<Vertex> &vertices, con
     ibd.ByteWidth = sizeof(uint32_t) * m_indexCount;
     ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
-    D3D11_SUBRESOURCE_DATA iinitData = {};
-    iinitData.pSysMem = indices.data();
+    D3D11_SUBRESOURCE_DATA iinit_data = {};
+    iinit_data.pSysMem = indices.data();
 
-    hr = device->CreateBuffer(&ibd, &iinitData, &m_indexBuffer);
-    if (FAILED(hr))
-        return false;
-
-    return true;
+    hr = device->CreateBuffer(&ibd, &iinit_data, &m_indexBuffer);
+    return SUCCEEDED(hr);
 }
 
 void Mesh::Draw(ID3D11DeviceContext *context)
@@ -151,11 +146,11 @@ void Mesh::Draw(ID3D11DeviceContext *context)
     context->DrawIndexed(m_indexCount, 0, 0);
 }
 
-void Mesh::DrawShape(ID3D11DeviceContext *context, size_t shapeIndex)
+void Mesh::DrawShape(ID3D11DeviceContext *context, size_t shape_index)
 {
-    if (shapeIndex >= m_shapes.size())
+    if (shape_index >= m_shapes.size())
         return;
-    const auto &shape = m_shapes[shapeIndex];
+    const auto &shape = m_shapes[shape_index];
 
     UINT stride = sizeof(Vertex);
     UINT offset = 0;

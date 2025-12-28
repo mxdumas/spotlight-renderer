@@ -39,7 +39,6 @@ __declspec(align(16)) struct ShadowMatrixBuffer
 class ShadowPass : public IRenderPass
 {
 public:
-
     /**
      * @brief Default constructor for the ShadowPass class.
      */
@@ -74,13 +73,14 @@ public:
      * @param mesh Pointer to the mesh to render (usually the stage).
      * @param stageOffset Vertical offset for the mesh.
      */
-    void Execute(ID3D11DeviceContext *context, const SpotlightData &spotData, int lightIndex, Mesh *mesh, float stageOffset);
+    void Execute(ID3D11DeviceContext *context, const SpotlightData &spot_data, int light_index, Mesh *mesh,
+                 float stage_offset);
 
     /**
      * @brief Gets the shader resource view of the shadow map array.
      * @return Pointer to the shadow map array SRV.
      */
-    ID3D11ShaderResourceView *GetShadowSRV() const
+    [[nodiscard]] ID3D11ShaderResourceView *GetShadowSRV() const
     {
         return m_shadowSRV.Get();
     }
@@ -89,7 +89,7 @@ public:
      * @brief Gets the sampler state used for shadow comparison.
      * @return Pointer to the shadow sampler state.
      */
-    ID3D11SamplerState *GetShadowSampler() const
+    [[nodiscard]] ID3D11SamplerState *GetShadowSampler() const
     {
         return m_shadowSampler.Get();
     }

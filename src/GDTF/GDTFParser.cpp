@@ -1,37 +1,34 @@
 #include "GDTFParser.h"
+#include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <miniz/miniz.h>
 #include <sstream>
-#include <algorithm>
-#include <fstream>
 
 namespace GDTF
 {
 
-bool GDTFParser::load(const std::string &file_name)
+bool GDTFParser::Load(const std::string &file_name)
 {
-    gdtf_path_ = file_name;
+    m_gdtfPath = file_name;
 
     std::vector<uint8_t> xml_data;
-    if (!extractFile("description.xml", xml_data))
+    if (!ExtractFile("description.xml", xml_data))
     {
         std::cerr << "Failed to extract description.xml from " << file_name << std::endl;
         return false;
     }
 
     std::string xml_content(xml_data.begin(), xml_data.end());
-    return parseXML(xml_content);
+    return ParseXML(xml_content);
 }
 
-bool GDTFParser::extractFile(const std::string &internal_path, std::vector<uint8_t> &out_data)
+bool GDTFParser::ExtractFile(const std::string &internal_path, std::vector<uint8_t> &out_data)
 {
-    // std::ofstream log("debug.log", std::ios::app);
-    // log << "Extracting: " << internal_path << std::endl;
-
     mz_zip_archive zip_archive;
     memset(&zip_archive, 0, sizeof(zip_archive));
 
-    if (!mz_zip_reader_init_file(&zip_archive, gdtf_path_.c_str(), 0))
+    if (!mz_zip_reader_init_file(&zip_archive, m_gdtfPath.c_str(), 0))
     {
         return false;
     }
@@ -43,21 +40,22 @@ bool GDTFParser::extractFile(const std::string &internal_path, std::vector<uint8
         int num_files = (int)mz_zip_reader_get_num_files(&zip_archive);
         for (int i = 0; i < num_files; i++)
         {
-             mz_zip_archive_file_stat file_stat;
-             if (mz_zip_reader_file_stat(&zip_archive, i, &file_stat))
-             {
-                 std::string fname = file_stat.m_filename;
-                 std::string target = internal_path;
-                 
-                 // Simple lowercase compare
-                 std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
-                 std::transform(target.begin(), target.end(), target.begin(), ::tolower);
-                 
-                 if (fname == target) {
-                     file_index = i;
-                     break;
-                 }
-             }
+            mz_zip_archive_file_stat file_stat;
+            if (mz_zip_reader_file_stat(&zip_archive, i, &file_stat))
+            {
+                std::string fname = file_stat.m_filename;
+                std::string target = internal_path;
+
+                // Simple lowercase compare
+                std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
+                std::transform(target.begin(), target.end(), target.begin(), ::tolower);
+
+                if (fname == target)
+                {
+                    file_index = i;
+                    break;
+                }
+            }
         }
     }
 
@@ -85,19 +83,19 @@ bool GDTFParser::extractFile(const std::string &internal_path, std::vector<uint8
     return true;
 }
 
-bool GDTFParser::parseXML(const std::string &xml_content)
+bool GDTFParser::ParseXML(const std::string &xml_content)
 {
-    pugi::xml_parse_result result = doc_.load_string(xml_content.c_str());
+    pugi::xml_parse_result result = m_doc.load_string(xml_content.c_str());
     if (!result)
     {
         return false;
     }
 
-    pugi::xml_node fixture_type = doc_.child("GDTF").child("FixtureType");
-    fixture_type_name_ = fixture_type.attribute("Name").as_string();
+    pugi::xml_node fixture_type = m_doc.child("GDTF").child("FixtureType");
+    m_fixtureTypeName = fixture_type.attribute("Name").as_string();
 
     // Parse Models
-    model_to_file_.clear();
+    m_modelToFile.clear();
     pugi::xml_node models = fixture_type.child("Models");
     for (pugi::xml_node model : models.children("Model"))
     {
@@ -105,7 +103,7 @@ bool GDTFParser::parseXML(const std::string &xml_content)
         std::string file = model.attribute("File").as_string();
         if (!name.empty() && !file.empty())
         {
-            model_to_file_[name] = file;
+            m_modelToFile[name] = file;
         }
     }
 
@@ -113,13 +111,13 @@ bool GDTFParser::parseXML(const std::string &xml_content)
     pugi::xml_node geometries = fixture_type.child("Geometries");
     for (pugi::xml_node child : geometries.children())
     {
-        geometry_root_ = parseGeometry(child);
-        if (geometry_root_)
+        m_geometryRoot = ParseGeometry(child);
+        if (m_geometryRoot)
             break;
     }
 
     // Parse Wheels
-    gobo_wheels_.clear();
+    m_goboWheels.clear();
     pugi::xml_node wheels_node = fixture_type.child("Wheels");
     for (pugi::xml_node wheel_node : wheels_node.children("Wheel"))
     {
@@ -131,10 +129,10 @@ bool GDTFParser::parseXML(const std::string &xml_content)
             GoboSlot slot;
             slot.name = slot_node.attribute("Name").as_string();
             slot.media_file_name = slot_node.attribute("MediaFileName").as_string();
-            
+
             wheel.slots.push_back(slot);
         }
-        gobo_wheels_.push_back(wheel);
+        m_goboWheels.push_back(wheel);
     }
 
     // Parse DMX Modes (take the first one)
@@ -160,7 +158,7 @@ bool GDTFParser::parseXML(const std::string &xml_content)
                 dc.byte_count = 1;
 
             dc.default_value = chan.attribute("Default").as_float();
-            dmx_channels_.push_back(dc);
+            m_dmxChannels.push_back(dc);
             current_offset += dc.byte_count;
         }
     }
@@ -168,7 +166,7 @@ bool GDTFParser::parseXML(const std::string &xml_content)
     return true;
 }
 
-std::shared_ptr<GeometryNode> GDTFParser::parseGeometry(pugi::xml_node node)
+std::shared_ptr<GeometryNode> GDTFParser::ParseGeometry(pugi::xml_node node)
 {
     std::string type = node.name();
     if (type == "Geometry" || type == "Axis" || type == "Beam" || type == "Filter" || type == "ColorBeam")
@@ -188,45 +186,34 @@ std::shared_ptr<GeometryNode> GDTFParser::parseGeometry(pugi::xml_node node)
             std::replace(cleaned.begin(), cleaned.end(), '{', ' ');
             std::replace(cleaned.begin(), cleaned.end(), '}', ' ');
             std::replace(cleaned.begin(), cleaned.end(), ',', ' ');
-            
+
             std::stringstream ss(cleaned);
             float m[16];
-            for (int i = 0; i < 16; ++i) {
-                if (!(ss >> m[i])) m[i] = (i % 5 == 0) ? 1.0f : 0.0f;
+            for (int i = 0; i < 16; ++i)
+            {
+                if (!(ss >> m[i]))
+                    m[i] = (i % 5 == 0) ? 1.0f : 0.0f;
             }
 
-                                                            // GDTF is Row-Major with translation in 4th column.
+            // GDTF is Row-Major with translation in 4th column.
+            // Transpose to move translation to 4th row for DirectX.
+            DirectX::XMFLOAT4X4 raw(m);
+            DirectX::XMMATRIX gdtf_mat = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&raw));
 
-                                                            // Transpose to move translation to 4th row for DirectX.
-
-                                                            DirectX::XMFLOAT4X4 raw(m);
-
-                                                            DirectX::XMMATRIX gdtfMat = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&raw));
-
-                                                
-
-                                                            // Apply translation inversion to match the physical model offsets
-
-                                                            DirectX::XMFLOAT4X4 finalMat;
-
-                                                            DirectX::XMStoreFloat4x4(&finalMat, gdtfMat);
-
-                                                            finalMat._41 = -finalMat._41;
-
-                                                            finalMat._42 = -finalMat._42;
-
-                                                            finalMat._43 = -finalMat._43;
-
-                                                
-
-                                                            gn->matrix = finalMat;
-
-                                                        }        for (pugi::xml_node child : node.children())
+            // Apply translation inversion to match the physical model offsets
+            DirectX::XMFLOAT4X4 final_mat;
+            DirectX::XMStoreFloat4x4(&final_mat, gdtf_mat);
+            final_mat._41 = -final_mat._41;
+            final_mat._42 = -final_mat._42;
+            final_mat._43 = -final_mat._43;
+            gn->matrix = final_mat;
+        }
+        for (pugi::xml_node child : node.children())
         {
-            auto childNode = parseGeometry(child);
-            if (childNode)
+            auto child_node = ParseGeometry(child);
+            if (child_node)
             {
-                gn->children.push_back(childNode);
+                gn->children.push_back(child_node);
             }
         }
         return gn;
@@ -234,17 +221,17 @@ std::shared_ptr<GeometryNode> GDTFParser::parseGeometry(pugi::xml_node node)
     return nullptr;
 }
 
-std::string GDTFParser::getModelFile(const std::string &model_name) const
+std::string GDTFParser::GetModelFile(const std::string &model_name) const
 {
-    auto it = model_to_file_.find(model_name);
-    if (it != model_to_file_.end())
+    auto it = m_modelToFile.find(model_name);
+    if (it != m_modelToFile.end())
     {
         return it->second;
     }
     return model_name;
 }
 
-std::vector<std::vector<uint8_t>> GDTFParser::extractGoboImages()
+std::vector<std::vector<uint8_t>> GDTFParser::ExtractGoboImages()
 {
     std::vector<std::vector<uint8_t>> images;
 
@@ -256,16 +243,16 @@ std::vector<std::vector<uint8_t>> GDTFParser::extractGoboImages()
         // Simple uncompressed TGA format (easier than PNG)
         // TGA header (18 bytes)
         circle_data.resize(18 + size * size * 4);
-        circle_data[2] = 2;  // Uncompressed true-color
+        circle_data[2] = 2; // Uncompressed true-color
         circle_data[12] = size & 0xFF;
         circle_data[13] = (size >> 8) & 0xFF;
         circle_data[14] = size & 0xFF;
         circle_data[15] = (size >> 8) & 0xFF;
-        circle_data[16] = 32; // 32 bits per pixel
+        circle_data[16] = 32;   // 32 bits per pixel
         circle_data[17] = 0x20; // Top-left origin
         // Radial gradient with hard edge cutoff (like real gobos)
         const float center = size / 2.0f;
-        const float radius = center * 0.40f; // Circle occupies 50% of diameter
+        const float radius = center * 0.40f;       // Circle occupies 50% of diameter
         const float edge_softness = radius * 0.1f; // Soft edge zone
         for (int y = 0; y < size; ++y)
         {
@@ -301,7 +288,7 @@ std::vector<std::vector<uint8_t>> GDTFParser::extractGoboImages()
         images.push_back(std::move(circle_data));
     }
 
-    for (const auto &wheel : gobo_wheels_)
+    for (const auto &wheel : m_goboWheels)
     {
         // Only process wheels that contain "Gobo" in the name
         if (wheel.name.find("Gobo") == std::string::npos)
@@ -314,20 +301,18 @@ std::vector<std::vector<uint8_t>> GDTFParser::extractGoboImages()
                 continue;
 
             // Try common paths and extensions
-            std::vector<std::string> paths_to_try = {
-                "wheels/" + slot.media_file_name + ".png",
-                "wheels/" + slot.media_file_name + ".PNG",
-                "wheels/" + slot.media_file_name + ".jpg",
-                "wheels/" + slot.media_file_name + ".jpeg",
-                slot.media_file_name + ".png",
-                slot.media_file_name
-            };
+            std::vector<std::string> paths_to_try = {"wheels/" + slot.media_file_name + ".png",
+                                                     "wheels/" + slot.media_file_name + ".PNG",
+                                                     "wheels/" + slot.media_file_name + ".jpg",
+                                                     "wheels/" + slot.media_file_name + ".jpeg",
+                                                     slot.media_file_name + ".png",
+                                                     slot.media_file_name};
 
             std::vector<uint8_t> data;
             bool found = false;
             for (const auto &path : paths_to_try)
             {
-                if (extractFile(path, data))
+                if (ExtractFile(path, data))
                 {
                     found = true;
                     break;

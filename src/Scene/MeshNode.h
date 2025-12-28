@@ -39,7 +39,7 @@ public:
      * @brief Gets the associated mesh resource.
      * @return A shared pointer to the Mesh.
      */
-    std::shared_ptr<Mesh> getMesh() const
+    [[nodiscard]] std::shared_ptr<Mesh> GetMesh() const
     {
         return m_mesh;
     }
@@ -48,7 +48,7 @@ public:
      * @brief Sets or replaces the mesh resource for this node.
      * @param mesh A shared pointer to the new Mesh.
      */
-    void setMesh(std::shared_ptr<Mesh> mesh)
+    void SetMesh(std::shared_ptr<Mesh> mesh)
     {
         m_mesh = mesh;
     }

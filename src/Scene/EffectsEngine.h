@@ -21,18 +21,42 @@ public:
     void Update(std::vector<Spotlight> &spotlights, float time);
 
     // Enable/disable
-    bool &Enabled() { return m_enabled; }
-    bool IsEnabled() const { return m_enabled; }
+    bool &Enabled()
+    {
+        return m_enabled;
+    }
+    [[nodiscard]] bool IsEnabled() const
+    {
+        return m_enabled;
+    }
 
     // Effect toggles
-    bool &PanEnabled() { return m_panEnabled; }
-    bool &TiltEnabled() { return m_tiltEnabled; }
-    bool &RainbowEnabled() { return m_rainbowEnabled; }
-    bool &GoboRotationEnabled() { return m_goboRotationEnabled; }
+    bool &PanEnabled()
+    {
+        return m_panEnabled;
+    }
+    bool &TiltEnabled()
+    {
+        return m_tiltEnabled;
+    }
+    bool &RainbowEnabled()
+    {
+        return m_rainbowEnabled;
+    }
+    bool &GoboRotationEnabled()
+    {
+        return m_goboRotationEnabled;
+    }
 
     // Speed control
-    float &Speed() { return m_speed; }
-    float GetSpeed() const { return m_speed; }
+    float &Speed()
+    {
+        return m_speed;
+    }
+    [[nodiscard]] float GetSpeed() const
+    {
+        return m_speed;
+    }
 
 private:
     bool m_enabled{true};

@@ -1,7 +1,7 @@
 #include "Spotlight.h"
-#include "Node.h"
 #include <cmath>
 #include <cstring>
+#include "Node.h"
 
 Spotlight::Spotlight()
 {
@@ -98,7 +98,7 @@ void Spotlight::SetPan(float degrees)
     {
         // Pan = rotation around Z axis (roll) because fixture is pitched 90°
         float roll = DirectX::XMConvertToRadians(m_pan);
-        m_panNode->setRotation(0.0f, 0.0f, roll);
+        m_panNode->SetRotation(0.0f, 0.0f, roll);
     }
 }
 
@@ -109,7 +109,7 @@ void Spotlight::SetTilt(float degrees)
     {
         // Tilt = rotation around X axis (pitch), negated to point at stage
         float pitch = -DirectX::XMConvertToRadians(m_tilt);
-        m_tiltNode->setRotation(pitch, 0.0f, 0.0f);
+        m_tiltNode->SetRotation(pitch, 0.0f, 0.0f);
     }
 }
 
@@ -126,7 +126,7 @@ void Spotlight::UpdateFromNodes()
     if (m_beamNode)
     {
         // Extract world transform from beam node
-        DirectX::XMMATRIX world = m_beamNode->getWorldMatrix();
+        DirectX::XMMATRIX world = m_beamNode->GetWorldMatrix();
 
         // Update position and direction for CPU/UI
         DirectX::XMFLOAT4X4 m;
@@ -137,9 +137,9 @@ void Spotlight::UpdateFromNodes()
 
         // Direction is the Forward vector (Z-axis) of the world matrix
         DirectX::XMVECTOR forward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-        DirectX::XMVECTOR worldForward = DirectX::XMVector3TransformNormal(forward, world);
+        DirectX::XMVECTOR world_forward = DirectX::XMVector3TransformNormal(forward, world);
         DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3 *>(&m_data.dirAngle),
-                               DirectX::XMVector3Normalize(worldForward));
+                               DirectX::XMVector3Normalize(world_forward));
 
         // LIGHT MATRIX: Use the inverse of the world matrix as the View matrix.
         // This is perfectly smooth and follows the hierarchy exactly.
@@ -171,18 +171,18 @@ void Spotlight::UpdateGoboShake(float time)
 
 void Spotlight::UpdateLightMatrix()
 {
-    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(m_data.posRange.x, m_data.posRange.y, m_data.posRange.z, 1.0f);
-    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(
+    DirectX::XMVECTOR l_pos = DirectX::XMVectorSet(m_data.posRange.x, m_data.posRange.y, m_data.posRange.z, 1.0f);
+    DirectX::XMVECTOR l_dir = DirectX::XMVector3Normalize(
         DirectX::XMVectorSet(m_data.dirAngle.x, m_data.dirAngle.y, m_data.dirAngle.z, 0.0f));
-    DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    DirectX::XMVECTOR l_up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
     // If direction is too close to up vector, use a different up
-    if (std::abs(DirectX::XMVectorGetY(lDir)) > 0.99f)
+    if (std::abs(DirectX::XMVectorGetY(l_dir)) > 0.99f)
     {
-        lUp = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+        l_up = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     }
 
-    DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
-    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_data.posRange.w);
-    m_data.lightViewProj = DirectX::XMMatrixTranspose(lView * lProj);
+    DirectX::XMMATRIX l_view = DirectX::XMMatrixLookToLH(l_pos, l_dir, l_up);
+    DirectX::XMMATRIX l_proj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_data.posRange.w);
+    m_data.lightViewProj = DirectX::XMMatrixTranspose(l_view * l_proj);
 }

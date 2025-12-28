@@ -5,7 +5,8 @@
 
 Scene::Scene()
     : m_camDistance(Config::CameraDefaults::DISTANCE), m_camPitch(Config::CameraDefaults::PITCH),
-      m_camYaw(Config::CameraDefaults::YAW), m_camTarget(Config::CameraDefaults::TARGET_X, Config::CameraDefaults::TARGET_Y, Config::CameraDefaults::TARGET_Z),
+      m_camYaw(Config::CameraDefaults::YAW),
+      m_camTarget(Config::CameraDefaults::TARGET_X, Config::CameraDefaults::TARGET_Y, Config::CameraDefaults::TARGET_Z),
       m_fixturePos(0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f), m_roomSpecular(Config::Materials::ROOM_SPECULAR),
       m_roomShininess(Config::Materials::ROOM_SHININESS), m_cmy(0.0f, 0.0f, 0.0f)
 {
@@ -23,8 +24,8 @@ bool Scene::Initialize(ID3D11Device *device)
     }
 
     // Calculate stage offset
-    float stageMinY = m_stageMesh->GetMinY();
-    m_stageOffset = Config::Room::FLOOR_Y - stageMinY;
+    float stage_min_y = m_stageMesh->GetMinY();
+    m_stageOffset = Config::Room::FLOOR_Y - stage_min_y;
 
     // Find anchor points from mesh
     m_anchorPositions.clear();
@@ -65,21 +66,20 @@ bool Scene::Initialize(ID3D11Device *device)
     // Load GDTF fixture model once
     GDTF::GDTFParser parser;
     std::shared_ptr<SceneGraph::Node> gdtfRoot;
-    if (parser.load("data/fixtures/Martin_Professional@MAC_Viper_Performance@20230516NoMeas.gdtf"))
+    if (parser.Load("data/fixtures/Martin_Professional@MAC_Viper_Performance@20230516NoMeas.gdtf"))
     {
-        GDTF::GDTFLoader loader;
-        gdtfRoot = loader.buildSceneGraph(device, parser);
+        gdtfRoot = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
     }
 
     // Load gobo texture from GDTF (always includes Open as first slot)
     m_goboTexture = std::make_unique<Texture>();
     m_goboSlotNames.clear();
-    auto gobo_images = parser.extractGoboImages();
+    auto gobo_images = parser.ExtractGoboImages();
     m_goboTexture->CreateTextureArray(device, gobo_images);
 
     // Populate gobo slot names from GDTF
     m_goboSlotNames.push_back("Open");
-    for (const auto &wheel : parser.getGoboWheels())
+    for (const auto &wheel : parser.GetGoboWheels())
     {
         if (wheel.name.find("Gobo") == std::string::npos)
             continue;
@@ -111,42 +111,43 @@ bool Scene::Initialize(ID3D11Device *device)
         // Add GDTF fixture node at this anchor
         if (gdtfRoot)
         {
-            GDTF::GDTFLoader loader;
-            auto instanceRoot = loader.buildSceneGraph(device, parser);
+            auto instanceRoot = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
             if (instanceRoot)
             {
                 // Placement node handles the world position (Anchor point)
                 auto placementNode = std::make_shared<SceneGraph::Node>("Placement");
-                placementNode->setTranslation(pos.x, pos.y, pos.z);
-                
+                placementNode->SetTranslation(pos.x, pos.y, pos.z);
+
                 // Orientation node handles the flip (so the fixture hangs correctly)
                 auto orientationNode = std::make_shared<SceneGraph::Node>("Orientation");
                 // Rotate 90 degrees around X (Pitch) to make GDTF "Forward" point down (-Y)
-                orientationNode->setRotation(DirectX::XM_PIDIV2, 0.0f, 0.0f);
+                orientationNode->SetRotation(DirectX::XM_PIDIV2, 0.0f, 0.0f);
                 // Scale 2x
-                orientationNode->setScale(2.0f, 2.0f, 2.0f);
-                
+                orientationNode->SetScale(2.0f, 2.0f, 2.0f);
+
                 // Bring it up a little to touch the truss
-                placementNode->setTranslation(pos.x, pos.y + 0.45f, pos.z);
-                
-                                placementNode->addChild(orientationNode);
-                                orientationNode->addChild(instanceRoot);
-                
-                                // Link spotlight to nodes for animation
-                                auto panNode = instanceRoot->findChild("Yoke");
-                                auto tiltNode = instanceRoot->findChild("Head");
-                                auto beamNode = instanceRoot->findChild("Beam");
-                
-                                // Fallback: search for nodes containing the names if exact match fails
-                                if (!panNode) panNode = instanceRoot->findChild("Pan");
-                                if (!tiltNode) tiltNode = instanceRoot->findChild("Tilt");
-                
-                                m_spotlights.back().LinkNodes(panNode, tiltNode, beamNode);
-                
-                                m_fixtureNodes.push_back(placementNode);
-                            }
-                        }
-                    }
+                placementNode->SetTranslation(pos.x, pos.y + 0.45f, pos.z);
+
+                placementNode->AddChild(orientationNode);
+                orientationNode->AddChild(instanceRoot);
+
+                // Link spotlight to nodes for animation
+                auto panNode = instanceRoot->FindChild("Yoke");
+                auto tiltNode = instanceRoot->FindChild("Head");
+                auto beamNode = instanceRoot->FindChild("Beam");
+
+                // Fallback: search for nodes containing the names if exact match fails
+                if (!panNode)
+                    panNode = instanceRoot->FindChild("Pan");
+                if (!tiltNode)
+                    tiltNode = instanceRoot->FindChild("Tilt");
+
+                m_spotlights.back().LinkNodes(panNode, tiltNode, beamNode);
+
+                m_fixtureNodes.push_back(placementNode);
+            }
+        }
+    }
     // Initialize camera
     m_camera.SetPerspective(Config::CameraDefaults::FOV, Config::Display::ASPECT_RATIO,
                             Config::CameraDefaults::CLIP_NEAR, Config::CameraDefaults::CLIP_FAR);
@@ -155,14 +156,14 @@ bool Scene::Initialize(ID3D11Device *device)
     return true;
 }
 
-void Scene::Update(float deltaTime)
+void Scene::Update(float delta_time)
 {
-    m_time += deltaTime;
+    m_time += delta_time;
 
     // Update GDTF fixture hierarchies
     for (auto &node : m_fixtureNodes)
     {
-        node->updateWorldMatrix();
+        node->UpdateWorldMatrix();
     }
 
     // Apply demo effects
@@ -178,16 +179,16 @@ void Scene::Update(float deltaTime)
 
 DirectX::XMFLOAT3 Scene::GetCameraPosition() const
 {
-    float camX = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
-    float camY = m_camDistance * sinf(m_camPitch);
-    float camZ = -m_camDistance * cosf(m_camPitch) * cosf(m_camYaw);
-    return {camX, camY, camZ};
+    float cam_x = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
+    float cam_y = m_camDistance * sinf(m_camPitch);
+    float cam_z = -m_camDistance * cosf(m_camPitch) * cosf(m_camYaw);
+    return {cam_x, cam_y, cam_z};
 }
 
 void Scene::UpdateCamera()
 {
-    DirectX::XMFLOAT3 camPos = GetCameraPosition();
-    m_camera.SetLookAt(camPos, m_camTarget, {0.0f, 1.0f, 0.0f});
+    DirectX::XMFLOAT3 cam_pos = GetCameraPosition();
+    m_camera.SetLookAt(cam_pos, m_camTarget, {0.0f, 1.0f, 0.0f});
 }
 
 void Scene::AddSpotlight(const Spotlight &light)

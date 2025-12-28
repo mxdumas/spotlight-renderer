@@ -4,12 +4,12 @@
 
 Texture::Texture() = default;
 
-bool Texture::LoadFromFile(ID3D11Device *device, const std::string &fileName)
+bool Texture::LoadFromFile(ID3D11Device *device, const std::string &file_name)
 {
     int width, height, channels;
-    unsigned char *data = stbi_load(fileName.c_str(), &width, &height, &channels, 4);
+    unsigned char *data = stbi_load(file_name.c_str(), &width, &height, &channels, 4);
 
-    bool isProcedural = false;
+    bool is_procedural = false;
     if (!data)
     {
         // Create a procedural circle gobo as fallback
@@ -31,7 +31,7 @@ bool Texture::LoadFromFile(ID3D11Device *device, const std::string &fileName)
                 data[idx + 3] = 255;
             }
         }
-        isProcedural = true;
+        is_procedural = true;
     }
 
     D3D11_TEXTURE2D_DESC desc = {};
@@ -44,14 +44,14 @@ bool Texture::LoadFromFile(ID3D11Device *device, const std::string &fileName)
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-    D3D11_SUBRESOURCE_DATA subData = {};
-    subData.pSysMem = data;
-    subData.SysMemPitch = width * 4;
+    D3D11_SUBRESOURCE_DATA sub_data = {};
+    sub_data.pSysMem = data;
+    sub_data.SysMemPitch = width * 4;
 
     ComPtr<ID3D11Texture2D> texture;
-    HRESULT hr = device->CreateTexture2D(&desc, &subData, &texture);
+    HRESULT hr = device->CreateTexture2D(&desc, &sub_data, &texture);
 
-    if (isProcedural)
+    if (is_procedural)
         free(data);
     else
         stbi_image_free(data);
@@ -66,7 +66,8 @@ bool Texture::LoadFromFile(ID3D11Device *device, const std::string &fileName)
 bool Texture::LoadFromMemory(ID3D11Device *device, const std::vector<uint8_t> &data)
 {
     int width, height, channels;
-    unsigned char *pixels = stbi_load_from_memory(data.data(), static_cast<int>(data.size()), &width, &height, &channels, 4);
+    unsigned char *pixels =
+        stbi_load_from_memory(data.data(), static_cast<int>(data.size()), &width, &height, &channels, 4);
 
     if (!pixels)
         return false;
@@ -81,12 +82,12 @@ bool Texture::LoadFromMemory(ID3D11Device *device, const std::vector<uint8_t> &d
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-    D3D11_SUBRESOURCE_DATA subData = {};
-    subData.pSysMem = pixels;
-    subData.SysMemPitch = width * 4;
+    D3D11_SUBRESOURCE_DATA sub_data = {};
+    sub_data.pSysMem = pixels;
+    sub_data.SysMemPitch = width * 4;
 
     ComPtr<ID3D11Texture2D> texture;
-    HRESULT hr = device->CreateTexture2D(&desc, &subData, &texture);
+    HRESULT hr = device->CreateTexture2D(&desc, &sub_data, &texture);
     stbi_image_free(pixels);
 
     if (FAILED(hr))
@@ -96,13 +97,14 @@ bool Texture::LoadFromMemory(ID3D11Device *device, const std::vector<uint8_t> &d
     return SUCCEEDED(hr);
 }
 
-bool Texture::CreateTextureArray(ID3D11Device *device, const std::vector<std::vector<uint8_t>> &filesData)
+bool Texture::CreateTextureArray(ID3D11Device *device, const std::vector<std::vector<uint8_t>> &files_data)
 {
-    if (filesData.empty())
+    if (files_data.empty())
         return false;
 
     // Load all images and determine max dimensions
-    struct ImageData {
+    struct ImageData
+    {
         unsigned char *pixels;
         int width;
         int height;
@@ -110,10 +112,11 @@ bool Texture::CreateTextureArray(ID3D11Device *device, const std::vector<std::ve
     std::vector<ImageData> images;
     int max_width = 0, max_height = 0;
 
-    for (const auto &file_data : filesData)
+    for (const auto &file_data : files_data)
     {
         int w, h, c;
-        unsigned char *pixels = stbi_load_from_memory(file_data.data(), static_cast<int>(file_data.size()), &w, &h, &c, 4);
+        unsigned char *pixels =
+            stbi_load_from_memory(file_data.data(), static_cast<int>(file_data.size()), &w, &h, &c, 4);
         if (pixels)
         {
             // Convert transparent pixels to black (gobo mask)
@@ -128,8 +131,10 @@ bool Texture::CreateTextureArray(ID3D11Device *device, const std::vector<std::ve
                 }
             }
             images.push_back({pixels, w, h});
-            if (w > max_width) max_width = w;
-            if (h > max_height) max_height = h;
+            if (w > max_width)
+                max_width = w;
+            if (h > max_height)
+                max_height = h;
         }
     }
 
@@ -148,15 +153,15 @@ bool Texture::CreateTextureArray(ID3D11Device *device, const std::vector<std::ve
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
     // Prepare subresource data for each slice
-    std::vector<D3D11_SUBRESOURCE_DATA> subDatas(images.size());
-    std::vector<std::vector<unsigned char>> resizedImages(images.size());
+    std::vector<D3D11_SUBRESOURCE_DATA> sub_datas(images.size());
+    std::vector<std::vector<unsigned char>> resized_images(images.size());
 
     for (size_t i = 0; i < images.size(); ++i)
     {
         // If image is smaller than max, we need to resize/pad it
         if (images[i].width != max_width || images[i].height != max_height)
         {
-            resizedImages[i].resize(max_width * max_height * 4, 0);
+            resized_images[i].resize(max_width * max_height * 4, 0);
             // Copy centered
             int offset_x = (max_width - images[i].width) / 2;
             int offset_y = (max_height - images[i].height) / 2;
@@ -166,24 +171,24 @@ bool Texture::CreateTextureArray(ID3D11Device *device, const std::vector<std::ve
                 {
                     int src_idx = (y * images[i].width + x) * 4;
                     int dst_idx = ((y + offset_y) * max_width + (x + offset_x)) * 4;
-                    resizedImages[i][dst_idx] = images[i].pixels[src_idx];
-                    resizedImages[i][dst_idx + 1] = images[i].pixels[src_idx + 1];
-                    resizedImages[i][dst_idx + 2] = images[i].pixels[src_idx + 2];
-                    resizedImages[i][dst_idx + 3] = images[i].pixels[src_idx + 3];
+                    resized_images[i][dst_idx] = images[i].pixels[src_idx];
+                    resized_images[i][dst_idx + 1] = images[i].pixels[src_idx + 1];
+                    resized_images[i][dst_idx + 2] = images[i].pixels[src_idx + 2];
+                    resized_images[i][dst_idx + 3] = images[i].pixels[src_idx + 3];
                 }
             }
-            subDatas[i].pSysMem = resizedImages[i].data();
+            sub_datas[i].pSysMem = resized_images[i].data();
         }
         else
         {
-            subDatas[i].pSysMem = images[i].pixels;
+            sub_datas[i].pSysMem = images[i].pixels;
         }
-        subDatas[i].SysMemPitch = max_width * 4;
-        subDatas[i].SysMemSlicePitch = 0;
+        sub_datas[i].SysMemPitch = max_width * 4;
+        sub_datas[i].SysMemSlicePitch = 0;
     }
 
     ComPtr<ID3D11Texture2D> texture;
-    HRESULT hr = device->CreateTexture2D(&desc, subDatas.data(), &texture);
+    HRESULT hr = device->CreateTexture2D(&desc, sub_datas.data(), &texture);
 
     // Free loaded images
     for (auto &img : images)
@@ -193,14 +198,14 @@ bool Texture::CreateTextureArray(ID3D11Device *device, const std::vector<std::ve
         return false;
 
     // Create SRV for texture array
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format = desc.Format;
-    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-    srvDesc.Texture2DArray.MostDetailedMip = 0;
-    srvDesc.Texture2DArray.MipLevels = 1;
-    srvDesc.Texture2DArray.FirstArraySlice = 0;
-    srvDesc.Texture2DArray.ArraySize = static_cast<UINT>(images.size());
+    D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+    srv_desc.Format = desc.Format;
+    srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+    srv_desc.Texture2DArray.MostDetailedMip = 0;
+    srv_desc.Texture2DArray.MipLevels = 1;
+    srv_desc.Texture2DArray.FirstArraySlice = 0;
+    srv_desc.Texture2DArray.ArraySize = static_cast<UINT>(images.size());
 
-    hr = device->CreateShaderResourceView(texture.Get(), &srvDesc, &m_srv);
+    hr = device->CreateShaderResourceView(texture.Get(), &srv_desc, &m_srv);
     return SUCCEEDED(hr);
 }

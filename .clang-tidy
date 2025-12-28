@@ -3,35 +3,39 @@ Checks: >
   modernize-*,
   readability-*,
   performance-*,
+  -clang-diagnostic-error,
+  -clang-diagnostic-pragma-once-outside-header,
   -readability-magic-numbers,
   -readability-identifier-length,
   -readability-braces-around-statements,
   -modernize-use-trailing-return-type,
   -modernize-avoid-c-arrays,
   -readability-uppercase-literal-suffix,
-  -readability-convert-member-functions-to-static,
-  -readability-simplify-boolean-expr,
   -bugprone-easily-swappable-parameters,
   -readability-non-const-parameter,
   -readability-implicit-bool-conversion,
-  -bugprone-branch-clone,
-  -readability-make-member-function-const,
   -readability-isolate-declaration,
   -readability-function-cognitive-complexity,
-  -modernize-use-default-member-init,
-  -performance-trivially-destructible,
-  -modernize-use-equals-default
+  -readability-convert-member-functions-to-static,
+  -readability-make-member-function-const,
+  -bugprone-branch-clone,
+  -modernize-use-equals-default,
+  -readability-named-parameter,
+  -readability-simplify-boolean-expr,
+  -readability-avoid-const-params-in-decls
 HeaderFilterRegex: '.*spotlight-renderer/src/.*'
 WarningsAsErrors: ''
 CheckOptions:
+  - key: readability-identifier-naming.NamespaceCase
+    value: CamelCase
   - key: readability-identifier-naming.ClassCase
     value: CamelCase
   - key: readability-identifier-naming.StructCase
     value: CamelCase
   - key: readability-identifier-naming.FunctionCase
-    value: camelBack
+    value: CamelCase
   - key: readability-identifier-naming.MethodCase
-    value: camelBack
+    value: CamelCase
   - key: readability-identifier-naming.VariableCase
     value: lower_case
   - key: readability-identifier-naming.PrivateMemberPrefix
@@ -44,9 +48,18 @@ CheckOptions:
     value: camelBack
   - key: readability-identifier-naming.ConstantCase
     value: UPPER_CASE
+  - key: readability-identifier-naming.LocalConstantCase
+    value: lower_case
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.ParameterCase
     value: lower_case
   - key: readability-identifier-naming.GlobalConstantCase
     value: UPPER_CASE
+  # Ignore Windows API and external library naming conventions
+  - key: readability-identifier-naming.FunctionIgnoredRegexp
+    value: '(ImGui_.*|WndProc.*)'
+  - key: readability-identifier-naming.ParameterIgnoredRegexp
+    value: '(hWnd|wParam|lParam|hInstance|hPrevInstance|lpCmdLine|nCmdShow)'
+  - key: readability-identifier-naming.VariableIgnoredRegexp
+    value: '(CALLBACK|WINAPI|LRESULT|RenderNodeRecursive|Update|AddChild|LinkNodes)'

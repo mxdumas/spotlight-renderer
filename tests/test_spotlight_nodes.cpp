@@ -10,39 +10,39 @@ bool NearEqual(float a, float b, float epsilon = 0.001f) {
 
 void TestSpotlightNodeLinking() {
     std::cout << "Testing spotlight node linking..." << std::endl;
-    
-    auto panNode = std::make_shared<SceneGraph::Node>("Pan");
-    auto tiltNode = std::make_shared<SceneGraph::Node>("Tilt");
-    auto beamNode = std::make_shared<SceneGraph::Node>("Beam");
 
-    panNode->addChild(tiltNode);
-    tiltNode->addChild(beamNode);
+    auto pan_node = std::make_shared<SceneGraph::Node>("Pan");
+    auto tilt_node = std::make_shared<SceneGraph::Node>("Tilt");
+    auto beam_node = std::make_shared<SceneGraph::Node>("Beam");
+
+    pan_node->AddChild(tilt_node);
+    tilt_node->AddChild(beam_node);
 
     Spotlight light;
-    light.LinkNodes(panNode, tiltNode, beamNode);
+    light.LinkNodes(pan_node, tilt_node, beam_node);
 
     // Initial state
-    panNode->updateWorldMatrix();
+    pan_node->UpdateWorldMatrix();
     light.UpdateFromNodes();
-    
+
     // Default Pan/Tilt should be 0
     assert(NearEqual(light.GetPan(), 0.0f));
     assert(NearEqual(light.GetTilt(), 0.0f));
 
     // Move Pan to 90 degrees
     light.SetPan(90.0f);
-    panNode->updateWorldMatrix();
+    pan_node->UpdateWorldMatrix();
     light.UpdateFromNodes();
 
     assert(NearEqual(light.GetPan(), 90.0f));
-    
+
     // Position should still be 0,0,0 if not translated
     DirectX::XMFLOAT3 pos = light.GetPosition();
     assert(NearEqual(pos.x, 0.0f));
     assert(NearEqual(pos.y, 0.0f));
     assert(NearEqual(pos.z, 0.0f));
 
-    // Direction should be updated. 
+    // Direction should be updated.
     // Pan 90 deg (Yaw) around Y: forward(0,0,1) -> (1,0,0)
     DirectX::XMFLOAT3 dir = light.GetDirection();
     assert(NearEqual(dir.x, 1.0f));
@@ -51,7 +51,7 @@ void TestSpotlightNodeLinking() {
 
     // Move Tilt to 90 degrees
     light.SetTilt(90.0f);
-    panNode->updateWorldMatrix();
+    pan_node->UpdateWorldMatrix();
     light.UpdateFromNodes();
 
     assert(NearEqual(light.GetTilt(), 90.0f));

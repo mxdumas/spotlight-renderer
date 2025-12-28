@@ -45,15 +45,15 @@ struct RenderContext
     DirectX::XMFLOAT3 cameraPos; ///< Current camera position in world space.
 
     // Scene data
-    std::vector<DirectX::XMFLOAT3> anchorPositions; ///< Positions of fixture anchors.
+    std::vector<DirectX::XMFLOAT3> anchorPositions;              ///< Positions of fixture anchors.
     std::vector<std::shared_ptr<SceneGraph::Node>> fixtureNodes; ///< Fixture hierarchies.
-    Spotlight *spotlight;                           ///< Pointer to the main spotlight.
-    std::vector<Spotlight> *spotlights;             ///< Pointer to the list of all spotlights.
-    CeilingLights *ceilingLights;                   ///< Pointer to the ceiling lights collection.
-    Mesh *stageMesh;                                ///< Pointer to the stage geometry mesh.
-    Texture *goboTexture;                           ///< Pointer to the gobo texture for the spotlight.
-    float stageOffset;                              ///< Vertical offset for the stage.
-    float time;                                     ///< Total elapsed time for animations.
+    Spotlight *spotlight;                                        ///< Pointer to the main spotlight.
+    std::vector<Spotlight> *spotlights;                          ///< Pointer to the list of all spotlights.
+    CeilingLights *ceilingLights;                                ///< Pointer to the ceiling lights collection.
+    Mesh *stageMesh;                                             ///< Pointer to the stage geometry mesh.
+    Texture *goboTexture;                                        ///< Pointer to the gobo texture for the spotlight.
+    float stageOffset;                                           ///< Vertical offset for the stage.
+    float time;                                                  ///< Total elapsed time for animations.
 
     // Room geometry (owned by caller)
     ID3D11Buffer *roomVB; ///< Pointer to the room's vertex buffer.
@@ -127,7 +127,7 @@ public:
      * @brief Checks if FXAA post-processing is enabled.
      * @return true if FXAA is enabled, false otherwise.
      */
-    bool IsFXAAEnabled() const
+    [[nodiscard]] bool IsFXAAEnabled() const
     {
         return m_enableFXAA;
     }
@@ -145,7 +145,7 @@ public:
      * @brief Checks if volumetric blur is enabled.
      * @return true if volumetric blur is enabled, false otherwise.
      */
-    bool IsVolumetricBlurEnabled() const
+    [[nodiscard]] bool IsVolumetricBlurEnabled() const
     {
         return m_enableVolBlur;
     }
@@ -163,7 +163,7 @@ public:
      * @brief Gets the current number of blur passes.
      * @return The number of blur iterations.
      */
-    int GetBlurPasses() const
+    [[nodiscard]] int GetBlurPasses() const
     {
         return m_blurPasses;
     }
@@ -181,7 +181,7 @@ public:
      * @brief Provides read-only access to the volumetric pass parameters.
      * @return A const reference to the VolumetricBuffer struct.
      */
-    const VolumetricBuffer &GetVolumetricParams() const
+    [[nodiscard]] const VolumetricBuffer &GetVolumetricParams() const
     {
         return m_volumetricPass->GetParams();
     }
@@ -211,7 +211,7 @@ private:
      * @param mb Matrix buffer to update for each node.
      */
     void RenderNodeRecursive(ID3D11DeviceContext *context, std::shared_ptr<SceneGraph::Node> node,
-                            PipelineMatrixBuffer &mb);
+                             PipelineMatrixBuffer &mb);
 
     /**
      * @brief Executes the volumetric lighting pass.

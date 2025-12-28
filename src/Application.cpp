@@ -136,5 +136,5 @@ void Application::RenderUI()
 void Application::EndFrame()
 {
     m_ui.EndFrame();
-    m_graphics.Present(false);  // VSync off - using frame limiter instead
+    m_graphics.Present(false); // VSync off - using frame limiter instead
 }

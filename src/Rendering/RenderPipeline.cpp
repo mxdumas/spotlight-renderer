@@ -51,20 +51,20 @@ bool RenderPipeline::Initialize(ID3D11Device *device)
         return false;
 
     // Create linear sampler for general use
-    D3D11_SAMPLER_DESC sampDesc = {};
-    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-    sampDesc.BorderColor[0] = 0.0f;
-    sampDesc.BorderColor[1] = 0.0f;
-    sampDesc.BorderColor[2] = 0.0f;
-    sampDesc.BorderColor[3] = 0.0f;
-    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sampDesc.MinLOD = 0;
-    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    D3D11_SAMPLER_DESC samp_desc = {};
+    samp_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samp_desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    samp_desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    samp_desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    samp_desc.BorderColor[0] = 0.0f;
+    samp_desc.BorderColor[1] = 0.0f;
+    samp_desc.BorderColor[2] = 0.0f;
+    samp_desc.BorderColor[3] = 0.0f;
+    samp_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    samp_desc.MinLOD = 0;
+    samp_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    HRESULT hr = device->CreateSamplerState(&sampDesc, &m_linearSampler);
+    HRESULT hr = device->CreateSamplerState(&samp_desc, &m_linearSampler);
     if (FAILED(hr))
         return false;
 
@@ -121,8 +121,8 @@ void RenderPipeline::SetupViewport(ID3D11DeviceContext *context, int width, int 
 
 void RenderPipeline::ClearShaderResources(ID3D11DeviceContext *context)
 {
-    ID3D11ShaderResourceView *nullSRVs[8] = {nullptr};
-    context->PSSetShaderResources(0, 8, nullSRVs);
+    ID3D11ShaderResourceView *null_srvs[8] = {nullptr};
+    context->PSSetShaderResources(0, 8, null_srvs);
 }
 
 void RenderPipeline::Render(ID3D11DeviceContext *context, const RenderContext &ctx)
@@ -172,11 +172,11 @@ void RenderPipeline::RenderShadowPass(ID3D11DeviceContext *context, const Render
     if (ctx.spotlights && !ctx.spotlights->empty())
     {
         // Render shadow map for each spotlight (up to MAX_SPOTLIGHTS)
-        int numLights = static_cast<int>(ctx.spotlights->size());
-        if (numLights > Config::Spotlight::MAX_SPOTLIGHTS)
-            numLights = Config::Spotlight::MAX_SPOTLIGHTS;
+        int num_lights = static_cast<int>(ctx.spotlights->size());
+        if (num_lights > Config::Spotlight::MAX_SPOTLIGHTS)
+            num_lights = Config::Spotlight::MAX_SPOTLIGHTS;
 
-        for (int i = 0; i < numLights; ++i)
+        for (int i = 0; i < num_lights; ++i)
         {
             m_shadowPass->Execute(context, ctx.spotlights->at(i).GetGPUData(), i, ctx.stageMesh, ctx.stageOffset);
         }
@@ -186,9 +186,9 @@ void RenderPipeline::RenderShadowPass(ID3D11DeviceContext *context, const Render
 void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderContext &ctx)
 {
     // Bind scene render target with depth
-    float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    float clear_color[] = {0.0f, 0.0f, 0.0f, 1.0f};
     m_sceneRT.Bind(context, ctx.depthStencilView);
-    m_sceneRT.Clear(context, clearColor);
+    m_sceneRT.Clear(context, clear_color);
     context->ClearDepthStencilView(ctx.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     SetupViewport(context, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT);
@@ -203,14 +203,14 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
     mb.view = DirectX::XMMatrixTranspose(view);
     mb.projection = DirectX::XMMatrixTranspose(proj);
 
-    DirectX::XMMATRIX invView = DirectX::XMMatrixInverse(nullptr, view);
-    DirectX::XMMATRIX invProj = DirectX::XMMatrixInverse(nullptr, proj);
-    mb.invViewProj = DirectX::XMMatrixTranspose(invProj * invView);
+    DirectX::XMMATRIX inv_view = DirectX::XMMatrixInverse(nullptr, view);
+    DirectX::XMMATRIX inv_proj = DirectX::XMMatrixInverse(nullptr, proj);
+    mb.invViewProj = DirectX::XMMatrixTranspose(inv_proj * inv_view);
 
     mb.cameraPos = {ctx.cameraPos.x, ctx.cameraPos.y, ctx.cameraPos.z, 1.0f};
 
     m_matrixBuffer.Update(context, mb);
-    
+
     // Update ceiling lights
     ctx.ceilingLights->Update();
     m_ceilingLightsBuffer.Update(context, ctx.ceilingLights->GetGPUData());
@@ -220,16 +220,16 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
     context->PSSetConstantBuffers(3, 1, m_ceilingLightsBuffer.GetAddressOf());
 
     // Bind textures
-    ID3D11ShaderResourceView *goboSRV = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
-    ID3D11ShaderResourceView *srvs[] = {goboSRV, m_shadowPass->GetShadowSRV()};
+    ID3D11ShaderResourceView *gobo_srv = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
+    ID3D11ShaderResourceView *srvs[] = {gobo_srv, m_shadowPass->GetShadowSRV()};
     context->PSSetShaderResources(0, 2, srvs);
 
     ID3D11SamplerState *samplers[] = {m_linearSampler.Get(), m_shadowPass->GetShadowSampler()};
     context->PSSetSamplers(0, 2, samplers);
 
     // Prepare spotlight list
-    const std::vector<Spotlight> emptyLights;
-    const std::vector<Spotlight>& lights = ctx.spotlights ? *ctx.spotlights : emptyLights;
+    const std::vector<Spotlight> empty_lights;
+    const std::vector<Spotlight> &lights = ctx.spotlights ? *ctx.spotlights : empty_lights;
 
     // Execute scene pass (room with identity world)
     m_scenePass->Execute(context, lights, ctx.depthStencilView, ctx.roomVB, ctx.roomIB,
@@ -248,12 +248,13 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
         {
             const auto &shape = shapes[i];
 
-            MaterialBuffer mbMat = {};
-            mbMat.color = DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
-            float specIntensity =
+            MaterialBuffer mb_mat = {};
+            mb_mat.color =
+                DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
+            float spec_intensity =
                 (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
-            mbMat.specParams = DirectX::XMFLOAT4(specIntensity, shape.material.shininess, 0.0f, 0.0f);
-            m_scenePass->GetMaterialBuffer().Update(context, mbMat);
+            mb_mat.specParams = DirectX::XMFLOAT4(spec_intensity, shape.material.shininess, 0.0f, 0.0f);
+            m_scenePass->GetMaterialBuffer().Update(context, mb_mat);
             context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
 
             ctx.stageMesh->DrawShape(context, i);
@@ -274,25 +275,26 @@ void RenderPipeline::RenderNodeRecursive(ID3D11DeviceContext *context, std::shar
         return;
 
     // Check if it's a mesh node
-    auto meshNode = std::dynamic_pointer_cast<SceneGraph::MeshNode>(node);
-    if (meshNode && meshNode->getMesh())
+    auto mesh_node = std::dynamic_pointer_cast<SceneGraph::MeshNode>(node);
+    if (mesh_node && mesh_node->GetMesh())
     {
         // Update world matrix
-        mb.world = DirectX::XMMatrixTranspose(node->getWorldMatrix());
+        mb.world = DirectX::XMMatrixTranspose(node->GetWorldMatrix());
         m_matrixBuffer.Update(context, mb);
 
-        auto mesh = meshNode->getMesh();
+        auto mesh = mesh_node->GetMesh();
         const auto &shapes = mesh->GetShapes();
 
         for (size_t i = 0; i < shapes.size(); ++i)
         {
             const auto &shape = shapes[i];
-            MaterialBuffer mbMat = {};
-            mbMat.color = DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
-            float specIntensity =
+            MaterialBuffer mb_mat = {};
+            mb_mat.color =
+                DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
+            float spec_intensity =
                 (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
-            mbMat.specParams = DirectX::XMFLOAT4(specIntensity, shape.material.shininess, 0.0f, 0.0f);
-            m_scenePass->GetMaterialBuffer().Update(context, mbMat);
+            mb_mat.specParams = DirectX::XMFLOAT4(spec_intensity, shape.material.shininess, 0.0f, 0.0f);
+            m_scenePass->GetMaterialBuffer().Update(context, mb_mat);
             context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
 
             mesh->DrawShape(context, i);
@@ -300,7 +302,7 @@ void RenderPipeline::RenderNodeRecursive(ID3D11DeviceContext *context, std::shar
     }
 
     // Recurse to children
-    for (auto &child : node->getChildren())
+    for (auto &child : node->GetChildren())
     {
         RenderNodeRecursive(context, child, mb);
     }
@@ -314,16 +316,16 @@ void RenderPipeline::RenderVolumetricPass(ID3D11DeviceContext *context, const Re
     // Bind matrix and spotlight buffers for volumetric pass
     context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
-    
-    // Note: Spotlight buffer (b1) is now handled internally by VolumetricPass::Execute 
+
+    // Note: Spotlight buffer (b1) is now handled internally by VolumetricPass::Execute
     // using the provided spotlights vector.
 
-    ID3D11ShaderResourceView *goboSRV = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
+    ID3D11ShaderResourceView *gobo_srv = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
 
-    const std::vector<Spotlight> emptyLights;
-    const std::vector<Spotlight>& lights = ctx.spotlights ? *ctx.spotlights : emptyLights;
+    const std::vector<Spotlight> empty_lights;
+    const std::vector<Spotlight> &lights = ctx.spotlights ? *ctx.spotlights : empty_lights;
 
-    m_volumetricPass->Execute(context, lights, &m_volRT, m_fullScreenVB.Get(), ctx.depthSRV, goboSRV,
+    m_volumetricPass->Execute(context, lights, &m_volRT, m_fullScreenVB.Get(), ctx.depthSRV, gobo_srv,
                               m_shadowPass->GetShadowSRV(), m_linearSampler.Get(), m_shadowPass->GetShadowSampler(),
                               ctx.time);
 
@@ -346,8 +348,6 @@ void RenderPipeline::RenderCompositePass(ID3D11DeviceContext *context)
 
 void RenderPipeline::RenderFinalPass(ID3D11DeviceContext *context, const RenderContext &ctx)
 {
-    float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
-
     if (m_enableFXAA)
     {
         m_fxaaPass->Execute(context, ctx.backBufferRTV, &m_sceneRT, m_fullScreenVB.Get(), m_linearSampler.Get());
