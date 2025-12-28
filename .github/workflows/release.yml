@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-release:
+    name: Build Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Validate version
+        shell: pwsh
+        run: |
+          $tagVersion = "${{ github.ref_name }}" -replace '^v', ''
+          $fileVersion = (Get-Content VERSION).Trim()
+          if ($tagVersion -ne $fileVersion) {
+            Write-Host "::error::Tag version ($tagVersion) does not match VERSION file ($fileVersion)"
+            exit 1
+          }
+          Write-Host "Version validated: $fileVersion"
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 'a34c873a9717a888f58dc05268dea15592c2f0ff'
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S . `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+      - name: Run tests
+        run: ctest --test-dir ./build -C ${{ env.BUILD_TYPE }} --output-on-failure
+
+      - name: Create release package
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          $releaseDir = "SpotlightRenderer-$version"
+
+          New-Item -ItemType Directory -Force -Path $releaseDir
+
+          Copy-Item "build/${{ env.BUILD_TYPE }}/SpotlightRenderer.exe" -Destination $releaseDir
+          Copy-Item -Recurse "build/${{ env.BUILD_TYPE }}/shaders" -Destination "$releaseDir/shaders"
+          Copy-Item -Recurse "build/${{ env.BUILD_TYPE }}/data" -Destination "$releaseDir/data"
+          Copy-Item "README.md" -Destination $releaseDir -ErrorAction SilentlyContinue
+          Copy-Item "LICENSE" -Destination $releaseDir -ErrorAction SilentlyContinue
+
+          Compress-Archive -Path $releaseDir -DestinationPath "SpotlightRenderer-$version-win64.zip"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: SpotlightRenderer-*-win64.zip
+
+  generate-docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Generate documentation
+        run: doxygen Doxyfile
+
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/html/
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-release, generate-docs]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release package
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: ./artifacts
+
+      - name: Download documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: ./docs
+
+      - name: Create documentation archive
+        run: |
+          cd docs
+          zip -r ../SpotlightRenderer-${{ github.ref_name }}-docs.zip .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Spotlight Renderer ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          generate_release_notes: true
+          files: |
+            artifacts/*.zip
+            SpotlightRenderer-${{ github.ref_name }}-docs.zip

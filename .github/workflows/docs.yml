@@ -1,0 +1,43 @@
+name: Documentation
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  doxygen:
+    name: Verify Doxygen
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Check Doxygen version
+        run: doxygen --version
+
+      - name: Generate documentation
+        run: doxygen Doxyfile
+
+      - name: Check for Doxygen warnings
+        run: |
+          doxygen Doxyfile 2>&1 | tee doxygen.log
+          if grep -E "(warning:|error:)" doxygen.log; then
+            echo "::warning::Doxygen reported warnings or errors"
+            # Uncomment the line below to fail on warnings
+            # exit 1
+          fi
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/html/
+          retention-days: 7
