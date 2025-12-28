@@ -7,6 +7,8 @@ on:
 
 env:
   BUILD_TYPE: Release
+  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
+  VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
 
 jobs:
   build-release:
@@ -30,16 +32,38 @@ jobs:
           }
           Write-Host "Version validated: $fileVersion"
 
+      - name: Create vcpkg cache directory
+        run: mkdir -p "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+        shell: bash
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-binary-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-binary-${{ runner.os }}-
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: 'a34c873a9717a888f58dc05268dea15592c2f0ff'
+          vcpkgGitCommitId: '84bab45d415d22042bd0b9081aea57f362da3f35'
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Configure CMake
         run: |
-          cmake -B build -S . `
+          cmake -B build -S . -G Ninja `
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
             -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Save vcpkg binary cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-binary-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
 
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }}
@@ -55,9 +79,9 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path $releaseDir
 
-          Copy-Item "build/${{ env.BUILD_TYPE }}/SpotlightRenderer.exe" -Destination $releaseDir
-          Copy-Item -Recurse "build/${{ env.BUILD_TYPE }}/shaders" -Destination "$releaseDir/shaders"
-          Copy-Item -Recurse "build/${{ env.BUILD_TYPE }}/data" -Destination "$releaseDir/data"
+          Copy-Item "build/SpotlightRenderer.exe" -Destination $releaseDir
+          Copy-Item -Recurse "build/shaders" -Destination "$releaseDir/shaders"
+          Copy-Item -Recurse "build/data" -Destination "$releaseDir/data"
           Copy-Item "README.md" -Destination $releaseDir -ErrorAction SilentlyContinue
           Copy-Item "LICENSE" -Destination $releaseDir -ErrorAction SilentlyContinue
 
