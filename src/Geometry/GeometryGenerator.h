@@ -21,8 +21,8 @@ namespace GeometryGenerator
  * @brief Creates a simple debug cube (8 vertices).
  *
  * @param device Pointer to the ID3D11Device.
- * @param out_vb Reference to the ComPtr that will receive the vertex buffer (position only).
- * @param out_ib Reference to the ComPtr that will receive the index buffer.
+ * @param outVb Reference to the ComPtr that will receive the vertex buffer (position only).
+ * @param outIb Reference to the ComPtr that will receive the index buffer.
  * @return true if creation succeeded, false otherwise.
  */
 bool CreateDebugCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb);

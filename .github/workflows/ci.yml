@@ -13,6 +13,8 @@ jobs:
   build-and-lint:
     name: Build & Lint
     runs-on: windows-latest
+    env:
+      VCPKG_BINARY_SOURCES: 'clear;x-gha,readwrite'
 
     steps:
       - name: Checkout repository
@@ -53,8 +55,6 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: '84bab45d415d22042bd0b9081aea57f362da3f35'
-        env:
-          VCPKG_BINARY_SOURCES: 'clear;x-gha,readwrite'
 
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
