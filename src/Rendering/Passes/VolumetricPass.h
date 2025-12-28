@@ -70,13 +70,13 @@ public:
      *
      * @param context Pointer to the ID3D11DeviceContext.
      * @param spotlights List of active spotlights in the scene.
-     * @param volumetricRT The render target where the volumetric effect will be rendered.
-     * @param fullScreenVB Vertex buffer for a full-screen quad.
-     * @param depthSRV Shader resource view of the scene's depth buffer.
-     * @param goboSRV Shader resource view of the spotlight's gobo texture.
-     * @param shadowSRV Shader resource view of the light's shadow map.
+     * @param volumetric_rt The render target where the volumetric effect will be rendered.
+     * @param full_screen_vb Vertex buffer for a full-screen quad.
+     * @param depth_srv Shader resource view of the scene's depth buffer.
+     * @param gobo_srv Shader resource view of the spotlight's gobo texture.
+     * @param shadow_srv Shader resource view of the light's shadow map.
      * @param sampler Linear sampler for texture sampling.
-     * @param shadowSampler Comparison sampler for shadow map sampling.
+     * @param shadow_sampler Comparison sampler for shadow map sampling.
      * @param time Total elapsed time used for jittering.
      */
     void Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights, RenderTarget *volumetric_rt,

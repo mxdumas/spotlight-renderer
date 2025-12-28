@@ -20,43 +20,24 @@ public:
      */
     void Update(std::vector<Spotlight> &spotlights, float time);
 
-    // Enable/disable
-    bool &Enabled()
-    {
-        return m_enabled;
-    }
-    [[nodiscard]] bool IsEnabled() const
-    {
-        return m_enabled;
-    }
+    /// @brief Returns a reference to the enabled state for modification.
+    bool &Enabled() { return m_enabled; }
+    /// @brief Returns whether effects are enabled.
+    [[nodiscard]] bool IsEnabled() const { return m_enabled; }
 
-    // Effect toggles
-    bool &PanEnabled()
-    {
-        return m_panEnabled;
-    }
-    bool &TiltEnabled()
-    {
-        return m_tiltEnabled;
-    }
-    bool &RainbowEnabled()
-    {
-        return m_rainbowEnabled;
-    }
-    bool &GoboRotationEnabled()
-    {
-        return m_goboRotationEnabled;
-    }
+    /// @brief Returns a reference to the pan effect toggle.
+    bool &PanEnabled() { return m_panEnabled; }
+    /// @brief Returns a reference to the tilt effect toggle.
+    bool &TiltEnabled() { return m_tiltEnabled; }
+    /// @brief Returns a reference to the rainbow color effect toggle.
+    bool &RainbowEnabled() { return m_rainbowEnabled; }
+    /// @brief Returns a reference to the gobo rotation effect toggle.
+    bool &GoboRotationEnabled() { return m_goboRotationEnabled; }
 
-    // Speed control
-    float &Speed()
-    {
-        return m_speed;
-    }
-    [[nodiscard]] float GetSpeed() const
-    {
-        return m_speed;
-    }
+    /// @brief Returns a reference to the speed multiplier for modification.
+    float &Speed() { return m_speed; }
+    /// @brief Returns the current speed multiplier.
+    [[nodiscard]] float GetSpeed() const { return m_speed; }
 
 private:
     bool m_enabled{true};

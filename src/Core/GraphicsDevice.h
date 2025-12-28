@@ -6,6 +6,13 @@
 
 using Microsoft::WRL::ComPtr;
 
+/**
+ * @class GraphicsDevice
+ * @brief Encapsulates DirectX 11 device, context, swap chain, and core render targets.
+ *
+ * Manages the D3D11 device lifecycle and provides access to the back buffer and
+ * depth-stencil resources needed for rendering.
+ */
 class GraphicsDevice
 {
 public:

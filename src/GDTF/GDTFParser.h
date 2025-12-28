@@ -27,10 +27,8 @@ struct GeometryNode
     DirectX::XMFLOAT4X4 matrix;                          ///< Local transformation matrix.
     std::vector<std::shared_ptr<GeometryNode>> children; ///< Child nodes in the hierarchy.
 
-    GeometryNode()
-    {
-        DirectX::XMStoreFloat4x4(&matrix, DirectX::XMMatrixIdentity());
-    }
+    /// @brief Default constructor, initializes matrix to identity.
+    GeometryNode() { DirectX::XMStoreFloat4x4(&matrix, DirectX::XMMatrixIdentity()); }
 };
 
 /**
