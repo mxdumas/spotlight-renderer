@@ -1,4 +1,4 @@
-name: Lint
+name: CI
 
 on:
   push:
@@ -6,29 +6,23 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  BUILD_TYPE: Release
+  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
+
 jobs:
-  clang-format:
-    name: Check formatting
+  build-and-lint:
+    name: Build & Lint
     runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Get source files
-        id: get-files
-        shell: pwsh
-        run: |
-          $files = Get-ChildItem -Path "src" -Recurse -Include *.cpp,*.h,*.hpp |
-            Where-Object { $_.FullName -notmatch "external" } |
-            ForEach-Object { $_.FullName }
-          $fileList = $files -join "`n"
-          echo "files<<EOF" >> $env:GITHUB_OUTPUT
-          echo $fileList >> $env:GITHUB_OUTPUT
-          echo "EOF" >> $env:GITHUB_OUTPUT
-          echo "Found $($files.Count) source files"
-
-      - name: Run clang-format
+      # Fast check first - no dependencies needed
+      - name: Check formatting (clang-format)
         shell: pwsh
         run: |
           $files = Get-ChildItem -Path "src" -Recurse -Include *.cpp,*.h,*.hpp |
@@ -47,18 +41,22 @@ jobs:
             Write-Host "::error::Some files need formatting. Run clang-format locally."
             exit 1
           }
-
           Write-Host "All files are properly formatted."
 
-  clang-tidy:
-    name: Static analysis
-    runs-on: windows-latest
+      # Cache vcpkg binary packages
+      - name: Create vcpkg cache directory
+        run: mkdir -p ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+        shell: bash
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
         with:
-          submodules: recursive
+          path: |
+            ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+            ${{ github.workspace }}/vcpkg/downloads
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -68,14 +66,15 @@ jobs:
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Configure CMake with Ninja (generate compile_commands.json)
+      # Configure with Ninja to generate compile_commands.json for clang-tidy
+      - name: Configure CMake
         run: |
           cmake -B build -S . -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
             -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      - name: Run clang-tidy
+      - name: Static analysis (clang-tidy)
         shell: pwsh
         run: |
           $files = Get-ChildItem -Path "src" -Recurse -Include *.cpp |
@@ -95,3 +94,19 @@ jobs:
           } else {
             Write-Host "Static analysis passed."
           }
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+      - name: Run tests
+        run: ctest --test-dir ./build -C ${{ env.BUILD_TYPE }} --output-on-failure
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpotlightRenderer-${{ github.sha }}
+          path: |
+            build/SpotlightRenderer.exe
+            build/shaders/
+            build/data/
+          retention-days: 7
