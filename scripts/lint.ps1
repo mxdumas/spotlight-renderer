@@ -1,6 +1,27 @@
-$clangPath = "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin"
-$clangFormat = Join-Path $clangPath "clang-format.exe"
-$clangTidy = Join-Path $clangPath "clang-tidy.exe"
+# Try to find clang tools in PATH first (CI), then fall back to VS paths (local dev)
+$clangFormat = Get-Command clang-format -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+$clangTidy = Get-Command clang-tidy -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+
+if (-not $clangFormat -or -not $clangTidy) {
+    # Fall back to VS installation paths
+    $vsPaths = @(
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin",
+        "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin",
+        "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin"
+    )
+    foreach ($path in $vsPaths) {
+        if (Test-Path (Join-Path $path "clang-format.exe")) {
+            $clangFormat = Join-Path $path "clang-format.exe"
+            $clangTidy = Join-Path $path "clang-tidy.exe"
+            break
+        }
+    }
+}
+
+if (-not $clangFormat -or -not (Test-Path $clangFormat)) {
+    Write-Host "Error: clang-format not found" -ForegroundColor Red
+    exit 1
+}
 
 $srcFiles = Get-ChildItem -Path "src" -Recurse -Include *.cpp, *.h, *.hpp | Where-Object { $_.FullName -notmatch "external" }
 
@@ -60,9 +81,16 @@ foreach ($line in $filtered) {
 
 $cleanOutput = ($result | Where-Object { $_.Trim() }) -join "`n"
 
-if ($cleanOutput) {
+# Check for actual warnings from our source code
+$srcWarnings = $result | Where-Object { $_ -match "src[/\\].*warning:" }
+
+if ($srcWarnings) {
+    Write-Host ($srcWarnings -join "`n")
+    Write-Host "`nClang-Tidy found issues in source code." -ForegroundColor Red
+    exit 1
+} elseif ($cleanOutput) {
     Write-Host $cleanOutput
-    Write-Host "`nClang-Tidy reported issues." -ForegroundColor Yellow
+    Write-Host "`nClang-Tidy reported issues (non-blocking)." -ForegroundColor Yellow
 } else {
     Write-Host "Linting successful. No issues found." -ForegroundColor Green
 }

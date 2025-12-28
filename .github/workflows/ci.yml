@@ -76,24 +76,7 @@ jobs:
 
       - name: Static analysis (clang-tidy)
         shell: pwsh
-        run: |
-          $files = Get-ChildItem -Path "src" -Recurse -Include *.cpp |
-            Where-Object { $_.FullName -notmatch "external" }
-
-          $hasErrors = $false
-          foreach ($file in $files) {
-            Write-Host "Analyzing $($file.Name)..."
-            & clang-tidy -p build $file.FullName --quiet 2>&1
-            if ($LASTEXITCODE -ne 0) {
-              $hasErrors = $true
-            }
-          }
-
-          if ($hasErrors) {
-            Write-Host "::warning::clang-tidy reported issues"
-          } else {
-            Write-Host "Static analysis passed."
-          }
+        run: .\scripts\lint.ps1
 
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }}
