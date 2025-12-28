@@ -27,7 +27,7 @@ public:
      * @brief Constructs a new Node.
      * @param name The debug name for this node.
      */
-    explicit Node(const std::string &name = "Node");
+    explicit Node(std::string name = "Node");
 
     /**
      * @brief Virtual destructor for inheritance.
@@ -38,13 +38,13 @@ public:
      * @brief Adds a child node to this node.
      * @param child A shared pointer to the node to add as a child.
      */
-    void AddChild(std::shared_ptr<Node> child);
+    void AddChild(const std::shared_ptr<Node> &child);
 
     /**
      * @brief Updates the world transform for this node and recursively for all its children.
-     * @param parent_world The world matrix of the parent node (defaults to identity).
+     * @param parentWorld The world matrix of the parent node (defaults to identity).
      */
-    void UpdateWorldMatrix(const DirectX::XMMATRIX &parent_world = DirectX::XMMatrixIdentity());
+    void UpdateWorldMatrix(const DirectX::XMMATRIX &parentWorld = DirectX::XMMatrixIdentity());
 
     /**
      * @brief Gets the list of child nodes.

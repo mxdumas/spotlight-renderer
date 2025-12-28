@@ -73,8 +73,8 @@ public:
      * @param mesh Pointer to the mesh to render (usually the stage).
      * @param stageOffset Vertical offset for the mesh.
      */
-    void Execute(ID3D11DeviceContext *context, const SpotlightData &spot_data, int light_index, Mesh *mesh,
-                 float stage_offset);
+    void Execute(ID3D11DeviceContext *context, const SpotlightData &spotData, int lightIndex, Mesh *mesh,
+                 float stageOffset);
 
     /**
      * @brief Gets the shader resource view of the shadow map array.

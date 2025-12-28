@@ -17,21 +17,21 @@ void EffectsEngine::Update(std::vector<Spotlight> &spotlights, float time)
         // Pan animation
         if (m_panEnabled)
         {
-            float pan = std::sin(t * PAN_SPEED + phase) * PAN_AMPLITUDE;
+            float pan = std::sin((t * PAN_SPEED) + phase) * PAN_AMPLITUDE;
             light.SetPan(pan);
         }
 
         // Tilt animation
         if (m_tiltEnabled)
         {
-            float tilt = std::cos(t * TILT_SPEED + phase) * TILT_AMPLITUDE + TILT_OFFSET;
+            float tilt = (std::cos((t * TILT_SPEED) + phase) * TILT_AMPLITUDE) + TILT_OFFSET;
             light.SetTilt(tilt);
         }
 
         // Rainbow color chase
         if (m_rainbowEnabled)
         {
-            float hue = std::fmod(t * RAINBOW_SPEED + static_cast<float>(i) * 0.25f, 1.0f);
+            float hue = std::fmod((t * RAINBOW_SPEED) + (static_cast<float>(i) * 0.25f), 1.0f);
 
             // HSV to RGB (simplified)
             float r = 0, g = 0, b = 0;
@@ -74,7 +74,7 @@ void EffectsEngine::Update(std::vector<Spotlight> &spotlights, float time)
         // Gobo rotation
         if (m_goboRotationEnabled)
         {
-            light.SetGoboRotation(t * GOBO_SPEED + phase);
+            light.SetGoboRotation((t * GOBO_SPEED) + phase);
         }
     }
 }

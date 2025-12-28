@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  BUILD_TYPE: Release
+  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
+  VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+
+jobs:
+  build-and-lint:
+    name: Build & Lint
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Create vcpkg cache directory
+        run: mkdir -p "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+        shell: bash
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-binary-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-binary-${{ runner.os }}-
+
+      # Fast check first - no dependencies needed
+      - name: Check formatting (clang-format)
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path "src" -Recurse -Include *.cpp,*.h,*.hpp |
+            Where-Object { $_.FullName -notmatch "external" }
+
+          $hasErrors = $false
+          foreach ($file in $files) {
+            $diff = & clang-format --dry-run --Werror $file.FullName 2>&1
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::error file=$($file.FullName)::File needs formatting"
+              $hasErrors = $true
+            }
+          }
+
+          if ($hasErrors) {
+            Write-Host "::error::Some files need formatting. Run clang-format locally."
+            exit 1
+          }
+          Write-Host "All files are properly formatted."
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '84bab45d415d22042bd0b9081aea57f362da3f35'
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # Configure with Ninja to generate compile_commands.json for clang-tidy
+      - name: Configure CMake
+        run: |
+          cmake -B build -S . -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Save vcpkg binary cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-binary-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+
+      - name: Static analysis (clang-tidy)
+        shell: pwsh
+        run: .\scripts\lint.ps1
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }}
+
+      - name: Run tests
+        run: ctest --test-dir ./build -C ${{ env.BUILD_TYPE }} --output-on-failure
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpotlightRenderer-${{ github.sha }}
+          path: |
+            build/SpotlightRenderer.exe
+            build/shaders/
+            build/data/
+          retention-days: 7

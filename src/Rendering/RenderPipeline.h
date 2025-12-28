@@ -210,7 +210,7 @@ private:
      * @param node The node to render.
      * @param mb Matrix buffer to update for each node.
      */
-    void RenderNodeRecursive(ID3D11DeviceContext *context, std::shared_ptr<SceneGraph::Node> node,
+    void RenderNodeRecursive(ID3D11DeviceContext *context, const std::shared_ptr<SceneGraph::Node> &node,
                              PipelineMatrixBuffer &mb);
 
     /**

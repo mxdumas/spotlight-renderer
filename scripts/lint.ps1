@@ -1,6 +1,65 @@
-$clangPath = "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin"
-$clangFormat = Join-Path $clangPath "clang-format.exe"
-$clangTidy = Join-Path $clangPath "clang-tidy.exe"
+# Ensure VS environment is loaded (needed for Windows SDK headers)
+# On CI, ilammy/msvc-dev-cmd sets this up; locally we need to do it ourselves
+if (-not $env:INCLUDE) {
+    Write-Host "Loading Visual Studio environment..."
+    $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vsWhere) {
+        $vsPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if ($vsPath) {
+            $devCmd = Join-Path $vsPath "Common7\Tools\VsDevCmd.bat"
+            if (Test-Path $devCmd) {
+                # Run VsDevCmd.bat and capture environment variables
+                $envVars = cmd /c "`"$devCmd`" -arch=amd64 -no_logo && set"
+                foreach ($line in $envVars) {
+                    if ($line -match "^([^=]+)=(.*)$") {
+                        [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
+                    }
+                }
+                Write-Host "VS environment loaded from: $vsPath" -ForegroundColor Green
+            }
+        }
+    }
+    if (-not $env:INCLUDE) {
+        Write-Host "Warning: Could not load VS environment. Some checks may fail." -ForegroundColor Yellow
+    }
+}
+
+# Try to find clang tools in PATH first (CI), then fall back to VS paths (local dev)
+$clangFormat = Get-Command clang-format -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+$clangTidy = Get-Command clang-tidy -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+
+if (-not $clangFormat -or -not $clangTidy) {
+    # Fall back to VS installation paths (use vswhere for reliability)
+    $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vsWhere) {
+        $vsPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if ($vsPath) {
+            $llvmPath = Join-Path $vsPath "VC\Tools\Llvm\x64\bin"
+            if (Test-Path (Join-Path $llvmPath "clang-format.exe")) {
+                $clangFormat = Join-Path $llvmPath "clang-format.exe"
+                $clangTidy = Join-Path $llvmPath "clang-tidy.exe"
+            }
+        }
+    }
+}
+
+if (-not $clangFormat -or -not (Test-Path $clangFormat)) {
+    Write-Host "Error: clang-format not found" -ForegroundColor Red
+    exit 1
+}
+
+if (-not $clangTidy -or -not (Test-Path $clangTidy)) {
+    Write-Host "Error: clang-tidy not found" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Using clang-format: $clangFormat"
+Write-Host "Using clang-tidy: $clangTidy"
+
+if (-not (Test-Path "build\compile_commands.json")) {
+    Write-Host "Error: build\compile_commands.json not found. Run cmake with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" -ForegroundColor Red
+    exit 1
+}
 
 $srcFiles = Get-ChildItem -Path "src" -Recurse -Include *.cpp, *.h, *.hpp | Where-Object { $_.FullName -notmatch "external" }
 
@@ -13,56 +72,47 @@ Write-Host "Formatting $($srcFiles.Count) files with clang-format..."
 & $clangFormat -i $srcFiles.FullName
 
 Write-Host "Analyzing files with clang-tidy..."
+Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+
+# Header filter: only report diagnostics from our src directory
+# Use simple pattern that works on both Windows and Unix paths
+$headerFilter = ".*/src/.*"
+
 # Note: clang-tidy might take time and return non-zero exit codes for warnings.
 # We use -p build to find compile_commands.json
-$ErrorActionPreference = "SilentlyContinue"
-$output = & $clangTidy -p build $srcFiles.FullName --quiet --system-headers=0 2>&1 | Out-String
-$ErrorActionPreference = "Continue"
+$jobs = [Environment]::ProcessorCount
 
-# Filter lines - remove noise from Windows SDK header parsing errors
-# Keep actual warnings from our source files
+# Check if PowerShell 7+ is available for parallel execution
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+    Write-Host "Running clang-tidy on $($srcFiles.Count) files (parallel, $jobs jobs)..."
+
+    $output = $srcFiles | ForEach-Object -Parallel {
+        & $using:clangTidy -p build $_.FullName --quiet --header-filter=$using:headerFilter --system-headers=0 2>&1
+    } -ThrottleLimit $jobs | Out-String
+} else {
+    Write-Host "Running clang-tidy on $($srcFiles.Count) files (sequential, PS $($PSVersionTable.PSVersion.Major))..."
+    $output = & $clangTidy -p build $srcFiles.FullName --quiet --header-filter=$headerFilter --system-headers=0 2>&1 | Out-String
+}
+
+# Filter clang-tidy output noise
 $lines = $output -split "`r?`n"
 $filtered = $lines | Where-Object {
     $_ -and
-    # Remove progress messages
-    $_ -notmatch "^\[\d+/\d+\] Processing file" -and
-    # Remove cumulative error counts (these are from Windows SDK parsing failures)
-    $_ -notmatch "^\d+ warnings? and \d+ errors? generated" -and
-    # Remove "Error while processing" lines (Windows SDK parse failures)
+    $_ -notmatch "^\d+ warnings?( and \d+ errors?)? generated" -and
+    $_ -notmatch "^error: too many errors emitted" -and
     $_ -notmatch "^Error while processing" -and
-    # Remove PowerShell NativeCommandError noise
-    $_ -notmatch "NativeCommandError" -and
-    $_ -notmatch "CategoryInfo" -and
-    $_ -notmatch "FullyQualifiedErrorId" -and
-    $_ -notmatch "At .+lint\.ps1:" -and
-    # Remove "file not found" errors from Windows SDK headers
-    $_ -notmatch "'[^']+' file not found" -and
-    # Remove false positives for external library naming
-    $_ -notmatch "invalid case style for variable '(Microsoft|std|D3D|DXGI)" -and
-    # Exclude class/namespace false positives (misidentified as variables due to parse failures)
-    -not ($_ -match "invalid case style for variable" -and $_ -match "class |namespace |struct ")
+    $_ -notmatch "^Suppressed \d+ warnings" -and
+    # PowerShell stderr noise
+    $_ -notmatch "NativeCommandError|CategoryInfo|FullyQualifiedErrorId"
 }
 
-# Remove context lines that follow filtered errors (lines starting with spaces and containing |)
-$result = @()
-$skipNext = $false
-foreach ($line in $filtered) {
-    if ($line -match "^\s+\d+\s*\|") {
-        # This is a code context line, skip if previous was filtered
-        continue
-    }
-    if ($line -match "^\s+\|") {
-        # This is a caret line, skip
-        continue
-    }
-    $result += $line
-}
+# Extract warnings from our src files
+$srcWarnings = $filtered | Where-Object { $_ -match "[/\\]src[/\\].*warning:" }
 
-$cleanOutput = ($result | Where-Object { $_.Trim() }) -join "`n"
-
-if ($cleanOutput) {
-    Write-Host $cleanOutput
-    Write-Host "`nClang-Tidy reported issues." -ForegroundColor Yellow
+if ($srcWarnings) {
+    Write-Host ($srcWarnings -join "`n")
+    Write-Host "`nClang-Tidy found issues in source code." -ForegroundColor Red
+    exit 1
 } else {
     Write-Host "Linting successful. No issues found." -ForegroundColor Green
 }

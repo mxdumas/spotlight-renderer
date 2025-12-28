@@ -12,7 +12,7 @@ void Application::Log(const std::string &message)
     std::ofstream logFile("debug.log", std::ios::app);
     if (logFile.is_open())
     {
-        logFile << message << std::endl;
+        logFile << message << '\n';
     }
     OutputDebugStringA((message + "\n").c_str());
 }

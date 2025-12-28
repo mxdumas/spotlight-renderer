@@ -20,39 +20,73 @@ public:
      */
     void Update(std::vector<Spotlight> &spotlights, float time);
 
-    // Enable/disable
+    /**
+     * @brief Gets the enabled state for modification.
+     * @return Reference to the enabled flag.
+     */
     bool &Enabled()
     {
         return m_enabled;
     }
+
+    /**
+     * @brief Checks if effects are enabled.
+     * @return True if effects are enabled.
+     */
     [[nodiscard]] bool IsEnabled() const
     {
         return m_enabled;
     }
 
-    // Effect toggles
+    /**
+     * @brief Gets the pan effect toggle.
+     * @return Reference to the pan enabled flag.
+     */
     bool &PanEnabled()
     {
         return m_panEnabled;
     }
+
+    /**
+     * @brief Gets the tilt effect toggle.
+     * @return Reference to the tilt enabled flag.
+     */
     bool &TiltEnabled()
     {
         return m_tiltEnabled;
     }
+
+    /**
+     * @brief Gets the rainbow color effect toggle.
+     * @return Reference to the rainbow enabled flag.
+     */
     bool &RainbowEnabled()
     {
         return m_rainbowEnabled;
     }
+
+    /**
+     * @brief Gets the gobo rotation effect toggle.
+     * @return Reference to the gobo rotation enabled flag.
+     */
     bool &GoboRotationEnabled()
     {
         return m_goboRotationEnabled;
     }
 
-    // Speed control
+    /**
+     * @brief Gets the speed multiplier for modification.
+     * @return Reference to the speed multiplier.
+     */
     float &Speed()
     {
         return m_speed;
     }
+
+    /**
+     * @brief Gets the current speed multiplier.
+     * @return The speed multiplier value.
+     */
     [[nodiscard]] float GetSpeed() const
     {
         return m_speed;

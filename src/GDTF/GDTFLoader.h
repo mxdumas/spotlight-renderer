@@ -55,8 +55,8 @@ private:
      * @return A shared pointer to the created SceneGraph Node.
      */
     static std::shared_ptr<SceneGraph::Node>
-    CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, std::shared_ptr<GeometryNode> gdtf_node,
-                        std::map<std::string, std::shared_ptr<Mesh>> &mesh_cache);
+    CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, const std::shared_ptr<GeometryNode> &gdtfNode,
+                        std::map<std::string, std::shared_ptr<Mesh>> &meshCache);
 };
 
 } // namespace GDTF

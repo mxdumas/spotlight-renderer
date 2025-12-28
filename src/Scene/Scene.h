@@ -47,9 +47,9 @@ public:
     /**
      * @brief Updates the scene state for a single frame.
      *
-     * @param delta_time The time elapsed since the last frame in seconds.
+     * @param deltaTime The time elapsed since the last frame in seconds.
      */
-    void Update(float delta_time);
+    void Update(float deltaTime);
 
     /**
      * @brief Gets a reference to the active camera.
@@ -240,7 +240,7 @@ public:
      * @brief Gets the collection of GDTF fixture placement nodes.
      * @return Const reference to the vector of shared pointers to SceneGraph::Nodes.
      */
-    const std::vector<std::shared_ptr<SceneGraph::Node>> &GetFixtureNodes() const
+    [[nodiscard]] const std::vector<std::shared_ptr<SceneGraph::Node>> &GetFixtureNodes() const
     {
         return m_fixtureNodes;
     }
@@ -249,7 +249,7 @@ public:
      * @brief Gets the list of gobo slot names for the current wheel.
      * @return Const reference to the vector of strings.
      */
-    const std::vector<std::string> &GetGoboSlotNames() const
+    [[nodiscard]] const std::vector<std::string> &GetGoboSlotNames() const
     {
         return m_goboSlotNames;
     }
@@ -258,11 +258,10 @@ public:
      * @brief Gets the vertical offset of the stage.
      * @return The stage offset value.
      */
-    float GetStageOffset() const
+    [[nodiscard]] float GetStageOffset() const
     {
         return m_stageOffset;
     }
-
     /**
      * @brief Gets a reference to the room's specular intensity.
      * @return Reference to the specular value.
@@ -285,7 +284,7 @@ public:
      * @brief Gets the room's specular intensity.
      * @return The specular value.
      */
-    float GetRoomSpecular() const
+    [[nodiscard]] float GetRoomSpecular() const
     {
         return m_roomSpecular;
     }
@@ -294,34 +293,16 @@ public:
      * @brief Gets the room's shininess (roughness).
      * @return The shininess value.
      */
-    float GetRoomShininess() const
+    [[nodiscard]] float GetRoomShininess() const
     {
         return m_roomShininess;
     }
-
-    /**
-     * @brief Gets a reference to the CMY color mixing toggle.
-     * @return Reference to the boolean flag.
-     */
-    bool &UseCMY()
-    {
-        return m_useCMY;
-    }
-
-    /**
-     * @brief Gets a reference to the CMY color values.
-     * @return Reference to the XMFLOAT3 representing Cyan, Magenta, Yellow.
-     */
-    DirectX::XMFLOAT3 &CMY()
-    {
-        return m_cmy;
-    }
-
+    // ...
     /**
      * @brief Checks if CMY color mixing is enabled.
      * @return true if CMY is used, false if RGB is used.
      */
-    bool GetUseCMY() const
+    [[nodiscard]] bool GetUseCMY() const
     {
         return m_useCMY;
     }
@@ -330,7 +311,7 @@ public:
      * @brief Gets the CMY color values.
      * @return Const reference to the XMFLOAT3 representing CMY.
      */
-    const DirectX::XMFLOAT3 &GetCMY() const
+    [[nodiscard]] const DirectX::XMFLOAT3 &GetCMY() const
     {
         return m_cmy;
     }
@@ -339,7 +320,7 @@ public:
      * @brief Gets the total elapsed time in the scene.
      * @return Total time in seconds.
      */
-    float GetTime() const
+    [[nodiscard]] float GetTime() const
     {
         return m_time;
     }

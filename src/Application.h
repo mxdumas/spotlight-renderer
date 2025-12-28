@@ -12,6 +12,13 @@
 
 using Microsoft::WRL::ComPtr;
 
+/**
+ * @class Application
+ * @brief Main application class that coordinates graphics, scene, UI, and rendering.
+ *
+ * Owns the GraphicsDevice, Scene, UIRenderer, and RenderPipeline. Provides the main
+ * frame loop operations (BeginFrame, RenderUI, EndFrame) for the spotlight renderer.
+ */
 class Application
 {
 public:

@@ -68,10 +68,10 @@ public:
      * @brief Loads a 3D model from an OBJ file and creates DirectX 11 buffers.
      *
      * @param device Pointer to the ID3D11Device.
-     * @param file_name Path to the .obj file.
+     * @param fileName Path to the .obj file.
      * @return true if loading succeeded, false otherwise.
      */
-    bool LoadFromOBJ(ID3D11Device *device, const std::string &file_name);
+    bool LoadFromOBJ(ID3D11Device *device, const std::string &fileName);
 
     /**
      * @brief Creates a mesh from raw vertex and index data.
@@ -103,9 +103,9 @@ public:
      * @brief Draws a single shape from the mesh by index.
      *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param shape_index Index of the shape to draw.
+     * @param shapeIndex Index of the shape to draw.
      */
-    void DrawShape(ID3D11DeviceContext *context, size_t shape_index);
+    void DrawShape(ID3D11DeviceContext *context, size_t shapeIndex);
 
     /**
      * @brief Gets the metadata for all shapes found in the mesh file.

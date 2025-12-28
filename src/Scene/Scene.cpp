@@ -24,8 +24,8 @@ bool Scene::Initialize(ID3D11Device *device)
     }
 
     // Calculate stage offset
-    float stage_min_y = m_stageMesh->GetMinY();
-    m_stageOffset = Config::Room::FLOOR_Y - stage_min_y;
+    float stageMinY = m_stageMesh->GetMinY();
+    m_stageOffset = Config::Room::FLOOR_Y - stageMinY;
 
     // Find anchor points from mesh
     m_anchorPositions.clear();
@@ -66,7 +66,7 @@ bool Scene::Initialize(ID3D11Device *device)
     // Load GDTF fixture model once
     GDTF::GDTFParser parser;
     std::shared_ptr<SceneGraph::Node> gdtfRoot;
-    if (parser.Load("data/fixtures/Martin_Professional@MAC_Viper_Performance@20230516NoMeas.gdtf"))
+    if (parser.Load(Config::Fixtures::DEFAULT_GDTF))
     {
         gdtfRoot = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
     }
@@ -74,11 +74,11 @@ bool Scene::Initialize(ID3D11Device *device)
     // Load gobo texture from GDTF (always includes Open as first slot)
     m_goboTexture = std::make_unique<Texture>();
     m_goboSlotNames.clear();
-    auto gobo_images = parser.ExtractGoboImages();
-    m_goboTexture->CreateTextureArray(device, gobo_images);
+    auto goboImages = parser.ExtractGoboImages();
+    m_goboTexture->CreateTextureArray(device, goboImages);
 
     // Populate gobo slot names from GDTF
-    m_goboSlotNames.push_back("Open");
+    m_goboSlotNames.emplace_back("Open");
     for (const auto &wheel : parser.GetGoboWheels())
     {
         if (wheel.name.find("Gobo") == std::string::npos)
@@ -103,8 +103,8 @@ bool Scene::Initialize(ID3D11Device *device)
         light.SetDirection(dir);
 
         // Default gobo: index 1 if available, otherwise Open (0)
-        int default_gobo = (m_goboSlotNames.size() > 1) ? 1 : 0;
-        light.SetGoboIndex(default_gobo);
+        int defaultGobo = (m_goboSlotNames.size() > 1) ? 1 : 0;
+        light.SetGoboIndex(defaultGobo);
 
         m_spotlights.push_back(light);
 
@@ -156,9 +156,9 @@ bool Scene::Initialize(ID3D11Device *device)
     return true;
 }
 
-void Scene::Update(float delta_time)
+void Scene::Update(float deltaTime)
 {
-    m_time += delta_time;
+    m_time += deltaTime;
 
     // Update GDTF fixture hierarchies
     for (auto &node : m_fixtureNodes)
@@ -179,16 +179,16 @@ void Scene::Update(float delta_time)
 
 DirectX::XMFLOAT3 Scene::GetCameraPosition() const
 {
-    float cam_x = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
-    float cam_y = m_camDistance * sinf(m_camPitch);
-    float cam_z = -m_camDistance * cosf(m_camPitch) * cosf(m_camYaw);
-    return {cam_x, cam_y, cam_z};
+    float camX = m_camDistance * cosf(m_camPitch) * sinf(m_camYaw);
+    float camY = m_camDistance * sinf(m_camPitch);
+    float camZ = -m_camDistance * cosf(m_camPitch) * cosf(m_camYaw);
+    return {camX, camY, camZ};
 }
 
 void Scene::UpdateCamera()
 {
-    DirectX::XMFLOAT3 cam_pos = GetCameraPosition();
-    m_camera.SetLookAt(cam_pos, m_camTarget, {0.0f, 1.0f, 0.0f});
+    DirectX::XMFLOAT3 camPos = GetCameraPosition();
+    m_camera.SetLookAt(camPos, m_camTarget, {0.0f, 1.0f, 0.0f});
 }
 
 void Scene::AddSpotlight(const Spotlight &light)
@@ -200,6 +200,6 @@ void Scene::RemoveSpotlight(size_t index)
 {
     if (index < m_spotlights.size() && m_spotlights.size() > 1)
     {
-        m_spotlights.erase(m_spotlights.begin() + index);
+        m_spotlights.erase(m_spotlights.begin() + static_cast<std::ptrdiff_t>(index));
     }
 }

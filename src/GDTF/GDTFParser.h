@@ -27,6 +27,7 @@ struct GeometryNode
     DirectX::XMFLOAT4X4 matrix;                          ///< Local transformation matrix.
     std::vector<std::shared_ptr<GeometryNode>> children; ///< Child nodes in the hierarchy.
 
+    /// @brief Default constructor, initializes matrix to identity.
     GeometryNode()
     {
         DirectX::XMStoreFloat4x4(&matrix, DirectX::XMMatrixIdentity());
@@ -88,19 +89,19 @@ public:
     /**
      * @brief Loads and parses a GDTF file from the disk.
      *
-     * @param file_name The absolute or relative path to the .gdtf file.
+     * @param fileName The absolute or relative path to the .gdtf file.
      * @return true if the file was opened and parsed successfully, false otherwise.
      */
-    bool Load(const std::string &file_name);
+    bool Load(const std::string &fileName);
 
     /**
      * @brief Extracts a specific file from the GDTF archive into memory.
      *
-     * @param internal_path The path of the file inside the ZIP archive.
-     * @param out_data Vector to store the raw binary data of the extracted file.
+     * @param internalPath The path of the file inside the ZIP archive.
+     * @param outData Vector to store the raw binary data of the extracted file.
      * @return true if the file exists and was extracted, false otherwise.
      */
-    bool ExtractFile(const std::string &internal_path, std::vector<uint8_t> &out_data);
+    bool ExtractFile(const std::string &internalPath, std::vector<uint8_t> &outData);
 
     /**
      * @brief Gets the name of the fixture type defined in the GDTF.
@@ -150,18 +151,18 @@ public:
 
     /**
      * @brief Gets the actual file name for a model name.
-     * @param model_name The name of the model in the geometry tree.
-     * @return The file name (usually GLB), or the model_name if not found.
+     * @param modelName The name of the model in the geometry tree.
+     * @return The file name (usually GLB), or the modelName if not found.
      */
-    [[nodiscard]] std::string GetModelFile(const std::string &model_name) const;
+    [[nodiscard]] std::string GetModelFile(const std::string &modelName) const;
 
 private:
     /**
      * @brief Internal helper to parse the XML content of description.xml.
-     * @param xml_content The raw XML string.
+     * @param xmlContent The raw XML string.
      * @return true if parsing succeeded.
      */
-    bool ParseXML(const std::string &xml_content);
+    bool ParseXML(const std::string &xmlContent);
 
     /**
      * @brief Recursively parses geometry nodes from the XML.

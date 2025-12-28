@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <utility>
 #include "../Resources/Mesh.h"
 #include "Node.h"
 
@@ -26,7 +27,7 @@ public:
      * @param mesh A shared pointer to the Mesh resource.
      * @param name The debug name for this node.
      */
-    MeshNode(std::shared_ptr<Mesh> mesh, const std::string &name = "MeshNode") : Node(name), m_mesh(mesh)
+    MeshNode(std::shared_ptr<Mesh> mesh, const std::string &name = "MeshNode") : Node(name), m_mesh(std::move(mesh))
     {
     }
 
@@ -50,7 +51,7 @@ public:
      */
     void SetMesh(std::shared_ptr<Mesh> mesh)
     {
-        m_mesh = mesh;
+        m_mesh = std::move(mesh);
     }
 
 private:

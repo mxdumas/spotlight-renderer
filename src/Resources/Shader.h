@@ -32,23 +32,36 @@ public:
      * @brief Compiles and loads a vertex shader from a file.
      *
      * @param device Pointer to the ID3D11Device.
-     * @param file_name Wide-string path to the .hlsl file.
-     * @param entry_point Name of the entry point function in the shader file.
-     * @param input_elements Description of the vertex input layout.
+     * @param fileName Wide-string path to the .hlsl file.
+     * @param entryPoint Name of the entry point function in the shader file.
+     * @param inputElements Description of the vertex input layout.
      * @return true if loading succeeded, false otherwise.
      */
-    bool LoadVertexShader(ID3D11Device *device, const std::wstring &file_name, const std::string &entry_point,
-                          const std::vector<D3D11_INPUT_ELEMENT_DESC> &input_elements);
+    bool LoadVertexShader(ID3D11Device *device, const std::wstring &fileName, const std::string &entryPoint,
+                          const std::vector<D3D11_INPUT_ELEMENT_DESC> &inputElements);
 
     /**
      * @brief Compiles and loads a pixel shader from a file.
      *
      * @param device Pointer to the ID3D11Device.
-     * @param file_name Wide-string path to the .hlsl file.
-     * @param entry_point Name of the entry point function in the shader file.
+     * @param fileName Wide-string path to the .hlsl file.
+     * @param entryPoint Name of the entry point function in the shader file.
      * @return true if loading succeeded, false otherwise.
      */
-    bool LoadPixelShader(ID3D11Device *device, const std::wstring &file_name, const std::string &entry_point);
+    bool LoadPixelShader(ID3D11Device *device, const std::wstring &fileName, const std::string &entryPoint);
+
+    /**
+     * @brief Loads both vertex and pixel shaders from a single .hlsl file.
+     *
+     * Uses standard entry points "VS" for vertex shader and "PS" for pixel shader.
+     *
+     * @param device Pointer to the ID3D11Device.
+     * @param fileName Wide-string path to the .hlsl file.
+     * @param inputElements Description of the vertex input layout.
+     * @return true if both shaders loaded successfully, false otherwise.
+     */
+    bool LoadFromFile(ID3D11Device *device, const std::wstring &fileName,
+                      const std::vector<D3D11_INPUT_ELEMENT_DESC> &inputElements);
 
     /**
      * @brief Binds the vertex shader, pixel shader, and input layout to the pipeline.

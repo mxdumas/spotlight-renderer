@@ -21,53 +21,53 @@ namespace GeometryGenerator
  * @brief Creates a simple debug cube (8 vertices).
  *
  * @param device Pointer to the ID3D11Device.
- * @param out_vb Reference to the ComPtr that will receive the vertex buffer (position only).
- * @param out_ib Reference to the ComPtr that will receive the index buffer.
+ * @param outVb Reference to the ComPtr that will receive the vertex buffer (position only).
+ * @param outIb Reference to the ComPtr that will receive the index buffer.
  * @return true if creation succeeded, false otherwise.
  */
-bool CreateDebugCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib);
+bool CreateDebugCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb);
 
 /**
  * @brief Creates a cone proxy used for visualizing spotlight orientation.
  *
  * @param device Pointer to the ID3D11Device.
- * @param out_vb Reference to the ComPtr that will receive the vertex buffer (position only).
- * @param out_ib Reference to the ComPtr that will receive the index buffer.
- * @param out_index_count Receives the number of indices in the generated cone.
+ * @param outVb Reference to the ComPtr that will receive the vertex buffer (position only).
+ * @param outIb Reference to the ComPtr that will receive the index buffer.
+ * @param outIndexCount Receives the number of indices in the generated cone.
  * @return true if creation succeeded, false otherwise.
  */
-bool CreateConeProxy(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib,
-                     uint32_t &out_index_count);
+bool CreateConeProxy(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb,
+                     uint32_t &outIndexCount);
 
 /**
  * @brief Creates an inverted room cube where normals face inward.
  *
  * @param device Pointer to the ID3D11Device.
- * @param out_vb Reference to the ComPtr that will receive the vertex buffer (position, normal, uv).
- * @param out_ib Reference to the ComPtr that will receive the index buffer.
+ * @param outVb Reference to the ComPtr that will receive the vertex buffer (position, normal, uv).
+ * @param outIb Reference to the ComPtr that will receive the index buffer.
  * @return true if creation succeeded, false otherwise.
  */
-bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib);
+bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb);
 
 /**
  * @brief Creates a UV sphere for point light visualization.
  *
  * @param device Pointer to the ID3D11Device.
- * @param out_vb Reference to the ComPtr that will receive the vertex buffer (position, normal, uv).
- * @param out_ib Reference to the ComPtr that will receive the index buffer.
- * @param out_index_count Receives the number of indices in the generated sphere.
+ * @param outVb Reference to the ComPtr that will receive the vertex buffer (position, normal, uv).
+ * @param outIb Reference to the ComPtr that will receive the index buffer.
+ * @param outIndexCount Receives the number of indices in the generated sphere.
  * @return true if creation succeeded, false otherwise.
  */
-bool CreateSphere(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib,
-                  uint32_t &out_index_count);
+bool CreateSphere(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb,
+                  uint32_t &outIndexCount);
 
 /**
  * @brief Creates a full-screen quad (2 triangles) covering NDC space from [-1,-1] to [1,1].
  *
  * @param device Pointer to the ID3D11Device.
- * @param out_vb Reference to the ComPtr that will receive the vertex buffer (position only).
+ * @param outVb Reference to the ComPtr that will receive the vertex buffer (position only).
  * @return true if creation succeeded, false otherwise.
  */
-bool CreateFullScreenQuad(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb);
+bool CreateFullScreenQuad(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb);
 
 } // namespace GeometryGenerator

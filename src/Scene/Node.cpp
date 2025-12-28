@@ -4,18 +4,19 @@
  */
 
 #include "Node.h"
+#include <utility>
 
 namespace SceneGraph
 {
 
-Node::Node(const std::string &name) : m_name(name)
+Node::Node(std::string name) : m_name(std::move(name))
 {
     m_baseMatrix = DirectX::XMMatrixIdentity();
     m_localMatrix = DirectX::XMMatrixIdentity();
     m_worldMatrix = DirectX::XMMatrixIdentity();
 }
 
-void Node::AddChild(std::shared_ptr<Node> child)
+void Node::AddChild(const std::shared_ptr<Node> &child)
 {
     if (child)
     {
@@ -43,7 +44,7 @@ std::shared_ptr<Node> Node::FindChild(const std::string &name)
     return nullptr;
 }
 
-void Node::UpdateWorldMatrix(const DirectX::XMMATRIX &parent_world)
+void Node::UpdateWorldMatrix(const DirectX::XMMATRIX &parentWorld)
 {
     if (m_hasBaseMatrix)
     {
@@ -62,7 +63,7 @@ void Node::UpdateWorldMatrix(const DirectX::XMMATRIX &parent_world)
     }
     // else: m_localMatrix stays as identity from constructor
 
-    m_worldMatrix = m_localMatrix * parent_world;
+    m_worldMatrix = m_localMatrix * parentWorld;
 
     for (auto &child : m_children)
     {

@@ -27,12 +27,12 @@ public:
     /**
      * @brief Sets the camera's perspective projection matrix.
      *
-     * @param fov_y Vertical field of view in radians.
+     * @param fovY Vertical field of view in radians.
      * @param aspect Aspect ratio (width / height).
-     * @param near_z Near clipping plane distance.
-     * @param far_z Far clipping plane distance.
+     * @param nearZ Near clipping plane distance.
+     * @param farZ Far clipping plane distance.
      */
-    void SetPerspective(float fov_y, float aspect, float near_z, float far_z);
+    void SetPerspective(float fovY, float aspect, float nearZ, float farZ);
 
     /**
      * @brief Gets the current view matrix.

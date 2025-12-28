@@ -30,9 +30,8 @@ jobs:
         run: |
           doxygen Doxyfile 2>&1 | tee doxygen.log
           if grep -E "(warning:|error:)" doxygen.log; then
-            echo "::warning::Doxygen reported warnings or errors"
-            # Uncomment the line below to fail on warnings
-            # exit 1
+            echo "::error::Doxygen reported warnings or errors"
+            exit 1
           fi
 
       - name: Upload documentation

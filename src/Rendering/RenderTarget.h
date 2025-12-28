@@ -26,11 +26,18 @@ public:
      */
     ~RenderTarget();
 
-    // Non-copyable, movable
+    /// @name Copy/Move semantics
+    /// @{
     RenderTarget(const RenderTarget &) = delete;
     RenderTarget &operator=(const RenderTarget &) = delete;
+    /// @brief Move constructor (transfers ownership of GPU resources).
     RenderTarget(RenderTarget &&) noexcept = default;
+    /**
+     * @brief Move assignment operator (transfers ownership of GPU resources).
+     * @return Reference to this object.
+     */
     RenderTarget &operator=(RenderTarget &&) noexcept = default;
+    /// @}
 
     /**
      * @brief Creates the render target texture and its corresponding views.
