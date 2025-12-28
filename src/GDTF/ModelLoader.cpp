@@ -26,78 +26,76 @@ std::shared_ptr<Mesh> ModelLoader::LoadFromMemory(ID3D11Device *device, const ui
         return nullptr;
     }
 
-    float min_x = 1e10f, min_y = 1e10f, min_z = 1e10f;
-    float max_x = -1e10f, max_y = -1e10f, max_z = -1e10f;
+    float minX = 1e10f, minY = 1e10f, minZ = 1e10f;
+    float maxX = -1e10f, maxY = -1e10f, maxZ = -1e10f;
 
     auto mesh = std::make_shared<Mesh>();
-    std::vector<Vertex> all_vertices;
-    std::vector<uint32_t> all_indices;
-    uint32_t vertex_offset = 0;
+    std::vector<Vertex> allVertices;
+    std::vector<uint32_t> allIndices;
+    uint32_t vertexOffset = 0;
 
     for (unsigned int m = 0; m < scene->mNumMeshes; ++m)
     {
-        aiMesh *ai_mesh = scene->mMeshes[m];
+        aiMesh *aiMesh = scene->mMeshes[m];
 
         ShapeInfo shape;
-        shape.name = ai_mesh->mName.C_Str();
-        shape.startIndex = (uint32_t)all_indices.size();
+        shape.name = aiMesh->mName.C_Str();
+        shape.startIndex = (uint32_t)allIndices.size();
 
-        for (unsigned int i = 0; i < ai_mesh->mNumVertices; ++i)
+        for (unsigned int i = 0; i < aiMesh->mNumVertices; ++i)
         {
             Vertex v;
             // Scale down by 0.001 to convert from mm to m
-            v.position = {ai_mesh->mVertices[i].x * 0.001f, ai_mesh->mVertices[i].y * 0.001f,
-                          ai_mesh->mVertices[i].z * 0.001f};
+            v.position = {aiMesh->mVertices[i].x * 0.001f, aiMesh->mVertices[i].y * 0.001f,
+                          aiMesh->mVertices[i].z * 0.001f};
 
-            min_x = (std::min)(min_x, v.position.x);
-            min_y = (std::min)(min_y, v.position.y);
-            min_z = (std::min)(min_z, v.position.z);
-            max_x = (std::max)(max_x, v.position.x);
-            max_y = (std::max)(max_y, v.position.y);
-            max_z = (std::max)(max_z, v.position.z);
+            minX = (std::min)(minX, v.position.x);
+            minY = (std::min)(minY, v.position.y);
+            minZ = (std::min)(minZ, v.position.z);
+            maxX = (std::max)(maxX, v.position.x);
+            maxY = (std::max)(maxY, v.position.y);
+            maxZ = (std::max)(maxZ, v.position.z);
 
-            if (ai_mesh->HasNormals())
-                v.normal = {ai_mesh->mNormals[i].x, ai_mesh->mNormals[i].y, ai_mesh->mNormals[i].z};
+            if (aiMesh->HasNormals())
+                v.normal = {aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z};
             else
                 v.normal = {0, 1, 0};
 
-            if (ai_mesh->HasTextureCoords(0))
-                v.uv = {ai_mesh->mTextureCoords[0][i].x, ai_mesh->mTextureCoords[0][i].y};
+            if (aiMesh->HasTextureCoords(0))
+                v.uv = {aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y};
             else
                 v.uv = {0, 0};
 
-            all_vertices.push_back(v);
+            allVertices.push_back(v);
         }
 
-        for (unsigned int i = 0; i < ai_mesh->mNumFaces; ++i)
+        for (unsigned int i = 0; i < aiMesh->mNumFaces; ++i)
         {
-            aiFace face = ai_mesh->mFaces[i];
+            aiFace face = aiMesh->mFaces[i];
             for (unsigned int j = 0; j < face.mNumIndices; ++j)
-                all_indices.push_back(face.mIndices[j] + vertex_offset);
+                allIndices.push_back(face.mIndices[j] + vertexOffset);
         }
 
-        shape.indexCount = ai_mesh->mNumFaces * 3;
+        shape.indexCount = aiMesh->mNumFaces * 3;
         shape.center = {0, 0, 0};
-
         // Assign a black material
         shape.material.diffuse = {0.05f, 0.05f, 0.05f};
         shape.material.specular = {0.2f, 0.2f, 0.2f};
         shape.material.shininess = 32.0f;
 
         mesh->AddShape(shape);
-
-        vertex_offset += ai_mesh->mNumVertices;
+        vertexOffset += aiMesh->mNumVertices;
     }
 
-    if (!mesh->Create(device, all_vertices, all_indices))
+    if (!mesh->Create(device, allVertices, allIndices))
         return nullptr;
 
     {
         std::ofstream log("debug.log", std::ios::app);
-        log << "Assimp loaded " << hint << ": " << all_vertices.size() << " vertices, " << all_indices.size() / 3
+        log << "Assimp loaded " << hint << ": " << allVertices.size() << " vertices, " << allIndices.size() / 3
             << " faces.\n";
-        log << "  Bounds: Min(" << min_x << "," << min_y << "," << min_z << ") Max(" << max_x << "," << max_y << ","
-            << max_z << ")\n";
+        log << "  Bounds: Min(" << minX << "," << minY << "," << minZ << ") Max(" << maxX << "," << maxY << "," << maxZ
+            << ")\n";
     }
 
     return mesh;

@@ -42,9 +42,9 @@ public:
 
     /**
      * @brief Updates the world transform for this node and recursively for all its children.
-     * @param parent_world The world matrix of the parent node (defaults to identity).
+     * @param parentWorld The world matrix of the parent node (defaults to identity).
      */
-    void UpdateWorldMatrix(const DirectX::XMMATRIX &parent_world = DirectX::XMMatrixIdentity());
+    void UpdateWorldMatrix(const DirectX::XMMATRIX &parentWorld = DirectX::XMMatrixIdentity());
 
     /**
      * @brief Gets the list of child nodes.

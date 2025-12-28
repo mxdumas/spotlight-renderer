@@ -46,13 +46,13 @@ public:
      * @brief Executes an additive composite of the volumetric lighting onto the scene.
      *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param scene_rt The scene render target to composite onto.
-     * @param volumetric_rt The volumetric texture containing the light effect.
-     * @param full_screen_vb Vertex buffer for a full-screen quad.
+     * @param sceneRt The scene render target to composite onto.
+     * @param volumetricRt The volumetric texture containing the light effect.
+     * @param fullScreenVb Vertex buffer for a full-screen quad.
      * @param sampler Sampler state for texture sampling.
      */
-    void ExecuteAdditive(ID3D11DeviceContext *context, RenderTarget *scene_rt, RenderTarget *volumetric_rt,
-                         ID3D11Buffer *full_screen_vb, ID3D11SamplerState *sampler);
+    void ExecuteAdditive(ID3D11DeviceContext *context, RenderTarget *sceneRt, RenderTarget *volumetricRt,
+                         ID3D11Buffer *fullScreenVb, ID3D11SamplerState *sampler);
 
     /**
      * @brief Executes a simple copy from a source texture to a destination render target.
@@ -60,13 +60,13 @@ public:
      * Used typically as a fallback or when certain post-processing steps are disabled.
      *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param dest_rtv The destination render target view.
-     * @param source_srv The source texture's shader resource view.
-     * @param full_screen_vb Vertex buffer for a full-screen quad.
+     * @param destRtv The destination render target view.
+     * @param sourceSrv The source texture's shader resource view.
+     * @param fullScreenVb Vertex buffer for a full-screen quad.
      * @param sampler Sampler state for texture sampling.
      */
-    void ExecuteCopy(ID3D11DeviceContext *context, ID3D11RenderTargetView *dest_rtv,
-                     ID3D11ShaderResourceView *source_srv, ID3D11Buffer *full_screen_vb, ID3D11SamplerState *sampler);
+    void ExecuteCopy(ID3D11DeviceContext *context, ID3D11RenderTargetView *destRtv, ID3D11ShaderResourceView *sourceSrv,
+                     ID3D11Buffer *fullScreenVb, ID3D11SamplerState *sampler);
 
 private:
     Shader m_compositeShader;

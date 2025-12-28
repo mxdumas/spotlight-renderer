@@ -2,8 +2,8 @@
 #define UNICODE
 #endif
 
-#include <mmsystem.h>
 #include <windows.h>
+#include <mmsystem.h>
 
 #include <chrono>
 #include <thread>
@@ -54,13 +54,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     SetProcessDPIAware();
-    const wchar_t CLASS_NAME[] = L"SpotlightRendererWindowClass";
+    const wchar_t className[] = L"SpotlightRendererWindowClass";
 
     WNDCLASS wc = {};
 
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
-    wc.lpszClassName = CLASS_NAME;
+    wc.lpszClassName = className;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 
     RegisterClass(&wc);
@@ -68,7 +68,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     RECT wr = {0, 0, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT};
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
-    HWND hwnd = CreateWindowEx(0, CLASS_NAME, L"Spotlight Renderer", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+    HWND hwnd = CreateWindowEx(0, className, L"Spotlight Renderer", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                                wr.right - wr.left, wr.bottom - wr.top, nullptr, nullptr, hInstance, nullptr);
 
     if (hwnd == nullptr)
@@ -90,15 +90,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Frame limiter: target 60 FPS (~16.67ms per frame)
     using clock = std::chrono::steady_clock;
-    constexpr auto target_frame_time = std::chrono::microseconds(16667);
-    constexpr auto spin_threshold = std::chrono::milliseconds(2);
+    constexpr auto targetFrameTime = std::chrono::microseconds(16667);
+    constexpr auto spinThreshold = std::chrono::milliseconds(2);
 
     // Improve Windows timer resolution
     timeBeginPeriod(1);
 
     while (running)
     {
-        auto frame_start = clock::now();
+        auto frameStart = clock::now();
 
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
@@ -117,12 +117,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             app.EndFrame();
 
             // Hybrid wait: sleep for bulk, spin for precision
-            auto remaining = target_frame_time - (clock::now() - frame_start);
-            if (remaining > spin_threshold)
+            auto remaining = targetFrameTime - (clock::now() - frameStart);
+            if (remaining > spinThreshold)
             {
-                std::this_thread::sleep_for(remaining - spin_threshold);
+                std::this_thread::sleep_for(remaining - spinThreshold);
             }
-            while (clock::now() - frame_start < target_frame_time)
+            while (clock::now() - frameStart < targetFrameTime)
             {
                 // Spin-wait for remaining time
             }

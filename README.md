@@ -32,12 +32,9 @@ A technical demonstration of a physically-based volumetric lighting engine utili
 - **IDE:** Visual Studio 2019 or later (C++ Desktop Development workload)
 - **Build System:** CMake 3.15+
 - **GPU:** DirectX 11 compatible hardware
-- **Tools:** Git (for vcpkg)
-- **Optional:** Ninja (recommended for faster builds and linting support)
+- **Tools:** Git (for vcpkg), Ninja (included with Visual Studio)
 
 ## Build Instructions
-
-### Standard (Visual Studio)
 
 1.  **Clone the repository:**
     ```powershell
@@ -51,44 +48,20 @@ A technical demonstration of a physically-based volumetric lighting engine utili
     .\vcpkg\bootstrap-vcpkg.bat
     ```
 
-3.  **Configure with CMake:**
+3.  **Build** (uses Ninja, generates `compile_commands.json` for linting):
     ```powershell
-    cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+    .\build.bat              # Debug build
+    .\build.bat --release    # Release build
     ```
 
-4.  **Build the project:**
-    ```powershell
-    cmake --build build --config Release
-    ```
-
-5.  **Run the executable:**
-    ```powershell
-    .\build\Release\SpotlightRenderer.exe
-    ```
-
-### Advanced (Ninja / CI Workflow)
-
-To reproduce the CI environment or run the linter (which requires `compile_commands.json`), usage of **Ninja** is recommended.
-
-1.  **Configure:**
-    ```powershell
-    cmake -B build -S . -G Ninja -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    ```
-
-2.  **Build:**
-    ```powershell
-    cmake --build build --config Release
-    ```
-
-3.  **Run:**
-    *Note: Ninja places binaries directly in `build/`, not `build/Release/`.*
+4.  **Run:**
     ```powershell
     .\build\SpotlightRenderer.exe
     ```
 
-4.  **Linting:**
+5.  **Lint** (requires build first):
     ```powershell
-    .\scripts\lint.ps1
+    pwsh -File .\scripts\lint.ps1
     ```
 
 ## Controls

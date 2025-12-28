@@ -2,20 +2,11 @@
 setlocal enabledelayedexpansion
 
 set CONFIG=Debug
-set GENERATOR=
-set NINJA_FLAG=0
-set EXTRA_ARGS=
 
 :parse_args
 if "%1"=="" goto end_parse
 if "%1"=="--release" (
     set CONFIG=Release
-    shift
-    goto parse_args
-)
-if "%1"=="--ninja" (
-    set GENERATOR=-G Ninja
-    set NINJA_FLAG=1
     shift
     goto parse_args
 )
@@ -29,10 +20,8 @@ if exist "vcpkg\scripts\buildsystems\vcpkg.cmake" (
     set TOOLCHAIN=-DCMAKE_TOOLCHAIN_FILE="vcpkg\scripts\buildsystems\vcpkg.cmake"
 )
 
-:: For Ninja, we must specify the build type during configuration
-if %NINJA_FLAG%==1 (
-    set EXTRA_ARGS=-DCMAKE_BUILD_TYPE=%CONFIG% -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-)
+:: Ninja requires build type at configure time
+set EXTRA_ARGS=-DCMAKE_BUILD_TYPE=%CONFIG% -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 :: Detect VS installation
 set "VS_PATH="
@@ -64,8 +53,8 @@ if not exist "%VS_PATH%" (
 echo Using Visual Studio environment from: "%VS_PATH%"
 call "%VS_PATH%" -arch=amd64 -no_logo
 
-echo Configuring CMake (Config: %CONFIG%, Generator: %GENERATOR%)...
-cmake -B build -S . %GENERATOR% %TOOLCHAIN% %EXTRA_ARGS%
+echo Configuring CMake (Config: %CONFIG%, Generator: Ninja)...
+cmake -B build -S . -G Ninja %TOOLCHAIN% %EXTRA_ARGS%
 if %ERRORLEVEL% neq 0 (
     echo Configuration failed!
     exit /b %ERRORLEVEL%

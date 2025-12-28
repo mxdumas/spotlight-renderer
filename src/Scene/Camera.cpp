@@ -10,13 +10,13 @@ Camera::Camera()
 
 void Camera::SetLookAt(XMFLOAT3 eye, XMFLOAT3 at, XMFLOAT3 up)
 {
-    XMVECTOR eye_vec = XMLoadFloat3(&eye);
-    XMVECTOR at_vec = XMLoadFloat3(&at);
-    XMVECTOR up_vec = XMLoadFloat3(&up);
-    XMStoreFloat4x4(&m_view, XMMatrixLookAtLH(eye_vec, at_vec, up_vec));
+    XMVECTOR eyeVec = XMLoadFloat3(&eye);
+    XMVECTOR atVec = XMLoadFloat3(&at);
+    XMVECTOR upVec = XMLoadFloat3(&up);
+    XMStoreFloat4x4(&m_view, XMMatrixLookAtLH(eyeVec, atVec, upVec));
 }
 
-void Camera::SetPerspective(float fov_y, float aspect, float near_z, float far_z)
+void Camera::SetPerspective(float fovY, float aspect, float nearZ, float farZ)
 {
-    XMStoreFloat4x4(&m_projection, XMMatrixPerspectiveFovLH(fov_y, aspect, near_z, far_z));
+    XMStoreFloat4x4(&m_projection, XMMatrixPerspectiveFovLH(fovY, aspect, nearZ, farZ));
 }

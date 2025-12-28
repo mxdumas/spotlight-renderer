@@ -6,7 +6,7 @@
 namespace GeometryGenerator
 {
 
-bool CreateDebugCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib)
+bool CreateDebugCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb)
 {
     float vertices[] = {
         -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
@@ -20,7 +20,7 @@ bool CreateDebugCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<
     vbd.ByteWidth = sizeof(vertices);
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     D3D11_SUBRESOURCE_DATA vinit = {vertices};
-    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &out_vb);
+    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &outVb);
     if (FAILED(hr))
         return false;
 
@@ -29,20 +29,20 @@ bool CreateDebugCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<
     ibd.ByteWidth = sizeof(indices);
     ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
     D3D11_SUBRESOURCE_DATA iinit = {indices};
-    hr = device->CreateBuffer(&ibd, &iinit, &out_ib);
+    hr = device->CreateBuffer(&ibd, &iinit, &outIb);
     return SUCCEEDED(hr);
 }
 
-bool CreateConeProxy(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib,
-                     uint32_t &out_index_count)
+bool CreateConeProxy(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb,
+                     uint32_t &outIndexCount)
 {
-    std::vector<float> cone_vertices;
-    std::vector<uint32_t> cone_indices;
+    std::vector<float> coneVertices;
+    std::vector<uint32_t> coneIndices;
 
     // Tip vertex at origin
-    cone_vertices.push_back(0.0f);
-    cone_vertices.push_back(0.0f);
-    cone_vertices.push_back(0.0f);
+    coneVertices.push_back(0.0f);
+    coneVertices.push_back(0.0f);
+    coneVertices.push_back(0.0f);
 
     constexpr int segments = Config::Geometry::CONE_SEGMENTS;
     constexpr float radius = Config::Geometry::CONE_RADIUS;
@@ -52,57 +52,57 @@ bool CreateConeProxy(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<
     for (int i = 0; i < segments; ++i)
     {
         float angle = static_cast<float>(i) / segments * 2.0f * Config::Math::PI;
-        cone_vertices.push_back(std::cos(angle) * radius);
-        cone_vertices.push_back(std::sin(angle) * radius);
-        cone_vertices.push_back(height);
+        coneVertices.push_back(std::cos(angle) * radius);
+        coneVertices.push_back(std::sin(angle) * radius);
+        coneVertices.push_back(height);
     }
 
     // Indices: lines from tip + base circle lines
     for (int i = 0; i < segments; ++i)
     {
         // Lines from tip to base
-        cone_indices.push_back(0);
-        cone_indices.push_back(i + 1);
+        coneIndices.push_back(0);
+        coneIndices.push_back(i + 1);
 
         // Lines for base circle
-        cone_indices.push_back(i + 1);
-        cone_indices.push_back(((i + 1) % segments) + 1);
+        coneIndices.push_back(i + 1);
+        coneIndices.push_back(((i + 1) % segments) + 1);
     }
 
     D3D11_BUFFER_DESC vbd = {};
     vbd.Usage = D3D11_USAGE_DEFAULT;
-    vbd.ByteWidth = static_cast<UINT>(cone_vertices.size() * sizeof(float));
+    vbd.ByteWidth = static_cast<UINT>(coneVertices.size() * sizeof(float));
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit = {cone_vertices.data()};
-    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &out_vb);
+    D3D11_SUBRESOURCE_DATA vinit = {coneVertices.data()};
+    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &outVb);
     if (FAILED(hr))
         return false;
 
     D3D11_BUFFER_DESC ibd = {};
     ibd.Usage = D3D11_USAGE_DEFAULT;
-    ibd.ByteWidth = static_cast<UINT>(cone_indices.size() * sizeof(uint32_t));
+    ibd.ByteWidth = static_cast<UINT>(coneIndices.size() * sizeof(uint32_t));
     ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA iinit = {cone_indices.data()};
-    hr = device->CreateBuffer(&ibd, &iinit, &out_ib);
+    D3D11_SUBRESOURCE_DATA iinit = {coneIndices.data()};
+    hr = device->CreateBuffer(&ibd, &iinit, &outIb);
     if (FAILED(hr))
         return false;
 
-    out_index_count = static_cast<uint32_t>(cone_indices.size());
+    outIndexCount = static_cast<uint32_t>(coneIndices.size());
     return true;
 }
 
-bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib)
+bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb)
 {
     constexpr float r = Config::Room::HALF_WIDTH;
-    constexpr float floor_y = Config::Room::FLOOR_Y;
-    constexpr float ceil_y = Config::Room::CEILING_Y;
+    constexpr float floorY = Config::Room::FLOOR_Y;
+    constexpr float ceilY = Config::Room::CEILING_Y;
 
     // Vertex format: position (3) + normal (3) + uv (2) = 8 floats per vertex
     // Normals inverted to face inward
-    float room_verts[] = {
+    float roomVerts[] = {
         // Back wall (-Z) - normal facing +Z
         -r,
-        floor_y,
+        floorY,
         -r,
         0,
         0,
@@ -110,7 +110,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         1,
         r,
-        floor_y,
+        floorY,
         -r,
         0,
         0,
@@ -118,7 +118,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         1,
         r,
-        ceil_y,
+        ceilY,
         -r,
         0,
         0,
@@ -126,7 +126,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         0,
         -r,
-        ceil_y,
+        ceilY,
         -r,
         0,
         0,
@@ -135,7 +135,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         // Front wall (+Z) - normal facing -Z
         -r,
-        floor_y,
+        floorY,
         r,
         0,
         0,
@@ -143,7 +143,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         1,
         r,
-        floor_y,
+        floorY,
         r,
         0,
         0,
@@ -151,7 +151,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         1,
         r,
-        ceil_y,
+        ceilY,
         r,
         0,
         0,
@@ -159,7 +159,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         0,
         -r,
-        ceil_y,
+        ceilY,
         r,
         0,
         0,
@@ -168,7 +168,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         // Left wall (-X) - normal facing +X
         -r,
-        floor_y,
+        floorY,
         r,
         1,
         0,
@@ -176,7 +176,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         1,
         -r,
-        floor_y,
+        floorY,
         -r,
         1,
         0,
@@ -184,7 +184,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         1,
         -r,
-        ceil_y,
+        ceilY,
         -r,
         1,
         0,
@@ -192,7 +192,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         0,
         -r,
-        ceil_y,
+        ceilY,
         r,
         1,
         0,
@@ -201,7 +201,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         // Right wall (+X) - normal facing -X
         r,
-        floor_y,
+        floorY,
         r,
         -1,
         0,
@@ -209,7 +209,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         1,
         r,
-        floor_y,
+        floorY,
         -r,
         -1,
         0,
@@ -217,7 +217,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         1,
         r,
-        ceil_y,
+        ceilY,
         -r,
         -1,
         0,
@@ -225,7 +225,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         0,
         r,
-        ceil_y,
+        ceilY,
         r,
         -1,
         0,
@@ -234,7 +234,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         // Floor (-Y) - normal facing +Y
         -r,
-        floor_y,
+        floorY,
         r,
         0,
         1,
@@ -242,7 +242,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         1,
         -r,
-        floor_y,
+        floorY,
         -r,
         0,
         1,
@@ -250,7 +250,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         1,
         r,
-        floor_y,
+        floorY,
         -r,
         0,
         1,
@@ -258,7 +258,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         0,
         r,
-        floor_y,
+        floorY,
         r,
         0,
         1,
@@ -267,7 +267,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         // Ceiling (+Y) - normal facing -Y
         -r,
-        ceil_y,
+        ceilY,
         r,
         0,
         -1,
@@ -275,7 +275,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         0,
         1,
         -r,
-        ceil_y,
+        ceilY,
         -r,
         0,
         -1,
@@ -283,7 +283,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         1,
         r,
-        ceil_y,
+        ceilY,
         -r,
         0,
         -1,
@@ -291,7 +291,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
         1,
         0,
         r,
-        ceil_y,
+        ceilY,
         r,
         0,
         -1,
@@ -301,39 +301,39 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<I
     };
 
     // CCW indices for inward-facing triangles
-    uint32_t room_inds[] = {// Floor
-                            16, 17, 18, 16, 18, 19,
-                            // Ceiling
-                            20, 22, 21, 20, 23, 22,
-                            // Back
-                            0, 1, 2, 0, 2, 3,
-                            // Front
-                            4, 6, 5, 4, 7, 6,
-                            // Left
-                            8, 9, 10, 8, 10, 11,
-                            // Right
-                            12, 14, 13, 12, 15, 14};
+    uint32_t roomInds[] = {// Floor
+                           16, 17, 18, 16, 18, 19,
+                           // Ceiling
+                           20, 22, 21, 20, 23, 22,
+                           // Back
+                           0, 1, 2, 0, 2, 3,
+                           // Front
+                           4, 6, 5, 4, 7, 6,
+                           // Left
+                           8, 9, 10, 8, 10, 11,
+                           // Right
+                           12, 14, 13, 12, 15, 14};
 
     D3D11_BUFFER_DESC vbd = {};
     vbd.Usage = D3D11_USAGE_DEFAULT;
-    vbd.ByteWidth = sizeof(room_verts);
+    vbd.ByteWidth = sizeof(roomVerts);
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit = {room_verts};
-    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &out_vb);
+    D3D11_SUBRESOURCE_DATA vinit = {roomVerts};
+    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &outVb);
     if (FAILED(hr))
         return false;
 
     D3D11_BUFFER_DESC ibd = {};
     ibd.Usage = D3D11_USAGE_DEFAULT;
-    ibd.ByteWidth = sizeof(room_inds);
+    ibd.ByteWidth = sizeof(roomInds);
     ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA iinit = {room_inds};
-    hr = device->CreateBuffer(&ibd, &iinit, &out_ib);
+    D3D11_SUBRESOURCE_DATA iinit = {roomInds};
+    hr = device->CreateBuffer(&ibd, &iinit, &outIb);
     return SUCCEEDED(hr);
 }
 
-bool CreateSphere(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3D11Buffer> &out_ib,
-                  uint32_t &out_index_count)
+bool CreateSphere(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID3D11Buffer> &outIb,
+                  uint32_t &outIndexCount)
 {
     std::vector<float> verts;
     std::vector<uint32_t> inds;
@@ -392,7 +392,7 @@ bool CreateSphere(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3
     vbd.ByteWidth = static_cast<UINT>(verts.size() * sizeof(float));
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     D3D11_SUBRESOURCE_DATA vinit = {verts.data()};
-    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &out_vb);
+    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &outVb);
     if (FAILED(hr))
         return false;
 
@@ -401,27 +401,27 @@ bool CreateSphere(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb, ComPtr<ID3
     ibd.ByteWidth = static_cast<UINT>(inds.size() * sizeof(uint32_t));
     ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
     D3D11_SUBRESOURCE_DATA iinit = {inds.data()};
-    hr = device->CreateBuffer(&ibd, &iinit, &out_ib);
+    hr = device->CreateBuffer(&ibd, &iinit, &outIb);
     if (FAILED(hr))
         return false;
 
-    out_index_count = static_cast<uint32_t>(inds.size());
+    outIndexCount = static_cast<uint32_t>(inds.size());
     return true;
 }
 
-bool CreateFullScreenQuad(ID3D11Device *device, ComPtr<ID3D11Buffer> &out_vb)
+bool CreateFullScreenQuad(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb)
 {
     // Two triangles covering NDC [-1,1] x [-1,1]
     // Position only (3 floats per vertex, 6 vertices)
-    float fs_vertices[] = {-1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f,
-                           1.0f,  -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  0.0f};
+    float fsVertices[] = {-1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f,
+                          1.0f,  -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  0.0f};
 
     D3D11_BUFFER_DESC vbd = {};
     vbd.Usage = D3D11_USAGE_DEFAULT;
-    vbd.ByteWidth = sizeof(fs_vertices);
+    vbd.ByteWidth = sizeof(fsVertices);
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit = {fs_vertices};
-    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &out_vb);
+    D3D11_SUBRESOURCE_DATA vinit = {fsVertices};
+    HRESULT hr = device->CreateBuffer(&vbd, &vinit, &outVb);
     return SUCCEEDED(hr);
 }
 

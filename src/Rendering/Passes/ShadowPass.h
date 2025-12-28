@@ -68,13 +68,13 @@ public:
      * Renders the specified mesh into the shadow map array at the given light index.
      *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param spot_data Parameters of the spotlight used for light matrix calculation.
-     * @param light_index Index of the light (0 to MAX_SHADOW_LIGHTS-1).
+     * @param spotData Parameters of the spotlight used for light matrix calculation.
+     * @param lightIndex Index of the light (0 to MAX_SHADOW_LIGHTS-1).
      * @param mesh Pointer to the mesh to render (usually the stage).
-     * @param stage_offset Vertical offset for the mesh.
+     * @param stageOffset Vertical offset for the mesh.
      */
-    void Execute(ID3D11DeviceContext *context, const SpotlightData &spot_data, int light_index, Mesh *mesh,
-                 float stage_offset);
+    void Execute(ID3D11DeviceContext *context, const SpotlightData &spotData, int lightIndex, Mesh *mesh,
+                 float stageOffset);
 
     /**
      * @brief Gets the shader resource view of the shadow map array.

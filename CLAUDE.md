@@ -13,27 +13,22 @@ Spotlight Renderer is a DirectX 11 volumetric lighting simulator implementing ph
 git clone https://github.com/Microsoft/vcpkg.git
 .\vcpkg\bootstrap-vcpkg.bat
 
-# Configure (generates compile_commands.json for clang-tidy)
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
-
-# Build Release (requires VS Developer Command Prompt)
-cmd /c '"C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64 && cmake --build build --config Release'
-
-# Build Debug
-cmd /c '"C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64 && cmake --build build --config Debug'
+# Build (uses Ninja, generates compile_commands.json)
+.\build.bat              # Debug
+.\build.bat --release    # Release
 
 # Run
-.\build\Release\SpotlightRenderer.exe
+.\build\SpotlightRenderer.exe
 
 # Run all tests
-ctest --test-dir ./build -C Release
+ctest --test-dir ./build
 
 # Run single test
 .\build\TestSceneGraph.exe
 .\build\TestSpotlightNodes.exe
 
-# Lint (requires VS with clang tools)
-.\scripts\lint.ps1
+# Lint (requires build first)
+pwsh -File .\scripts\lint.ps1
 ```
 
 ## Architecture
@@ -82,10 +77,11 @@ All constants are centralized in `src/Core/Config.h` with namespaces: `Config::D
 
 ## Code Style
 
-### C++17
+### C++17 (Microsoft/C# Style)
 - Classes/Structs: PascalCase (`class NetworkScanner`)
-- Functions/Methods: camelCase (`void sendMessage()`)
-- Local variables: snake_case (`auto retry_count = 0`)
+- Functions/Methods: PascalCase (`void SendMessage()`)
+- Local variables: camelCase (`auto retryCount = 0`)
+- Parameters: camelCase (`void Foo(int bufferSize)`)
 - Private/protected members: m_ prefix with camelCase (`int m_connectionId`)
 - Constants/Enums: SCREAMING_SNAKE (`static constexpr int MAX_BUFFER`)
 - Use `ComPtr<T>` for all DirectX COM objects, never raw pointers
@@ -94,7 +90,7 @@ All constants are centralized in `src/Core/Config.h` with namespaces: `Config::D
 ### HLSL
 - IO Structures: PascalCase with suffix (`struct VS_INPUT`, `struct PS_OUTPUT`)
 - Functions: PascalCase (`float3 CalculateLighting()`)
-- Local variables: snake_case (`float3 light_dir`)
+- Local variables: camelCase (`float3 lightDir`)
 - Textures/Samplers: prefix `t_`/`s_` (`Texture2D t_diffuse`, `SamplerState s_linear`)
 - Always declare registers explicitly (`register(b0)`, `register(t0)`)
 - Use coordinate space suffixes: `_world`, `_view`, `_clip`, `_model`

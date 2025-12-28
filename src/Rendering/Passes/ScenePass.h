@@ -75,16 +75,16 @@ public:
      * @param context Pointer to the ID3D11DeviceContext.
      * @param spotlights List of active spotlights.
      * @param dsv Depth-stencil view to use for depth testing.
-     * @param room_vb Vertex buffer for the room geometry.
-     * @param room_ib Index buffer for the room geometry.
-     * @param stage_mesh Pointer to the stage mesh.
-     * @param stage_offset Vertical offset for stage placement.
-     * @param room_specular Specular intensity for the room material.
-     * @param room_shininess Shininess exponent for the room material.
+     * @param roomVb Vertex buffer for the room geometry.
+     * @param roomIb Index buffer for the room geometry.
+     * @param stageMesh Pointer to the stage mesh.
+     * @param stageOffset Vertical offset for stage placement.
+     * @param roomSpecular Specular intensity for the room material.
+     * @param roomShininess Shininess exponent for the room material.
      */
     void Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights, ID3D11DepthStencilView *dsv,
-                 ID3D11Buffer *room_vb, ID3D11Buffer *room_ib, Mesh *stage_mesh, float stage_offset,
-                 float room_specular, float room_shininess);
+                 ID3D11Buffer *roomVb, ID3D11Buffer *roomIb, Mesh *stageMesh, float stageOffset, float roomSpecular,
+                 float roomShininess);
 
     /**
      * @brief Gets the internal shader used by this pass.

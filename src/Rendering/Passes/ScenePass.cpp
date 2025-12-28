@@ -38,19 +38,19 @@ void ScenePass::Shutdown()
 }
 
 void ScenePass::Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights,
-                        ID3D11DepthStencilView *dsv, ID3D11Buffer *room_vb, ID3D11Buffer *room_ib, Mesh *stage_mesh,
-                        float stage_offset, float room_specular, float room_shininess)
+                        ID3D11DepthStencilView *dsv, ID3D11Buffer *roomVb, ID3D11Buffer *roomIb, Mesh *stageMesh,
+                        float stageOffset, float roomSpecular, float roomShininess)
 {
     // Update spotlight buffer
-    SpotlightArrayBuffer spot_data;
-    std::memset(&spot_data, 0, sizeof(spot_data));
+    SpotlightArrayBuffer spotData;
+    std::memset(&spotData, 0, sizeof(spotData));
 
     size_t count = (std::min)(spotlights.size(), static_cast<size_t>(Config::Spotlight::MAX_SPOTLIGHTS));
     for (size_t i = 0; i < count; ++i)
     {
-        spot_data.lights[i] = spotlights[i].GetGPUData();
+        spotData.lights[i] = spotlights[i].GetGPUData();
     }
-    m_spotlightArrayBuffer.Update(context, spot_data);
+    m_spotlightArrayBuffer.Update(context, spotData);
 
     // Set viewport
     D3D11_VIEWPORT viewport = {};
@@ -70,7 +70,7 @@ void ScenePass::Execute(ID3D11DeviceContext *context, const std::vector<Spotligh
     {
         MaterialBuffer mb = {};
         mb.color = {Config::Materials::ROOM_COLOR, Config::Materials::ROOM_COLOR, Config::Materials::ROOM_COLOR, 1.0f};
-        mb.specParams = {room_specular, room_shininess, 0.0f, 0.0f};
+        mb.specParams = {roomSpecular, roomShininess, 0.0f, 0.0f};
         m_materialBuffer.Update(context, mb);
         context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
 
@@ -79,8 +79,8 @@ void ScenePass::Execute(ID3D11DeviceContext *context, const std::vector<Spotligh
 
         UINT stride = Config::Vertex::STRIDE_FULL;
         UINT offset = 0;
-        context->IASetVertexBuffers(0, 1, &room_vb, &stride, &offset);
-        context->IASetIndexBuffer(room_ib, DXGI_FORMAT_R32_UINT, 0);
+        context->IASetVertexBuffers(0, 1, &roomVb, &stride, &offset);
+        context->IASetIndexBuffer(roomIb, DXGI_FORMAT_R32_UINT, 0);
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         context->DrawIndexed(Config::Room::INDEX_COUNT, 0, 0);
 
@@ -88,22 +88,22 @@ void ScenePass::Execute(ID3D11DeviceContext *context, const std::vector<Spotligh
     }
 
     // Render Stage Mesh with per-shape materials from MTL
-    if (stage_mesh)
+    if (stageMesh)
     {
-        const auto &shapes = stage_mesh->GetShapes();
+        const auto &shapes = stageMesh->GetShapes();
         for (size_t i = 0; i < shapes.size(); ++i)
         {
             const auto &shape = shapes[i];
 
-            MaterialBuffer mb_mat = {};
-            mb_mat.color = {shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f};
-            float spec_intensity =
+            MaterialBuffer mbMat = {};
+            mbMat.color = {shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f};
+            float specIntensity =
                 (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
-            mb_mat.specParams = {spec_intensity, shape.material.shininess, 0.0f, 0.0f};
-            m_materialBuffer.Update(context, mb_mat);
+            mbMat.specParams = {specIntensity, shape.material.shininess, 0.0f, 0.0f};
+            m_materialBuffer.Update(context, mbMat);
             context->PSSetConstantBuffers(2, 1, m_materialBuffer.GetAddressOf());
 
-            stage_mesh->DrawShape(context, i);
+            stageMesh->DrawShape(context, i);
         }
     }
 }

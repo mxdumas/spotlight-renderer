@@ -120,18 +120,18 @@ void UIRenderer::RenderControls(UIContext &ctx)
 
     if (ImGui::CollapsingHeader("Global Scene Parameters", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        CeilingLights &ceiling_lights = scene.GetCeilingLights();
+        CeilingLights &ceilingLights = scene.GetCeilingLights();
 
         ImGui::Text("Environment");
-        float ceiling_int = ceiling_lights.GetIntensity();
-        if (ImGui::SliderFloat("Ceiling Light Intensity", &ceiling_int, 1.0f, 100.0f))
+        float ceilingInt = ceilingLights.GetIntensity();
+        if (ImGui::SliderFloat("Ceiling Light Intensity", &ceilingInt, 1.0f, 100.0f))
         {
-            ceiling_lights.SetIntensity(ceiling_int);
+            ceilingLights.SetIntensity(ceilingInt);
         }
-        float amb_fill = ceiling_lights.GetAmbient();
-        if (ImGui::SliderFloat("Ambient Fill", &amb_fill, 0.0f, 100.0f))
+        float ambFill = ceilingLights.GetAmbient();
+        if (ImGui::SliderFloat("Ambient Fill", &ambFill, 0.0f, 100.0f))
         {
-            ceiling_lights.SetAmbient(amb_fill);
+            ceilingLights.SetAmbient(ambFill);
         }
         ImGui::SliderFloat("Room Specular", &scene.RoomSpecular(), 0.0f, 1.0f);
         ImGui::SliderFloat("Room Shininess", &scene.RoomShininess(), 1.0f, 128.0f);
@@ -145,7 +145,7 @@ void UIRenderer::RenderControls(UIContext &ctx)
         if (ImGui::CollapsingHeader(label))
         {
             Spotlight &spotlight = spotlights[i];
-            SpotlightData &spot_data = spotlight.GetGPUDataMutable();
+            SpotlightData &spotData = spotlight.GetGPUDataMutable();
 
             ImGui::PushID(static_cast<int>(i));
 
@@ -163,40 +163,39 @@ void UIRenderer::RenderControls(UIContext &ctx)
 
             ImGui::Separator();
             ImGui::Text("Color & Intensity");
-            if (ImGui::ColorEdit3("Color", &spot_data.colorInt.x))
+            if (ImGui::ColorEdit3("Color", &spotData.colorInt.x))
             {
                 // Sync CMY if needed or just use RGB
             }
-            ImGui::DragFloat("Intensity", &spot_data.colorInt.w, 1.0f, 0.0f, 5000.0f);
-            ImGui::DragFloat("Range", &spot_data.posRange.w, 1.0f, 10.0f, 1000.0f);
+            ImGui::DragFloat("Intensity", &spotData.colorInt.w, 1.0f, 0.0f, 5000.0f);
+            ImGui::DragFloat("Range", &spotData.posRange.w, 1.0f, 10.0f, 1000.0f);
 
             ImGui::Separator();
             ImGui::Text("Beam Shape");
-            ImGui::SliderFloat("Beam Angle", &spot_data.coneGobo.x, 0.0f, 1.0f);
-            ImGui::SliderFloat("Field Angle", &spot_data.coneGobo.y, 0.0f, 1.0f);
+            ImGui::SliderFloat("Beam Angle", &spotData.coneGobo.x, 0.0f, 1.0f);
+            ImGui::SliderFloat("Field Angle", &spotData.coneGobo.y, 0.0f, 1.0f);
 
             ImGui::Separator();
             ImGui::Text("Gobo Settings");
 
-            const auto &gobo_names = scene.GetGoboSlotNames();
-            if (!gobo_names.empty())
+            const auto &goboNames = scene.GetGoboSlotNames();
+            if (!goboNames.empty())
             {
-                int current_gobo = spotlight.GetGoboIndex();
-                std::string current_gobo_name =
-                    (current_gobo >= 0 && static_cast<size_t>(current_gobo) < gobo_names.size())
-                        ? gobo_names[static_cast<size_t>(current_gobo)]
-                        : "Unknown";
+                int currentGobo = spotlight.GetGoboIndex();
+                const char *currentName = (currentGobo >= 0 && static_cast<size_t>(currentGobo) < goboNames.size())
+                                              ? goboNames[static_cast<size_t>(currentGobo)].c_str()
+                                              : "Unknown";
 
-                if (ImGui::BeginCombo("Gobo", current_gobo_name.c_str()))
+                if (ImGui::BeginCombo("Gobo", currentName))
                 {
-                    for (size_t n = 0; n < gobo_names.size(); n++)
+                    for (size_t n = 0; n < goboNames.size(); n++)
                     {
-                        const bool is_selected = (static_cast<size_t>(current_gobo) == n);
-                        if (ImGui::Selectable(gobo_names[n].c_str(), is_selected))
+                        const bool isSelected = (static_cast<size_t>(currentGobo) == n);
+                        if (ImGui::Selectable(goboNames[n].c_str(), isSelected))
                         {
                             spotlight.SetGoboIndex(static_cast<int>(n));
                         }
-                        if (is_selected)
+                        if (isSelected)
                         {
                             ImGui::SetItemDefaultFocus();
                         }
@@ -205,7 +204,7 @@ void UIRenderer::RenderControls(UIContext &ctx)
                 }
             }
 
-            ImGui::DragFloat("Gobo Rotation", &spot_data.coneGobo.z, 0.01f);
+            ImGui::DragFloat("Gobo Rotation", &spotData.coneGobo.z, 0.01f);
             float shake = spotlight.GetGoboShake();
             if (ImGui::SliderFloat("Shake Amount", &shake, 0.0f, 1.0f))
             {
@@ -218,33 +217,33 @@ void UIRenderer::RenderControls(UIContext &ctx)
 
     if (ImGui::CollapsingHeader("Volumetric Quality"))
     {
-        VolumetricBuffer &vol_params = ctx.pipeline->GetVolumetricParams();
-        ImGui::DragFloat("Step Count", &vol_params.params.x, 1.0f, Config::Volumetric::MIN_STEP_COUNT,
+        VolumetricBuffer &volParams = ctx.pipeline->GetVolumetricParams();
+        ImGui::DragFloat("Step Count", &volParams.params.x, 1.0f, Config::Volumetric::MIN_STEP_COUNT,
                          Config::Volumetric::MAX_STEP_COUNT);
-        ImGui::SliderFloat("Density", &vol_params.params.y, 0.0f, 1.0f);
-        ImGui::SliderFloat("Light Intensity Multiplier", &vol_params.params.z, 0.0f,
+        ImGui::SliderFloat("Density", &volParams.params.y, 0.0f, 1.0f);
+        ImGui::SliderFloat("Light Intensity Multiplier", &volParams.params.z, 0.0f,
                            Config::Volumetric::DEFAULT_INTENSITY);
-        ImGui::SliderFloat("Anisotropy (G)", &vol_params.params.w, Config::Volumetric::MIN_ANISOTROPY,
+        ImGui::SliderFloat("Anisotropy (G)", &volParams.params.w, Config::Volumetric::MIN_ANISOTROPY,
                            Config::Volumetric::MAX_ANISOTROPY);
     }
 
     if (ImGui::CollapsingHeader("Post Processing"))
     {
-        bool fxaa_enabled = ctx.pipeline->IsFXAAEnabled();
-        if (ImGui::Checkbox("Enable FXAA", &fxaa_enabled))
+        bool fxaaEnabled = ctx.pipeline->IsFXAAEnabled();
+        if (ImGui::Checkbox("Enable FXAA", &fxaaEnabled))
         {
-            ctx.pipeline->SetFXAAEnabled(fxaa_enabled);
+            ctx.pipeline->SetFXAAEnabled(fxaaEnabled);
         }
-        bool blur_enabled = ctx.pipeline->IsVolumetricBlurEnabled();
-        if (ImGui::Checkbox("Enable Volumetric Blur", &blur_enabled))
+        bool blurEnabled = ctx.pipeline->IsVolumetricBlurEnabled();
+        if (ImGui::Checkbox("Enable Volumetric Blur", &blurEnabled))
         {
-            ctx.pipeline->SetVolumetricBlurEnabled(blur_enabled);
+            ctx.pipeline->SetVolumetricBlurEnabled(blurEnabled);
         }
-        int blur_passes = ctx.pipeline->GetBlurPasses();
-        if (ImGui::SliderInt("Blur Passes", &blur_passes, Config::PostProcess::MIN_BLUR_PASSES,
+        int blurPasses = ctx.pipeline->GetBlurPasses();
+        if (ImGui::SliderInt("Blur Passes", &blurPasses, Config::PostProcess::MIN_BLUR_PASSES,
                              Config::PostProcess::MAX_BLUR_PASSES))
         {
-            ctx.pipeline->SetBlurPasses(blur_passes);
+            ctx.pipeline->SetBlurPasses(blurPasses);
         }
     }
 

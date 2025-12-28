@@ -15,123 +15,121 @@ namespace GDTF
 
 std::shared_ptr<SceneGraph::Node> GDTFLoader::BuildSceneGraph(ID3D11Device *device, GDTFParser &parser)
 {
-    auto gdtf_root = parser.GetGeometryRoot();
-    if (!gdtf_root)
+    auto gdtfRoot = parser.GetGeometryRoot();
+    if (!gdtfRoot)
     {
         return nullptr;
     }
 
-    std::map<std::string, std::shared_ptr<Mesh>> mesh_cache;
-    auto root = CreateNodeRecursive(device, parser, gdtf_root, mesh_cache);
+    std::map<std::string, std::shared_ptr<Mesh>> meshCache;
+    auto root = CreateNodeRecursive(device, parser, gdtfRoot, meshCache);
 
     return root;
 }
 
 std::shared_ptr<SceneGraph::Node>
-GDTFLoader::CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser,
-                                const std::shared_ptr<GeometryNode> &gdtf_node,
-                                std::map<std::string, std::shared_ptr<Mesh>> &mesh_cache)
+GDTFLoader::CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, const std::shared_ptr<GeometryNode> &gdtfNode,
+                                std::map<std::string, std::shared_ptr<Mesh>> &meshCache)
 {
-    if (!gdtf_node)
+    if (!gdtfNode)
     {
         return nullptr;
     }
 
-    std::shared_ptr<SceneGraph::Node> scene_node;
+    std::shared_ptr<SceneGraph::Node> sceneNode;
 
     // Check if this node has a model
-    if (!gdtf_node->model.empty())
+    if (!gdtfNode->model.empty())
     {
-        std::string model_file = parser.GetModelFile(gdtf_node->model);
+        std::string modelPath = parser.GetModelFile(gdtfNode->model);
         std::shared_ptr<Mesh> mesh;
 
-        if (mesh_cache.count(model_file))
+        if (meshCache.count(modelPath))
         {
-            mesh = mesh_cache[model_file];
+            mesh = meshCache[modelPath];
         }
         else
         {
             // Try to load model from GDTF
-            std::vector<uint8_t> model_data;
-            std::string model_path = model_file;
+            std::vector<uint8_t> modelData;
 
             // Only try to load if it's a known 3D format we support (GLB/GLTF/3DS) or no extension
-            bool is_supported =
-                (model_path.find(".glb") != std::string::npos || model_path.find(".gltf") != std::string::npos ||
-                 model_path.find(".3ds") != std::string::npos || model_path.find('.') == std::string::npos);
+            bool isSupported =
+                (modelPath.find(".glb") != std::string::npos || modelPath.find(".gltf") != std::string::npos ||
+                 modelPath.find(".3ds") != std::string::npos || modelPath.find('.') == std::string::npos);
 
-            if (is_supported)
+            if (isSupported)
             {
                 // Try various search patterns
-                std::vector<std::string> search_paths;
-                std::string base_name = model_path;
+                std::vector<std::string> searchPaths;
+                std::string baseName = modelPath;
 
                 // If no extension, try .glb and .3ds
-                if (base_name.find('.') == std::string::npos)
+                if (baseName.find('.') == std::string::npos)
                 {
-                    search_paths.push_back(base_name + ".glb");
-                    search_paths.push_back("models/" + base_name + ".glb");
-                    search_paths.push_back(base_name + ".3ds");
-                    search_paths.push_back("models/" + base_name + ".3ds");
-                    search_paths.push_back("models/3ds/" + base_name + ".3ds");
+                    searchPaths.push_back(baseName + ".glb");
+                    searchPaths.push_back("models/" + baseName + ".glb");
+                    searchPaths.push_back(baseName + ".3ds");
+                    searchPaths.push_back("models/" + baseName + ".3ds");
+                    searchPaths.push_back("models/3ds/" + baseName + ".3ds");
                 }
                 else
                 {
-                    search_paths.push_back(base_name);
-                    search_paths.push_back("models/" + base_name);
-                    if (base_name.find(".3ds") != std::string::npos)
+                    searchPaths.push_back(baseName);
+                    searchPaths.push_back("models/" + baseName);
+                    if (baseName.find(".3ds") != std::string::npos)
                     {
-                        search_paths.push_back("models/3ds/" + base_name);
+                        searchPaths.push_back("models/3ds/" + baseName);
                     }
                 }
 
-                for (const auto &path : search_paths)
+                for (const auto &path : searchPaths)
                 {
-                    if (parser.ExtractFile(path, model_data))
+                    if (parser.ExtractFile(path, modelData))
                     {
-                        model_path = path; // Update hint for Assimp
+                        modelPath = path; // Update hint for Assimp
                         break;
                     }
                 }
             }
 
-            if (!model_data.empty())
+            if (!modelData.empty())
             {
-                mesh = ModelLoader::LoadFromMemory(device, model_data.data(), model_data.size(), model_path);
+                mesh = ModelLoader::LoadFromMemory(device, modelData.data(), modelData.size(), modelPath);
             }
 
             if (mesh)
             {
-                mesh_cache[model_file] = mesh;
+                meshCache[modelPath] = mesh;
                 std::ofstream log("debug.log", std::ios::app);
-                log << "Loaded model mesh: " << model_file << " with Assimp.\n";
+                log << "Loaded model mesh: " << modelPath << " with Assimp.\n";
             }
         }
 
         if (mesh)
         {
-            scene_node = std::make_shared<SceneGraph::MeshNode>(mesh, gdtf_node->name);
+            sceneNode = std::make_shared<SceneGraph::MeshNode>(mesh, gdtfNode->name);
         }
     }
 
-    if (!scene_node)
+    if (!sceneNode)
     {
-        scene_node = std::make_shared<SceneGraph::Node>(gdtf_node->name);
+        sceneNode = std::make_shared<SceneGraph::Node>(gdtfNode->name);
     }
 
     // Set local matrix from GDTF
-    scene_node->SetLocalMatrix(DirectX::XMLoadFloat4x4(&gdtf_node->matrix));
+    sceneNode->SetLocalMatrix(DirectX::XMLoadFloat4x4(&gdtfNode->matrix));
 
-    for (auto &child_gdtf : gdtf_node->children)
+    for (auto &childGdtf : gdtfNode->children)
     {
-        auto child_scene = CreateNodeRecursive(device, parser, child_gdtf, mesh_cache);
-        if (child_scene)
+        auto childScene = CreateNodeRecursive(device, parser, childGdtf, meshCache);
+        if (childScene)
         {
-            scene_node->AddChild(child_scene);
+            sceneNode->AddChild(childScene);
         }
     }
 
-    return scene_node;
+    return sceneNode;
 }
 
 } // namespace GDTF

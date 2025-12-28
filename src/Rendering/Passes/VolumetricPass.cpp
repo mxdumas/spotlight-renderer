@@ -35,30 +35,29 @@ void VolumetricPass::Shutdown()
 }
 
 void VolumetricPass::Execute(ID3D11DeviceContext *context, const std::vector<Spotlight> &spotlights,
-                             RenderTarget *volumetric_rt, ID3D11Buffer *full_screen_vb,
-                             ID3D11ShaderResourceView *depth_srv, ID3D11ShaderResourceView *gobo_srv,
-                             ID3D11ShaderResourceView *shadow_srv, ID3D11SamplerState *sampler,
-                             ID3D11SamplerState *shadow_sampler, float time)
+                             RenderTarget *volumetricRt, ID3D11Buffer *fullScreenVb, ID3D11ShaderResourceView *depthSrv,
+                             ID3D11ShaderResourceView *goboSrv, ID3D11ShaderResourceView *shadowSrv,
+                             ID3D11SamplerState *sampler, ID3D11SamplerState *shadowSampler, float time)
 {
     // Update jitter time
     m_params.jitter.x = time * Config::Volumetric::JITTER_SCALE;
     m_volumetricBuffer.Update(context, m_params);
 
     // Update spotlight buffer
-    SpotlightArrayBuffer spot_data;
-    std::memset(&spot_data, 0, sizeof(spot_data)); // Clear potentially unused slots
+    SpotlightArrayBuffer spotData;
+    std::memset(&spotData, 0, sizeof(spotData)); // Clear potentially unused slots
 
     size_t count = (std::min)(spotlights.size(), static_cast<size_t>(Config::Spotlight::MAX_SPOTLIGHTS));
     for (size_t i = 0; i < count; ++i)
     {
-        spot_data.lights[i] = spotlights[i].GetGPUData();
+        spotData.lights[i] = spotlights[i].GetGPUData();
     }
-    m_spotlightArrayBuffer.Update(context, spot_data);
+    m_spotlightArrayBuffer.Update(context, spotData);
 
     // Clear and bind volumetric render target
-    float black_color[] = {0.0f, 0.0f, 0.0f, 0.0f};
-    volumetric_rt->Clear(context, black_color);
-    volumetric_rt->Bind(context);
+    float blackColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
+    volumetricRt->Clear(context, blackColor);
+    volumetricRt->Bind(context);
 
     // Set viewport
     D3D11_VIEWPORT viewport = {};
@@ -73,22 +72,22 @@ void VolumetricPass::Execute(ID3D11DeviceContext *context, const std::vector<Spo
     context->PSSetConstantBuffers(1, 2, buffers); // Start at slot 1 (SpotlightBuffer)
 
     // Bind textures: depth, gobo, shadow
-    ID3D11ShaderResourceView *srvs[] = {depth_srv, gobo_srv, shadow_srv};
+    ID3D11ShaderResourceView *srvs[] = {depthSrv, goboSrv, shadowSrv};
     context->PSSetShaderResources(0, 3, srvs);
 
     // Bind samplers
-    ID3D11SamplerState *samplers[] = {sampler, shadow_sampler};
+    ID3D11SamplerState *samplers[] = {sampler, shadowSampler};
     context->PSSetSamplers(0, 2, samplers);
 
     // Bind shader and draw fullscreen quad
     m_volumetricShader.Bind(context);
     UINT stride = Config::Vertex::STRIDE_POSITION_ONLY;
     UINT offset = 0;
-    context->IASetVertexBuffers(0, 1, &full_screen_vb, &stride, &offset);
+    context->IASetVertexBuffers(0, 1, &fullScreenVb, &stride, &offset);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context->Draw(6, 0);
 
     // Unbind SRVs to avoid conflicts
-    ID3D11ShaderResourceView *null_srvs[3] = {nullptr};
-    context->PSSetShaderResources(0, 3, null_srvs);
+    ID3D11ShaderResourceView *nullSrvs[3] = {nullptr};
+    context->PSSetShaderResources(0, 3, nullSrvs);
 }

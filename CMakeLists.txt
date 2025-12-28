@@ -55,8 +55,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # Include directories
-target_include_directories(${PROJECT_NAME} PRIVATE
-    src
+# SYSTEM tells compiler and clang-tidy to treat external headers as system headers
+target_include_directories(${PROJECT_NAME} PRIVATE src)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     external
     external/imgui
     external/pugixml
@@ -74,7 +75,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # Tests
 enable_testing()
 add_executable(TestVolumetricJitter tests/test_volumetric_jitter.cpp)
-target_include_directories(TestVolumetricJitter PRIVATE src external external/imgui)
+target_include_directories(TestVolumetricJitter PRIVATE src)
+target_include_directories(TestVolumetricJitter SYSTEM PRIVATE external external/imgui)
 target_link_libraries(TestVolumetricJitter PRIVATE d3d11 dxgi d3dcompiler)
 add_test(NAME VolumetricJitterTest COMMAND TestVolumetricJitter)
 
@@ -87,6 +89,7 @@ target_include_directories(TestSceneGraph PRIVATE src)
 add_test(NAME SceneGraphTest COMMAND TestSceneGraph)
 
 add_executable(TestSpotlightNodes tests/test_spotlight_nodes.cpp src/Scene/Spotlight.cpp src/Scene/Node.cpp)
-target_include_directories(TestSpotlightNodes PRIVATE src external)
+target_include_directories(TestSpotlightNodes PRIVATE src)
+target_include_directories(TestSpotlightNodes SYSTEM PRIVATE external)
 target_link_libraries(TestSpotlightNodes PRIVATE d3d11 dxgi d3dcompiler)
 add_test(NAME SpotlightNodesTest COMMAND TestSpotlightNodes)

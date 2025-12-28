@@ -43,7 +43,7 @@ std::shared_ptr<Node> Node::FindChild(const std::string &name)
     return nullptr;
 }
 
-void Node::UpdateWorldMatrix(const DirectX::XMMATRIX &parent_world)
+void Node::UpdateWorldMatrix(const DirectX::XMMATRIX &parentWorld)
 {
     if (m_hasBaseMatrix)
     {
@@ -62,7 +62,7 @@ void Node::UpdateWorldMatrix(const DirectX::XMMATRIX &parent_world)
     }
     // else: m_localMatrix stays as identity from constructor
 
-    m_worldMatrix = m_localMatrix * parent_world;
+    m_worldMatrix = m_localMatrix * parentWorld;
 
     for (auto &child : m_children)
     {

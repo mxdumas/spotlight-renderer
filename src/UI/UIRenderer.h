@@ -1,8 +1,8 @@
 #pragma once
 
+#include <windows.h>
 #include <DirectXMath.h>
 #include <d3d11.h>
-#include <windows.h>
 
 // Forward declarations
 class Scene;

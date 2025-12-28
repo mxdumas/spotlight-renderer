@@ -31,10 +31,10 @@ void CeilingLights::Update()
     {
         for (int x = 0; x < Config::CeilingLights::GRID_X; ++x)
         {
-            float pos_x = Config::CeilingLights::X_START + (static_cast<float>(x) * Config::CeilingLights::X_SPACING);
-            float pos_z = Config::CeilingLights::Z_START + (static_cast<float>(z) * Config::CeilingLights::Z_SPACING);
+            float posX = Config::CeilingLights::X_START + (static_cast<float>(x) * Config::CeilingLights::X_SPACING);
+            float posZ = Config::CeilingLights::Z_START + (static_cast<float>(z) * Config::CeilingLights::Z_SPACING);
 
-            m_data.lights[idx].pos = {pos_x, Config::CeilingLights::HEIGHT, pos_z, Config::CeilingLights::RANGE};
+            m_data.lights[idx].pos = {posX, Config::CeilingLights::HEIGHT, posZ, Config::CeilingLights::RANGE};
             m_data.lights[idx].color = {m_color.x, m_color.y, m_color.z,
                                         m_intensity * Config::CeilingLights::INTENSITY_MULTIPLIER};
             ++idx;
@@ -42,6 +42,6 @@ void CeilingLights::Update()
     }
 
     // Normalize ambient to 0-1 range based on MAX_FILL
-    float amb_val = m_ambientFill / Config::Ambient::MAX_FILL;
-    m_data.ambient = {amb_val, amb_val, amb_val, 1.0f};
+    float ambVal = m_ambientFill / Config::Ambient::MAX_FILL;
+    m_data.ambient = {ambVal, ambVal, ambVal, 1.0f};
 }

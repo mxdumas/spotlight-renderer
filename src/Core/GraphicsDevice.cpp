@@ -22,17 +22,17 @@ bool GraphicsDevice::Initialize(HWND hwnd)
     sd.SampleDesc.Quality = 0;
     sd.Windowed = TRUE;
 
-    UINT create_device_flags = 0;
+    UINT createDeviceFlags = 0;
 #ifdef _DEBUG
-    create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
+    createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-    D3D_FEATURE_LEVEL feature_levels[] = {D3D_FEATURE_LEVEL_11_0};
-    D3D_FEATURE_LEVEL feature_level;
+    D3D_FEATURE_LEVEL featureLevels[] = {D3D_FEATURE_LEVEL_11_0};
+    D3D_FEATURE_LEVEL featureLevel;
 
     HRESULT hr =
-        D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, create_device_flags, feature_levels,
-                                      1, D3D11_SDK_VERSION, &sd, &m_swapChain, &m_device, &feature_level, &m_context);
+        D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevels, 1,
+                                      D3D11_SDK_VERSION, &sd, &m_swapChain, &m_device, &featureLevel, &m_context);
 
     if (FAILED(hr))
     {
@@ -40,45 +40,45 @@ bool GraphicsDevice::Initialize(HWND hwnd)
     }
 
     // Get back buffer and create RTV
-    ComPtr<ID3D11Texture2D> back_buffer;
-    hr = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &back_buffer);
+    ComPtr<ID3D11Texture2D> backBuffer;
+    hr = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
     if (FAILED(hr))
         return false;
 
-    hr = m_device->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_backBufferRTV);
+    hr = m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_backBufferRTV);
     if (FAILED(hr))
         return false;
 
     // Create depth/stencil buffer
-    D3D11_TEXTURE2D_DESC depth_desc = {};
-    depth_desc.Width = Config::Display::WINDOW_WIDTH;
-    depth_desc.Height = Config::Display::WINDOW_HEIGHT;
-    depth_desc.MipLevels = 1;
-    depth_desc.ArraySize = 1;
-    depth_desc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-    depth_desc.SampleDesc.Count = 1;
-    depth_desc.SampleDesc.Quality = 0;
-    depth_desc.Usage = D3D11_USAGE_DEFAULT;
-    depth_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+    D3D11_TEXTURE2D_DESC depthDesc = {};
+    depthDesc.Width = Config::Display::WINDOW_WIDTH;
+    depthDesc.Height = Config::Display::WINDOW_HEIGHT;
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.SampleDesc.Quality = 0;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
-    hr = m_device->CreateTexture2D(&depth_desc, nullptr, &m_depthStencilBuffer);
+    hr = m_device->CreateTexture2D(&depthDesc, nullptr, &m_depthStencilBuffer);
     if (FAILED(hr))
         return false;
 
     // Create DSV
-    D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
-    dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    hr = m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsv_desc, &m_depthStencilView);
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    hr = m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, &m_depthStencilView);
     if (FAILED(hr))
         return false;
 
     // Create depth SRV for reading depth in shaders
-    D3D11_SHADER_RESOURCE_VIEW_DESC depth_srv_desc = {};
-    depth_srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-    depth_srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    depth_srv_desc.Texture2D.MipLevels = 1;
-    hr = m_device->CreateShaderResourceView(m_depthStencilBuffer.Get(), &depth_srv_desc, &m_depthSRV);
+    D3D11_SHADER_RESOURCE_VIEW_DESC depthSrvDesc = {};
+    depthSrvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    depthSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    depthSrvDesc.Texture2D.MipLevels = 1;
+    hr = m_device->CreateShaderResourceView(m_depthStencilBuffer.Get(), &depthSrvDesc, &m_depthSRV);
     if (FAILED(hr))
         return false;
 
