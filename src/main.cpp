@@ -2,8 +2,8 @@
 #define UNICODE
 #endif
 
-#include <windows.h>
 #include <mmsystem.h>
+#include <windows.h>
 
 #include <chrono>
 #include <thread>
