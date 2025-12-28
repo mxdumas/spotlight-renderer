@@ -22,11 +22,11 @@ struct SpotlightData;
  */
 __declspec(align(16)) struct ShadowMatrixBuffer
 {
-    DirectX::XMMATRIX world;       ///< World transformation matrix.
-    DirectX::XMMATRIX view;        ///< Combined view-projection matrix (named for layout compat).
-    DirectX::XMMATRIX projection;  ///< Unused, kept for layout alignment.
-    DirectX::XMMATRIX invViewProj; ///< Unused, kept for layout alignment.
-    DirectX::XMFLOAT4 cameraPos;   ///< Unused, kept for layout alignment.
+    DirectX::XMMATRIX world;     ///< World transformation matrix.
+    DirectX::XMMATRIX viewProj;  ///< Combined light view-projection matrix.
+    DirectX::XMMATRIX padding1;  ///< Unused, kept for layout alignment.
+    DirectX::XMMATRIX padding2;  ///< Unused, kept for layout alignment.
+    DirectX::XMFLOAT4 cameraPos; ///< Unused, kept for layout alignment.
 };
 
 /**

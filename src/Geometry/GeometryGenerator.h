@@ -18,14 +18,7 @@ namespace GeometryGenerator
 {
 
 /**
- * @brief Generates raw vertex and index data for a box.
- */
-void CreateBox(float width, float height, float depth, std::vector<Vertex> &out_vertices,
-               std::vector<uint32_t> &out_indices);
-
-/**
  * @brief Creates a simple debug cube (8 vertices).
-// ...
  *
  * @param device Pointer to the ID3D11Device.
  * @param out_vb Reference to the ComPtr that will receive the vertex buffer (position only).

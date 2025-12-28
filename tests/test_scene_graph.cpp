@@ -47,8 +47,8 @@ void TestHierarchyTransform() {
 void TestRotationPropagation() {
     std::cout << "Testing rotation propagation..." << std::endl;
     auto parent = std::make_shared<SceneGraph::Node>("Parent");
-    // Rotate parent 90 degrees around Y axis
-    parent->SetRotation(0.0f, 0.0f, DirectX::XM_PIDIV2);
+    // Rotate parent 90 degrees around Y axis (yaw)
+    parent->SetRotation(0.0f, DirectX::XM_PIDIV2, 0.0f);
 
     auto child = std::make_shared<SceneGraph::Node>("Child");
     // Child is 1 unit forward in its local Z

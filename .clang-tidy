@@ -61,5 +61,6 @@ CheckOptions:
     value: '(ImGui_.*|WndProc.*)'
   - key: readability-identifier-naming.ParameterIgnoredRegexp
     value: '(hWnd|wParam|lParam|hInstance|hPrevInstance|lpCmdLine|nCmdShow)'
+  # Note: clang-tidy misclassifies some method names as variables; anchored patterns suppress these
   - key: readability-identifier-naming.VariableIgnoredRegexp
-    value: '(CALLBACK|WINAPI|LRESULT|RenderNodeRecursive|Update|AddChild|LinkNodes)'
+    value: '(CALLBACK|WINAPI|LRESULT|RenderNodeRecursive$|Update$|AddChild$|LinkNodes$)'

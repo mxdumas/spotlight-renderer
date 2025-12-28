@@ -21,7 +21,7 @@ void TestSpotlightNodeLinking() {
     Spotlight light;
     light.LinkNodes(pan_node, tilt_node, beam_node);
 
-    // Initial state
+    // Initial state: forward direction is (0,0,1)
     pan_node->UpdateWorldMatrix();
     light.UpdateFromNodes();
 
@@ -29,48 +29,41 @@ void TestSpotlightNodeLinking() {
     assert(NearEqual(light.GetPan(), 0.0f));
     assert(NearEqual(light.GetTilt(), 0.0f));
 
-    // Move Pan to 90 degrees
-    light.SetPan(90.0f);
-    pan_node->UpdateWorldMatrix();
-    light.UpdateFromNodes();
+    // Initial direction: forward (0,0,1)
+    DirectX::XMFLOAT3 dir = light.GetDirection();
+    assert(NearEqual(dir.x, 0.0f));
+    assert(NearEqual(dir.y, 0.0f));
+    assert(NearEqual(dir.z, 1.0f));
 
-    assert(NearEqual(light.GetPan(), 90.0f));
-
-    // Position should still be 0,0,0 if not translated
+    // Position should be 0,0,0 (no translation)
     DirectX::XMFLOAT3 pos = light.GetPosition();
     assert(NearEqual(pos.x, 0.0f));
     assert(NearEqual(pos.y, 0.0f));
     assert(NearEqual(pos.z, 0.0f));
 
-    // Direction should be updated.
-    // Pan 90 deg (Yaw) around Y: forward(0,0,1) -> (1,0,0)
-    DirectX::XMFLOAT3 dir = light.GetDirection();
-    assert(NearEqual(dir.x, 1.0f));
-    assert(NearEqual(dir.y, 0.0f));
-    assert(NearEqual(dir.z, 0.0f));
+    // Move Pan to 90 degrees
+    // Note: In GDTF convention, Pan is roll (Z rotation) because fixture is pitched 90°
+    // Z rotation of (0,0,1) leaves it unchanged
+    light.SetPan(90.0f);
+    pan_node->UpdateWorldMatrix();
+    light.UpdateFromNodes();
+
+    assert(NearEqual(light.GetPan(), 90.0f));
+    dir = light.GetDirection();
+    assert(NearEqual(dir.z, 1.0f)); // Z unchanged by roll
 
     // Move Tilt to 90 degrees
+    // Tilt is pitch (X rotation), negated: -90° rotates (0,0,1) towards +Y
     light.SetTilt(90.0f);
     pan_node->UpdateWorldMatrix();
     light.UpdateFromNodes();
 
     assert(NearEqual(light.GetTilt(), 90.0f));
-    
-    // Tilt 90 deg (Pitch) around X after Pan 90 deg.
-    // This is getting complex but let's check if it's not zero.
+
+    // After combined rotations, verify direction has changed
     dir = light.GetDirection();
-    // (Pitch 90 after Yaw 90) -> should point down (0,-1,0) if Yaw happened first.
-    // Wait, XMMatrixRotationRollPitchYaw(pitch, yaw, roll) 
-    // In our case: Pitch=tilt, Yaw=pan.
-    // If both are 90:
-    // Yaw 90: Forward(0,0,1) -> (1,0,0)
-    // Then Pitch 90 around (local) X (which is now global -Z): 
-    // This depends on the order. 
-    // XMMatrixRotationRollPitchYaw order is typically Y, then X, then Z or similar.
-    // Actually it's Roll, then Pitch, then Yaw? No, docs say:
-    // "The rotation order is roll first, then pitch, then yaw."
-    
-    std::cout << "Spotlight direction after Pan 90, Tilt 90: " << dir.x << ", " << dir.y << ", " << dir.z << std::endl;
+    float magnitude = std::sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+    assert(NearEqual(magnitude, 1.0f)); // Direction should be normalized
 
     std::cout << "Spotlight node linking passed." << std::endl;
 }

@@ -16,11 +16,11 @@ git clone https://github.com/Microsoft/vcpkg.git
 # Configure (generates compile_commands.json for clang-tidy)
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
 
-# Build Release
-cmake --build build --config Release
+# Build Release (requires VS Developer Command Prompt)
+cmd /c '"C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64 && cmake --build build --config Release'
 
 # Build Debug
-cmake --build build --config Debug
+cmd /c '"C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64 && cmake --build build --config Debug'
 
 # Run
 .\build\Release\SpotlightRenderer.exe
@@ -29,10 +29,10 @@ cmake --build build --config Debug
 ctest --test-dir ./build -C Release
 
 # Run single test
-.\build\Release\TestRayMath.exe
-.\build\Release\TestVolumetricJitter.exe
+.\build\TestSceneGraph.exe
+.\build\TestSpotlightNodes.exe
 
-# Lint (requires VS 2022+ with clang tools)
+# Lint (requires VS with clang tools)
 .\scripts\lint.ps1
 ```
 

@@ -111,12 +111,11 @@ void ShadowPass::Execute(ID3D11DeviceContext *context, const SpotlightData &spot
     DirectX::XMMATRIX light_view_proj = DirectX::XMMatrixTranspose(spot_data.lightViewProj);
 
     // Update matrix buffer with combined light view-projection matrix
-    // The shader uses viewProj directly instead of separate view/projection
     ShadowMatrixBuffer mb;
     mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(0.0f, stage_offset, 0.0f));
-    mb.view = DirectX::XMMatrixTranspose(light_view_proj); // viewProj in shader
-    mb.projection = DirectX::XMMatrixIdentity();           // padding (unused)
-    mb.invViewProj = DirectX::XMMatrixIdentity();          // padding (unused)
+    mb.viewProj = DirectX::XMMatrixTranspose(light_view_proj);
+    mb.padding1 = DirectX::XMMatrixIdentity();
+    mb.padding2 = DirectX::XMMatrixIdentity();
     mb.cameraPos = {0.0f, 0.0f, 0.0f, 0.0f};
     m_matrixBuffer.Update(context, mb);
 
