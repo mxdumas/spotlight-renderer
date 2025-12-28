@@ -22,7 +22,7 @@ std::shared_ptr<Mesh> ModelLoader::LoadFromMemory(ID3D11Device *device, const ui
     if (!scene || !scene->HasMeshes())
     {
         std::ofstream log("debug.log", std::ios::app);
-        log << "Assimp failed to load " << hint << ": " << importer.GetErrorString() << std::endl;
+        log << "Assimp failed to load " << hint << ": " << importer.GetErrorString() << '\n';
         return nullptr;
     }
 
@@ -95,9 +95,9 @@ std::shared_ptr<Mesh> ModelLoader::LoadFromMemory(ID3D11Device *device, const ui
     {
         std::ofstream log("debug.log", std::ios::app);
         log << "Assimp loaded " << hint << ": " << all_vertices.size() << " vertices, " << all_indices.size() / 3
-            << " faces." << std::endl;
+            << " faces.\n";
         log << "  Bounds: Min(" << min_x << "," << min_y << "," << min_z << ") Max(" << max_x << "," << max_y << ","
-            << max_z << ")" << std::endl;
+            << max_z << ")\n";
     }
 
     return mesh;

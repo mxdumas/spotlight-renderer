@@ -65,10 +65,10 @@ bool Scene::Initialize(ID3D11Device *device)
 
     // Load GDTF fixture model once
     GDTF::GDTFParser parser;
-    std::shared_ptr<SceneGraph::Node> gdtfRoot;
+    std::shared_ptr<SceneGraph::Node> gdtf_root;
     if (parser.Load("data/fixtures/Martin_Professional@MAC_Viper_Performance@20230516NoMeas.gdtf"))
     {
-        gdtfRoot = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
+        gdtf_root = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
     }
 
     // Load gobo texture from GDTF (always includes Open as first slot)
@@ -96,10 +96,10 @@ bool Scene::Initialize(ID3D11Device *device)
         light.SetPosition(pos);
 
         // Point towards center of stage
-        DirectX::XMVECTOR posVec = DirectX::XMLoadFloat3(&pos);
-        DirectX::XMVECTOR dirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(posVec));
+        DirectX::XMVECTOR pos_vec = DirectX::XMLoadFloat3(&pos);
+        DirectX::XMVECTOR dir_vec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(pos_vec));
         DirectX::XMFLOAT3 dir;
-        DirectX::XMStoreFloat3(&dir, dirVec);
+        DirectX::XMStoreFloat3(&dir, dir_vec);
         light.SetDirection(dir);
 
         // Default gobo: index 1 if available, otherwise Open (0)
@@ -109,42 +109,42 @@ bool Scene::Initialize(ID3D11Device *device)
         m_spotlights.push_back(light);
 
         // Add GDTF fixture node at this anchor
-        if (gdtfRoot)
+        if (gdtf_root)
         {
-            auto instanceRoot = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
-            if (instanceRoot)
+            auto instance_root = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
+            if (instance_root)
             {
                 // Placement node handles the world position (Anchor point)
-                auto placementNode = std::make_shared<SceneGraph::Node>("Placement");
-                placementNode->SetTranslation(pos.x, pos.y, pos.z);
+                auto placement_node = std::make_shared<SceneGraph::Node>("Placement");
+                placement_node->SetTranslation(pos.x, pos.y, pos.z);
 
                 // Orientation node handles the flip (so the fixture hangs correctly)
-                auto orientationNode = std::make_shared<SceneGraph::Node>("Orientation");
+                auto orientation_node = std::make_shared<SceneGraph::Node>("Orientation");
                 // Rotate 90 degrees around X (Pitch) to make GDTF "Forward" point down (-Y)
-                orientationNode->SetRotation(DirectX::XM_PIDIV2, 0.0f, 0.0f);
+                orientation_node->SetRotation(DirectX::XM_PIDIV2, 0.0f, 0.0f);
                 // Scale 2x
-                orientationNode->SetScale(2.0f, 2.0f, 2.0f);
+                orientation_node->SetScale(2.0f, 2.0f, 2.0f);
 
                 // Bring it up a little to touch the truss
-                placementNode->SetTranslation(pos.x, pos.y + 0.45f, pos.z);
+                placement_node->SetTranslation(pos.x, pos.y + 0.45f, pos.z);
 
-                placementNode->AddChild(orientationNode);
-                orientationNode->AddChild(instanceRoot);
+                placement_node->AddChild(orientation_node);
+                orientation_node->AddChild(instance_root);
 
                 // Link spotlight to nodes for animation
-                auto panNode = instanceRoot->FindChild("Yoke");
-                auto tiltNode = instanceRoot->FindChild("Head");
-                auto beamNode = instanceRoot->FindChild("Beam");
+                auto pan_node = instance_root->FindChild("Yoke");
+                auto tilt_node = instance_root->FindChild("Head");
+                auto beam_node = instance_root->FindChild("Beam");
 
                 // Fallback: search for nodes containing the names if exact match fails
-                if (!panNode)
-                    panNode = instanceRoot->FindChild("Pan");
-                if (!tiltNode)
-                    tiltNode = instanceRoot->FindChild("Tilt");
+                if (!pan_node)
+                    pan_node = instance_root->FindChild("Pan");
+                if (!tilt_node)
+                    tilt_node = instance_root->FindChild("Tilt");
 
-                m_spotlights.back().LinkNodes(panNode, tiltNode, beamNode);
+                m_spotlights.back().LinkNodes(pan_node, tilt_node, beam_node);
 
-                m_fixtureNodes.push_back(placementNode);
+                m_fixtureNodes.push_back(placement_node);
             }
         }
     }

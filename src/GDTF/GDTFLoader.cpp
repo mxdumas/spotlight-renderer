@@ -28,7 +28,8 @@ std::shared_ptr<SceneGraph::Node> GDTFLoader::BuildSceneGraph(ID3D11Device *devi
 }
 
 std::shared_ptr<SceneGraph::Node>
-GDTFLoader::CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, std::shared_ptr<GeometryNode> gdtf_node,
+GDTFLoader::CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser,
+                                const std::shared_ptr<GeometryNode> &gdtf_node,
                                 std::map<std::string, std::shared_ptr<Mesh>> &mesh_cache)
 {
     if (!gdtf_node)
@@ -57,7 +58,7 @@ GDTFLoader::CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, std::s
             // Only try to load if it's a known 3D format we support (GLB/GLTF/3DS) or no extension
             bool is_supported =
                 (model_path.find(".glb") != std::string::npos || model_path.find(".gltf") != std::string::npos ||
-                 model_path.find(".3ds") != std::string::npos || model_path.find(".") == std::string::npos);
+                 model_path.find(".3ds") != std::string::npos || model_path.find('.') == std::string::npos);
 
             if (is_supported)
             {
@@ -66,7 +67,7 @@ GDTFLoader::CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, std::s
                 std::string base_name = model_path;
 
                 // If no extension, try .glb and .3ds
-                if (base_name.find(".") == std::string::npos)
+                if (base_name.find('.') == std::string::npos)
                 {
                     search_paths.push_back(base_name + ".glb");
                     search_paths.push_back("models/" + base_name + ".glb");
@@ -103,7 +104,7 @@ GDTFLoader::CreateNodeRecursive(ID3D11Device *device, GDTFParser &parser, std::s
             {
                 mesh_cache[model_file] = mesh;
                 std::ofstream log("debug.log", std::ios::app);
-                log << "Loaded model mesh: " << model_file << " with Assimp." << std::endl;
+                log << "Loaded model mesh: " << model_file << " with Assimp.\n";
             }
         }
 

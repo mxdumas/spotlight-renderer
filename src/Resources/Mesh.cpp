@@ -25,14 +25,14 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &file_name)
     }
 
     // Build material data from MTL
-    std::vector<MaterialData> materialDataList;
+    std::vector<MaterialData> material_data_list;
     for (const auto &mat : materials)
     {
         MaterialData md;
         md.diffuse = {mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]};
         md.specular = {mat.specular[0], mat.specular[1], mat.specular[2]};
         md.shininess = mat.shininess > 0.0f ? mat.shininess : 32.0f;
-        materialDataList.push_back(md);
+        material_data_list.push_back(md);
     }
 
     std::vector<Vertex> vertices;
@@ -92,9 +92,9 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &file_name)
         if (!shape.mesh.material_ids.empty() && shape.mesh.material_ids[0] >= 0)
         {
             size_t mat_id = (size_t)shape.mesh.material_ids[0];
-            if (mat_id < materialDataList.size())
+            if (mat_id < material_data_list.size())
             {
-                info.material = materialDataList[mat_id];
+                info.material = material_data_list[mat_id];
             }
         }
 

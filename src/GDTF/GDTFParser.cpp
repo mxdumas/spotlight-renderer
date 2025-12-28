@@ -15,7 +15,7 @@ bool GDTFParser::Load(const std::string &file_name)
     std::vector<uint8_t> xml_data;
     if (!ExtractFile("description.xml", xml_data))
     {
-        std::cerr << "Failed to extract description.xml from " << file_name << std::endl;
+        std::cerr << "Failed to extract description.xml from " << file_name << '\n';
         return false;
     }
 
@@ -242,7 +242,7 @@ std::vector<std::vector<uint8_t>> GDTFParser::ExtractGoboImages()
         std::vector<uint8_t> circle_data;
         // Simple uncompressed TGA format (easier than PNG)
         // TGA header (18 bytes)
-        circle_data.resize(18 + size * size * 4);
+        circle_data.resize(18 + (size * size * 4));
         circle_data[2] = 2; // Uncompressed true-color
         circle_data[12] = size & 0xFF;
         circle_data[13] = (size >> 8) & 0xFF;
@@ -258,9 +258,9 @@ std::vector<std::vector<uint8_t>> GDTFParser::ExtractGoboImages()
         {
             for (int x = 0; x < size; ++x)
             {
-                float dx = x - center;
-                float dy = y - center;
-                float dist = std::sqrt(dx * dx + dy * dy);
+                float dx = static_cast<float>(x) - center;
+                float dy = static_cast<float>(y) - center;
+                float dist = std::sqrt((dx * dx) + (dy * dy));
 
                 float brightness = 0.0f;
                 if (dist < radius - edge_softness)
@@ -277,8 +277,8 @@ std::vector<std::vector<uint8_t>> GDTFParser::ExtractGoboImages()
                 }
                 // else: black (brightness = 0)
 
-                unsigned char val = static_cast<unsigned char>(brightness * 255.0f);
-                int idx = 18 + (y * size + x) * 4;
+                auto val = static_cast<unsigned char>(brightness * 255.0f);
+                int idx = 18 + ((y * size) + x) * 4;
                 circle_data[idx] = val;     // B
                 circle_data[idx + 1] = val; // G
                 circle_data[idx + 2] = val; // R

@@ -183,16 +183,18 @@ void UIRenderer::RenderControls(UIContext &ctx)
             {
                 int current_gobo = spotlight.GetGoboIndex();
                 std::string current_gobo_name =
-                    (current_gobo < gobo_names.size()) ? gobo_names[current_gobo] : "Unknown";
+                    (current_gobo >= 0 && static_cast<size_t>(current_gobo) < gobo_names.size())
+                        ? gobo_names[static_cast<size_t>(current_gobo)]
+                        : "Unknown";
 
                 if (ImGui::BeginCombo("Gobo", current_gobo_name.c_str()))
                 {
-                    for (int n = 0; n < gobo_names.size(); n++)
+                    for (size_t n = 0; n < gobo_names.size(); n++)
                     {
-                        const bool is_selected = (current_gobo == n);
+                        const bool is_selected = (static_cast<size_t>(current_gobo) == n);
                         if (ImGui::Selectable(gobo_names[n].c_str(), is_selected))
                         {
-                            spotlight.SetGoboIndex(n);
+                            spotlight.SetGoboIndex(static_cast<int>(n));
                         }
                         if (is_selected)
                         {

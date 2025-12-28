@@ -9,10 +9,10 @@ Application::~Application()
 
 void Application::Log(const std::string &message)
 {
-    std::ofstream logFile("debug.log", std::ios::app);
-    if (logFile.is_open())
+    std::ofstream log_file("debug.log", std::ios::app);
+    if (log_file.is_open())
     {
-        logFile << message << std::endl;
+        log_file << message << '\n';
     }
     OutputDebugStringA((message + "\n").c_str());
 }
@@ -21,7 +21,7 @@ bool Application::Initialize(HWND hwnd)
 {
     // Clear previous log
     {
-        std::ofstream logFile("debug.log", std::ios::trunc);
+        std::ofstream log_file("debug.log", std::ios::trunc);
     }
 
     Log("Application::Initialize Started");
