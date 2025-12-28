@@ -66,7 +66,7 @@ bool Scene::Initialize(ID3D11Device *device)
     // Load GDTF fixture model once
     GDTF::GDTFParser parser;
     std::shared_ptr<SceneGraph::Node> gdtfRoot;
-    if (parser.Load("data/fixtures/Martin_Professional@MAC_Viper_Performance@20230516NoMeas.gdtf"))
+    if (parser.Load(Config::Fixtures::DEFAULT_GDTF))
     {
         gdtfRoot = GDTF::GDTFLoader::BuildSceneGraph(device, parser);
     }
@@ -78,7 +78,7 @@ bool Scene::Initialize(ID3D11Device *device)
     m_goboTexture->CreateTextureArray(device, goboImages);
 
     // Populate gobo slot names from GDTF
-    m_goboSlotNames.push_back("Open");
+    m_goboSlotNames.emplace_back("Open");
     for (const auto &wheel : parser.GetGoboWheels())
     {
         if (wheel.name.find("Gobo") == std::string::npos)
@@ -96,15 +96,15 @@ bool Scene::Initialize(ID3D11Device *device)
         light.SetPosition(pos);
 
         // Point towards center of stage
-        DirectX::XMVECTOR pos_vec = DirectX::XMLoadFloat3(&pos);
-        DirectX::XMVECTOR dir_vec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(pos_vec));
+        DirectX::XMVECTOR posVec = DirectX::XMLoadFloat3(&pos);
+        DirectX::XMVECTOR dirVec = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(posVec));
         DirectX::XMFLOAT3 dir;
-        DirectX::XMStoreFloat3(&dir, dir_vec);
+        DirectX::XMStoreFloat3(&dir, dirVec);
         light.SetDirection(dir);
 
         // Default gobo: index 1 if available, otherwise Open (0)
-        int default_gobo = (m_goboSlotNames.size() > 1) ? 1 : 0;
-        light.SetGoboIndex(default_gobo);
+        int defaultGobo = (m_goboSlotNames.size() > 1) ? 1 : 0;
+        light.SetGoboIndex(defaultGobo);
 
         m_spotlights.push_back(light);
 
@@ -200,6 +200,6 @@ void Scene::RemoveSpotlight(size_t index)
 {
     if (index < m_spotlights.size() && m_spotlights.size() > 1)
     {
-        m_spotlights.erase(m_spotlights.begin() + index);
+        m_spotlights.erase(m_spotlights.begin() + static_cast<std::ptrdiff_t>(index));
     }
 }

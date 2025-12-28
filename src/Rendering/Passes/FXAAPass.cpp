@@ -8,9 +8,7 @@ bool FXAAPass::Initialize(ID3D11Device *device)
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    if (!m_fxaaShader.LoadVertexShader(device, L"shaders/fxaa.hlsl", "VS", fsLayout))
-        return false;
-    if (!m_fxaaShader.LoadPixelShader(device, L"shaders/fxaa.hlsl", "PS"))
+    if (!m_fxaaShader.LoadFromFile(device, Config::Shaders::FXAA, fsLayout))
         return false;
 
     // Initialize constant buffer

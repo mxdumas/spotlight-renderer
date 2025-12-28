@@ -11,9 +11,7 @@ bool ScenePass::Initialize(ID3D11Device *device)
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    if (!m_basicShader.LoadVertexShader(device, L"shaders/basic.hlsl", "VS", layout))
-        return false;
-    if (!m_basicShader.LoadPixelShader(device, L"shaders/basic.hlsl", "PS"))
+    if (!m_basicShader.LoadFromFile(device, Config::Shaders::BASIC, layout))
         return false;
 
     // Initialize material buffer

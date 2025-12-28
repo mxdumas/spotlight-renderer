@@ -210,4 +210,27 @@ constexpr unsigned int STRIDE_FULL = 32;
 constexpr unsigned int STRIDE_POSITION_ONLY = 12;
 } // namespace Vertex
 
+/**
+ * @namespace Shaders
+ * @brief Paths to shader files.
+ */
+namespace Shaders
+{
+constexpr wchar_t BASIC[] = L"shaders/basic.hlsl";
+constexpr wchar_t SHADOW[] = L"shaders/shadow.hlsl";
+constexpr wchar_t VOLUMETRIC[] = L"shaders/volumetric.hlsl";
+constexpr wchar_t BLUR[] = L"shaders/blur.hlsl";
+constexpr wchar_t COMPOSITE[] = L"shaders/composite.hlsl";
+constexpr wchar_t FXAA[] = L"shaders/fxaa.hlsl";
+} // namespace Shaders
+
+/**
+ * @namespace Fixtures
+ * @brief Paths to fixture data files.
+ */
+namespace Fixtures
+{
+constexpr char DEFAULT_GDTF[] = "data/fixtures/Martin_Professional@MAC_Viper_Performance@20230516NoMeas.gdtf";
+} // namespace Fixtures
+
 } // namespace Config

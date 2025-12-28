@@ -8,9 +8,7 @@ bool BlurPass::Initialize(ID3D11Device *device)
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    if (!m_blurShader.LoadVertexShader(device, L"shaders/blur.hlsl", "VS", fsLayout))
-        return false;
-    if (!m_blurShader.LoadPixelShader(device, L"shaders/blur.hlsl", "PS"))
+    if (!m_blurShader.LoadFromFile(device, Config::Shaders::BLUR, fsLayout))
         return false;
 
     // Initialize constant buffer

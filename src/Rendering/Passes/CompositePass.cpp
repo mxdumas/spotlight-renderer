@@ -8,9 +8,7 @@ bool CompositePass::Initialize(ID3D11Device *device)
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    if (!m_compositeShader.LoadVertexShader(device, L"shaders/composite.hlsl", "VS", fsLayout))
-        return false;
-    if (!m_compositeShader.LoadPixelShader(device, L"shaders/composite.hlsl", "PS"))
+    if (!m_compositeShader.LoadFromFile(device, Config::Shaders::COMPOSITE, fsLayout))
         return false;
 
     // Create additive blend state

@@ -133,6 +133,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID
         1,
         0,
         0,
+
         // Front wall (+Z) - normal facing -Z
         -r,
         floorY,
@@ -166,6 +167,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID
         -1,
         0,
         0,
+
         // Left wall (-X) - normal facing +X
         -r,
         floorY,
@@ -199,6 +201,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID
         0,
         0,
         0,
+
         // Right wall (+X) - normal facing -X
         r,
         floorY,
@@ -232,6 +235,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID
         0,
         0,
         0,
+
         // Floor (-Y) - normal facing +Y
         -r,
         floorY,
@@ -265,6 +269,7 @@ bool CreateRoomCube(ID3D11Device *device, ComPtr<ID3D11Buffer> &outVb, ComPtr<ID
         0,
         0,
         0,
+
         // Ceiling (+Y) - normal facing -Y
         -r,
         ceilY,

@@ -66,9 +66,7 @@ bool ShadowPass::Initialize(ID3D11Device *device)
         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
-    if (!m_shadowShader.LoadVertexShader(device, L"shaders/shadow.hlsl", "VS", layout))
-        return false;
-    if (!m_shadowShader.LoadPixelShader(device, L"shaders/shadow.hlsl", "PS"))
+    if (!m_shadowShader.LoadFromFile(device, Config::Shaders::SHADOW, layout))
         return false;
 
     // Initialize constant buffer
@@ -81,8 +79,8 @@ bool ShadowPass::Initialize(ID3D11Device *device)
 void ShadowPass::Shutdown()
 {
     m_shadowSRV.Reset();
-    for (int i = 0; i < Config::Spotlight::MAX_SPOTLIGHTS; ++i)
-        m_shadowDSV[i].Reset();
+    for (auto &dsv : m_shadowDSV)
+        dsv.Reset();
     m_shadowMap.Reset();
     m_shadowSampler.Reset();
 }

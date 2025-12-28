@@ -1,6 +1,7 @@
 #include "Spotlight.h"
 #include <cmath>
 #include <cstring>
+#include <utility>
 #include "Node.h"
 
 Spotlight::Spotlight()
@@ -34,7 +35,7 @@ void Spotlight::SetDirection(const DirectX::XMFLOAT3 &dir)
     // Normalize direction
     DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&dir);
     v = DirectX::XMVector3Normalize(v);
-    DirectX::XMFLOAT3 normalized;
+    DirectX::XMFLOAT3 normalized = {};
     DirectX::XMStoreFloat3(&normalized, v);
 
     m_data.dirAngle.x = normalized.x;
@@ -116,9 +117,9 @@ void Spotlight::SetTilt(float degrees)
 void Spotlight::LinkNodes(std::shared_ptr<SceneGraph::Node> pan, std::shared_ptr<SceneGraph::Node> tilt,
                           std::shared_ptr<SceneGraph::Node> beam)
 {
-    m_panNode = pan;
-    m_tiltNode = tilt;
-    m_beamNode = beam;
+    m_panNode = std::move(pan);
+    m_tiltNode = std::move(tilt);
+    m_beamNode = std::move(beam);
 }
 
 void Spotlight::UpdateFromNodes()

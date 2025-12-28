@@ -172,9 +172,7 @@ void RenderPipeline::RenderShadowPass(ID3D11DeviceContext *context, const Render
     if (ctx.spotlights && !ctx.spotlights->empty())
     {
         // Render shadow map for each spotlight (up to MAX_SPOTLIGHTS)
-        int numLights = static_cast<int>(ctx.spotlights->size());
-        if (numLights > Config::Spotlight::MAX_SPOTLIGHTS)
-            numLights = Config::Spotlight::MAX_SPOTLIGHTS;
+        int numLights = (std::min)(static_cast<int>(ctx.spotlights->size()), Config::Spotlight::MAX_SPOTLIGHTS);
 
         for (int i = 0; i < numLights; ++i)
         {
@@ -262,13 +260,13 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderC
     }
 
     // Render GDTF Fixtures
-    for (auto &node : ctx.fixtureNodes)
+    for (const auto &node : ctx.fixtureNodes)
     {
         RenderNodeRecursive(context, node, mb);
     }
 }
 
-void RenderPipeline::RenderNodeRecursive(ID3D11DeviceContext *context, std::shared_ptr<SceneGraph::Node> node,
+void RenderPipeline::RenderNodeRecursive(ID3D11DeviceContext *context, const std::shared_ptr<SceneGraph::Node> &node,
                                          PipelineMatrixBuffer &mb)
 {
     if (!node)
@@ -302,7 +300,7 @@ void RenderPipeline::RenderNodeRecursive(ID3D11DeviceContext *context, std::shar
     }
 
     // Recurse to children
-    for (auto &child : node->GetChildren())
+    for (const auto &child : node->GetChildren())
     {
         RenderNodeRecursive(context, child, mb);
     }

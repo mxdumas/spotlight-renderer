@@ -51,6 +51,19 @@ public:
     bool LoadPixelShader(ID3D11Device *device, const std::wstring &fileName, const std::string &entryPoint);
 
     /**
+     * @brief Loads both vertex and pixel shaders from a single .hlsl file.
+     *
+     * Uses standard entry points "VS" for vertex shader and "PS" for pixel shader.
+     *
+     * @param device Pointer to the ID3D11Device.
+     * @param fileName Wide-string path to the .hlsl file.
+     * @param inputElements Description of the vertex input layout.
+     * @return true if both shaders loaded successfully, false otherwise.
+     */
+    bool LoadFromFile(ID3D11Device *device, const std::wstring &fileName,
+                      const std::vector<D3D11_INPUT_ELEMENT_DESC> &inputElements);
+
+    /**
      * @brief Binds the vertex shader, pixel shader, and input layout to the pipeline.
      *
      * @param context Pointer to the ID3D11DeviceContext.

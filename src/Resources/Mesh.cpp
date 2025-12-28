@@ -55,9 +55,9 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
         {
             Vertex vertex = {};
 
-            float vx = attrib.vertices[3 * index.vertex_index + 0];
-            float vy = attrib.vertices[3 * index.vertex_index + 1];
-            float vz = attrib.vertices[3 * index.vertex_index + 2];
+            float vx = attrib.vertices[(3 * index.vertex_index) + 0];
+            float vy = attrib.vertices[(3 * index.vertex_index) + 1];
+            float vz = attrib.vertices[(3 * index.vertex_index) + 2];
 
             minX = (std::min)(minX, vx);
             minY = (std::min)(minY, vy);
@@ -72,14 +72,15 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
 
             if (index.normal_index >= 0)
             {
-                vertex.normal = {attrib.normals[3 * index.normal_index + 0], attrib.normals[3 * index.normal_index + 1],
-                                 attrib.normals[3 * index.normal_index + 2]};
+                vertex.normal = {attrib.normals[(3 * index.normal_index) + 0],
+                                 attrib.normals[(3 * index.normal_index) + 1],
+                                 attrib.normals[(3 * index.normal_index) + 2]};
             }
 
             if (index.texcoord_index >= 0)
             {
-                vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0],
-                             1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+                vertex.uv = {attrib.texcoords[(2 * index.texcoord_index) + 0],
+                             1.0f - attrib.texcoords[(2 * index.texcoord_index) + 1]};
             }
 
             vertices.push_back(vertex);
@@ -92,7 +93,7 @@ bool Mesh::LoadFromOBJ(ID3D11Device *device, const std::string &fileName)
         // Get material from first face (shapes typically use one material)
         if (!shape.mesh.material_ids.empty() && shape.mesh.material_ids[0] >= 0)
         {
-            size_t matId = (size_t)shape.mesh.material_ids[0];
+            auto matId = static_cast<size_t>(shape.mesh.material_ids[0]);
             if (matId < materialDataList.size())
             {
                 info.material = materialDataList[matId];

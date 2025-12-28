@@ -72,6 +72,16 @@ bool Shader::LoadPixelShader(ID3D11Device *device, const std::wstring &fileName,
     return true;
 }
 
+bool Shader::LoadFromFile(ID3D11Device *device, const std::wstring &fileName,
+                          const std::vector<D3D11_INPUT_ELEMENT_DESC> &inputElements)
+{
+    if (!LoadVertexShader(device, fileName, "VS", inputElements))
+        return false;
+    if (!LoadPixelShader(device, fileName, "PS"))
+        return false;
+    return true;
+}
+
 void Shader::Bind(ID3D11DeviceContext *context)
 {
     context->IASetInputLayout(m_inputLayout.Get());

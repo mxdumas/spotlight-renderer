@@ -8,9 +8,7 @@ bool VolumetricPass::Initialize(ID3D11Device *device)
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    if (!m_volumetricShader.LoadVertexShader(device, L"shaders/volumetric.hlsl", "VS", fsLayout))
-        return false;
-    if (!m_volumetricShader.LoadPixelShader(device, L"shaders/volumetric.hlsl", "PS"))
+    if (!m_volumetricShader.LoadFromFile(device, Config::Shaders::VOLUMETRIC, fsLayout))
         return false;
 
     // Initialize constant buffer

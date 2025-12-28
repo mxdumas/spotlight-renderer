@@ -4,18 +4,19 @@
  */
 
 #include "Node.h"
+#include <utility>
 
 namespace SceneGraph
 {
 
-Node::Node(const std::string &name) : m_name(name)
+Node::Node(std::string name) : m_name(std::move(name))
 {
     m_baseMatrix = DirectX::XMMatrixIdentity();
     m_localMatrix = DirectX::XMMatrixIdentity();
     m_worldMatrix = DirectX::XMMatrixIdentity();
 }
 
-void Node::AddChild(std::shared_ptr<Node> child)
+void Node::AddChild(const std::shared_ptr<Node> &child)
 {
     if (child)
     {
