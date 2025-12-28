@@ -2,6 +2,9 @@
 
 A technical demonstration of a physically-based volumetric lighting engine utilizing DirectX 11 and HLSL. This project showcases real-time ray-marching, shadow mapping, and hierarchical fixture loading via the General Device Type Format (GDTF) standard, built from scratch without commercial game engines.
 
+[![Demo Video](https://img.youtube.com/vi/ap32ZcuJYaw/maxresdefault.jpg)](https://www.youtube.com/watch?v=ap32ZcuJYaw)
+*▶ Click to watch — Real-time volumetric lighting with Mie scattering and shadow mapping.*
+
 ## Core Features
 
 ### 🔦 Volumetric Rendering
@@ -11,25 +14,43 @@ A technical demonstration of a physically-based volumetric lighting engine utili
 - **Post-Processing:** Kawase blur and FXAA for noise reduction and edge smoothing.
 
 ### 🏗️ GDTF & Scene Graph
-- **GDTF Support:** Native parsing of `.gdtf` archives (ZIP), extracting `description.xml` and 3D assets.
+- **GDTF Support:** Native parsing of `.gdtf` archives (ZIP), extracting `description.xml` and 3D assets. [GDTF](https://gdtf-share.com/) is an open standard for describing lighting fixtures.
 - **Hierarchical Loading:** Reconstructs complex fixture geometry (Base → Yoke → Head) into a transformable scene graph.
 - **Model Support:** Uses **Assimp** to load diverse mesh data (GLB, glTF, 3DS) embedded within fixtures.
 
 ### ⚙️ Engine Technology
 - **Pure DirectX 11:** Custom C++17 renderer with no third-party engine dependencies.
 - **Render Pipeline:** Multi-pass architecture:
-  1.  **Shadow Pass:** Depth rendering from light perspective.
-  2.  **Scene Pass:** Opaque geometry rendering.
-  3.  **Volumetric Pass:** Ray-marching accumulation into off-screen buffer.
-  4.  **Blur Pass:** Multi-tap Gaussian/Kawase blur on volumetric data.
-  5.  **Composite Pass:** Additive blending of scene and fog.
-  6.  **FXAA Pass:** Anti-aliasing.
+
+```mermaid
+flowchart LR
+    subgraph Shadow
+        A[Shadow Pass]
+    end
+    subgraph Lighting
+        B[Scene Pass]
+        C[Volumetric Pass]
+    end
+    subgraph Post-Processing
+        D[Blur Pass]
+        E[Composite Pass]
+        F[FXAA Pass]
+    end
+
+    A -->|Shadow Map| B
+    A -->|Shadow Map| C
+    B -->|Scene RT| E
+    C -->|Volume RT| D
+    D -->|Blurred RT| E
+    E -->|Combined RT| F
+    F -->|Back Buffer| G((Display))
+```
 - **Interactive UI:** Powered by ImGui for real-time manipulation of light parameters (Beam Angle, Zoom, Color Mixing, Gobo Shake).
 
 ## Requirements
 
 - **OS:** Windows 10/11
-- **IDE:** Visual Studio 2019 or later (C++ Desktop Development workload)
+- **IDE:** Visual Studio 2022+ (C++ Desktop Development workload)
 - **Build System:** CMake 3.15+
 - **GPU:** DirectX 11 compatible hardware
 - **Tools:** Git (for vcpkg), Ninja (included with Visual Studio)
@@ -56,7 +77,9 @@ A technical demonstration of a physically-based volumetric lighting engine utili
 
 4.  **Run:**
     ```powershell
-    .\build\SpotlightRenderer.exe
+    .\run.bat              # Run Debug build
+    .\run.bat --release    # Run Release build
+    .\run.bat --build      # Build and run
     ```
 
 5.  **Lint** (requires build first):
@@ -69,21 +92,30 @@ A technical demonstration of a physically-based volumetric lighting engine utili
 The application launches with an ImGui overlay window "Spotlight Renderer Controls".
 
 ### Camera
-- **Right Click + Drag:** Orbit camera.
-- **Middle Click + Drag:** Pan camera.
-- **Scroll:** Zoom in/out.
+- **Distance / Pitch / Yaw:** Orbit around the scene.
+- **Target:** Set the look-at point.
+
+### Demo Effects
+- **Enable Demo:** Toggle automated light animation.
+- **Speed:** Animation playback rate.
+- **Pan / Tilt / Rainbow / Gobo Rotation:** Toggle individual effects.
 
 ### Spotlight Parameters
-- **Position/Direction:** Move and aim the light in 3D space.
-- **GDTF Node Control:** Rotate specific parts of the fixture (e.g., Pan/Tilt).
-- **Beam Properties:** Adjust Beam Angle (cone) and Field Angle (softness).
-- **Color:** Toggle between RGB and CMY subtractive mixing.
-- **Gobo:** Enable rotation and shake effects.
+- **Pan / Tilt:** GDTF fixture orientation.
+- **Color / Intensity / Range:** Light appearance and reach.
+- **Beam Angle / Field Angle:** Cone shape and softness.
+- **Gobo:** Select pattern, rotation, and shake amount.
 
 ### Volumetric Quality
-- **Step Count:** Number of ray-marching samples (higher = better quality, lower performance).
+- **Step Count:** Ray-marching samples (quality vs. performance).
 - **Density:** Atmospheric thickness.
-- **Anisotropy (g):** Controls forward vs. backward light scattering.
+- **Intensity Multiplier:** Volumetric brightness.
+- **Anisotropy (g):** Forward vs. backward scattering.
+
+### Post Processing
+- **FXAA:** Anti-aliasing toggle.
+- **Volumetric Blur:** Soften volumetric output.
+- **Blur Passes:** Number of blur iterations.
 
 ## Technical Details
 
@@ -97,3 +129,11 @@ The application launches with an ImGui overlay window "Spotlight Renderer Contro
     - `stb_image`: Texture Loading
     - `pugixml`: XML Parsing (GDTF)
     - `miniz`: Archive extraction (GDTF)
+
+## References
+
+- Henyey, L.G. & Greenstein, J.L. (1941). *Diffuse radiation in the galaxy* — Phase function for Mie scattering
+- Williams, L. (1978). *Casting curved shadows on curved surfaces* — Shadow mapping
+- Blinn, J. (1977). *Models of light reflection for computer synthesized pictures* — Blinn-Phong shading
+- Lottes, T. (2009). *FXAA 3.11*, NVIDIA — Fast approximate anti-aliasing
+- Jimenez, J. (2014). *Interleaved Gradient Noise* — Temporal-stable dithering for ray marching
