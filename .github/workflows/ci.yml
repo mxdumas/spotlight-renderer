@@ -8,7 +8,6 @@ on:
 
 env:
   BUILD_TYPE: Release
-  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
 
 jobs:
   build-and-lint:
@@ -43,21 +42,7 @@ jobs:
           }
           Write-Host "All files are properly formatted."
 
-      # Cache vcpkg binary packages
-      - name: Create vcpkg cache directory
-        run: mkdir -p ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-        shell: bash
-
-      - name: Cache vcpkg packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-            ${{ github.workspace }}/vcpkg/downloads
-          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
-          restore-keys: |
-            vcpkg-${{ runner.os }}-
-
+      # run-vcpkg has built-in caching via VCPKG_BINARY_SOURCES=x-gha
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
