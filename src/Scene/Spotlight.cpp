@@ -1,33 +1,36 @@
 #include "Spotlight.h"
 #include <cmath>
 #include <cstring>
+#include "Node.h"
 
 Spotlight::Spotlight()
-    : m_goboShakeAmount(0.0f)
 {
     std::memset(&m_data, 0, sizeof(m_data));
 
     // Default values
-    m_data.posRange = { 0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f, Config::Spotlight::DEFAULT_RANGE };
-    m_data.dirAngle = { 0.0f, -1.0f, 0.0f, 0.0f }; // Pointing down
-    m_data.colorInt = { 1.0f, 1.0f, 1.0f, Config::Spotlight::DEFAULT_INTENSITY };
-    m_data.coneGobo = { Config::Spotlight::DEFAULT_BEAM_ANGLE, Config::Spotlight::DEFAULT_FIELD_ANGLE, 0.0f, 0.0f };
-    m_data.goboOff = { 0.0f, 0.0f, 0.0f, 0.0f };
+    m_data.posRange = {0.0f, Config::Spotlight::DEFAULT_HEIGHT, 0.0f, Config::Spotlight::DEFAULT_RANGE};
+    m_data.dirAngle = {0.0f, -1.0f, 0.0f, 0.0f}; // Pointing down
+    m_data.colorInt = {1.0f, 1.0f, 1.0f, Config::Spotlight::DEFAULT_INTENSITY};
+    m_data.coneGobo = {Config::Spotlight::DEFAULT_BEAM_ANGLE, Config::Spotlight::DEFAULT_FIELD_ANGLE, 0.0f, 0.0f};
+    m_data.goboOff = {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
-void Spotlight::SetPosition(const DirectX::XMFLOAT3& pos) {
+void Spotlight::SetPosition(const DirectX::XMFLOAT3 &pos)
+{
     m_data.posRange.x = pos.x;
     m_data.posRange.y = pos.y;
     m_data.posRange.z = pos.z;
 }
 
-void Spotlight::SetPosition(float x, float y, float z) {
+void Spotlight::SetPosition(float x, float y, float z)
+{
     m_data.posRange.x = x;
     m_data.posRange.y = y;
     m_data.posRange.z = z;
 }
 
-void Spotlight::SetDirection(const DirectX::XMFLOAT3& dir) {
+void Spotlight::SetDirection(const DirectX::XMFLOAT3 &dir)
+{
     // Normalize direction
     DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&dir);
     v = DirectX::XMVector3Normalize(v);
@@ -39,70 +42,147 @@ void Spotlight::SetDirection(const DirectX::XMFLOAT3& dir) {
     m_data.dirAngle.z = normalized.z;
 }
 
-void Spotlight::SetColor(float r, float g, float b) {
+void Spotlight::SetColor(float r, float g, float b)
+{
     m_data.colorInt.x = r;
     m_data.colorInt.y = g;
     m_data.colorInt.z = b;
 }
 
-void Spotlight::SetColorFromCMY(float c, float m, float y) {
+void Spotlight::SetColorFromCMY(float c, float m, float y)
+{
     m_data.colorInt.x = 1.0f - c;
     m_data.colorInt.y = 1.0f - m;
     m_data.colorInt.z = 1.0f - y;
 }
 
-void Spotlight::SetIntensity(float intensity) {
+void Spotlight::SetIntensity(float intensity)
+{
     m_data.colorInt.w = intensity;
 }
 
-void Spotlight::SetRange(float range) {
+void Spotlight::SetRange(float range)
+{
     m_data.posRange.w = range;
 }
 
-void Spotlight::SetBeamAngle(float beam) {
+void Spotlight::SetBeamAngle(float beam)
+{
     m_data.coneGobo.x = beam;
 }
 
-void Spotlight::SetFieldAngle(float field) {
+void Spotlight::SetFieldAngle(float field)
+{
     m_data.coneGobo.y = field;
 }
 
-void Spotlight::SetGoboRotation(float rotation) {
+void Spotlight::SetGoboRotation(float rotation)
+{
     m_data.coneGobo.z = rotation;
 }
 
-void Spotlight::SetGoboShake(float amount) {
+void Spotlight::SetGoboIndex(int index)
+{
+    m_data.coneGobo.w = static_cast<float>(index);
+}
+
+void Spotlight::SetGoboShake(float amount)
+{
     m_goboShakeAmount = amount;
 }
 
-DirectX::XMFLOAT3 Spotlight::GetPosition() const {
-    return { m_data.posRange.x, m_data.posRange.y, m_data.posRange.z };
+void Spotlight::SetPan(float degrees)
+{
+    m_pan = degrees;
+    if (m_panNode)
+    {
+        // Pan = rotation around Z axis (roll) because fixture is pitched 90°
+        float roll = DirectX::XMConvertToRadians(m_pan);
+        m_panNode->SetRotation(0.0f, 0.0f, roll);
+    }
 }
 
-DirectX::XMFLOAT3 Spotlight::GetDirection() const {
-    return { m_data.dirAngle.x, m_data.dirAngle.y, m_data.dirAngle.z };
+void Spotlight::SetTilt(float degrees)
+{
+    m_tilt = degrees;
+    if (m_tiltNode)
+    {
+        // Tilt = rotation around X axis (pitch), negated to point at stage
+        float pitch = -DirectX::XMConvertToRadians(m_tilt);
+        m_tiltNode->SetRotation(pitch, 0.0f, 0.0f);
+    }
 }
 
-void Spotlight::UpdateGoboShake(float time) {
-    m_data.goboOff.x = std::sin(time * Config::Spotlight::SHAKE_FREQ_X) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
-    m_data.goboOff.y = std::cos(time * Config::Spotlight::SHAKE_FREQ_Y) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
+void Spotlight::LinkNodes(std::shared_ptr<SceneGraph::Node> pan, std::shared_ptr<SceneGraph::Node> tilt,
+                          std::shared_ptr<SceneGraph::Node> beam)
+{
+    m_panNode = pan;
+    m_tiltNode = tilt;
+    m_beamNode = beam;
 }
 
-void Spotlight::UpdateLightMatrix() {
-    DirectX::XMVECTOR lPos = DirectX::XMVectorSet(m_data.posRange.x, m_data.posRange.y, m_data.posRange.z, 1.0f);
-    DirectX::XMVECTOR lDir = DirectX::XMVector3Normalize(
-        DirectX::XMVectorSet(m_data.dirAngle.x, m_data.dirAngle.y, m_data.dirAngle.z, 0.0f)
-    );
-    DirectX::XMVECTOR lUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+void Spotlight::UpdateFromNodes()
+{
+    if (m_beamNode)
+    {
+        // Extract world transform from beam node
+        DirectX::XMMATRIX world = m_beamNode->GetWorldMatrix();
+
+        // Update position and direction for CPU/UI
+        DirectX::XMFLOAT4X4 m;
+        DirectX::XMStoreFloat4x4(&m, world);
+        m_data.posRange.x = m._41;
+        m_data.posRange.y = m._42;
+        m_data.posRange.z = m._43;
+
+        // Direction is the Forward vector (Z-axis) of the world matrix
+        DirectX::XMVECTOR forward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+        DirectX::XMVECTOR world_forward = DirectX::XMVector3TransformNormal(forward, world);
+        DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3 *>(&m_data.dirAngle),
+                               DirectX::XMVector3Normalize(world_forward));
+
+        // LIGHT MATRIX: Use the inverse of the world matrix as the View matrix.
+        // This is perfectly smooth and follows the hierarchy exactly.
+        DirectX::XMVECTOR det;
+        DirectX::XMMATRIX view = DirectX::XMMatrixInverse(&det, world);
+        DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_data.posRange.w);
+
+        m_data.lightViewProj = DirectX::XMMatrixTranspose(view * proj);
+    }
+}
+
+DirectX::XMFLOAT3 Spotlight::GetPosition() const
+{
+    return {m_data.posRange.x, m_data.posRange.y, m_data.posRange.z};
+}
+
+DirectX::XMFLOAT3 Spotlight::GetDirection() const
+{
+    return {m_data.dirAngle.x, m_data.dirAngle.y, m_data.dirAngle.z};
+}
+
+void Spotlight::UpdateGoboShake(float time)
+{
+    m_data.goboOff.x =
+        std::sin(time * Config::Spotlight::SHAKE_FREQ_X) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
+    m_data.goboOff.y =
+        std::cos(time * Config::Spotlight::SHAKE_FREQ_Y) * m_goboShakeAmount * Config::Spotlight::SHAKE_SCALE;
+}
+
+void Spotlight::UpdateLightMatrix()
+{
+    DirectX::XMVECTOR l_pos = DirectX::XMVectorSet(m_data.posRange.x, m_data.posRange.y, m_data.posRange.z, 1.0f);
+    DirectX::XMVECTOR l_dir = DirectX::XMVector3Normalize(
+        DirectX::XMVectorSet(m_data.dirAngle.x, m_data.dirAngle.y, m_data.dirAngle.z, 0.0f));
+    DirectX::XMVECTOR l_up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
     // If direction is too close to up vector, use a different up
-    if (std::abs(DirectX::XMVectorGetY(lDir)) > 0.99f) {
-        lUp = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    if (std::abs(DirectX::XMVectorGetY(l_dir)) > 0.99f)
+    {
+        l_up = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     }
 
-    DirectX::XMMATRIX lView = DirectX::XMMatrixLookToLH(lPos, lDir, lUp);
-    DirectX::XMMATRIX lProj = DirectX::XMMatrixPerspectiveFovLH(
-        DirectX::XM_PIDIV2, 1.0f, 0.1f, m_data.posRange.w
-    );
-    m_data.lightViewProj = DirectX::XMMatrixTranspose(lView * lProj);
+    DirectX::XMMATRIX l_view = DirectX::XMMatrixLookToLH(l_pos, l_dir, l_up);
+    DirectX::XMMATRIX l_proj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, 1.0f, 0.1f, m_data.posRange.w);
+    m_data.lightViewProj = DirectX::XMMatrixTranspose(l_view * l_proj);
 }

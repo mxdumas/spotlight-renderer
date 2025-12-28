@@ -1,6 +1,6 @@
 # Spotlight Renderer
 
-A DirectX 11 volumetric spotlight renderer implementing physical light behavior, shadow mapping, and Mie scattering.
+A basic DirectX 11 volumetric spotlight renderer implementing physical light behavior, shadow mapping, and Mie scattering.
 
 ## Features
 
@@ -18,19 +18,33 @@ A DirectX 11 volumetric spotlight renderer implementing physical light behavior,
 - Visual Studio 2019 or later (with C++ Desktop Development workload)
 - CMake 3.15+
 - DirectX 11 compatible GPU
+- Git (for vcpkg)
 
 ## Build Instructions
 
-1.  Clone the repository.
-2.  Configure with CMake:
+1.  Clone the repository:
     ```powershell
-    cmake -B build -S .
+    git clone https://github.com/your-repo/spotlight-renderer.git
+    cd spotlight-renderer
     ```
-3.  Build the project:
+
+2.  Setup vcpkg (first time only):
+    ```powershell
+    git clone https://github.com/Microsoft/vcpkg.git
+    .\vcpkg\bootstrap-vcpkg.bat
+    ```
+
+3.  Configure with CMake:
+    ```powershell
+    cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+    ```
+
+4.  Build the project:
     ```powershell
     cmake --build build --config Release
     ```
-4.  Run the executable:
+
+5.  Run the executable:
     ```powershell
     .\build\Release\SpotlightRenderer.exe
     ```
@@ -64,3 +78,6 @@ The application launches with an ImGui overlay window "Spotlight Renderer Contro
     - `ImGui`: User Interface
     - `tinyobjloader`: 3D Mesh Loading
     - `stb_image`: Texture Loading
+    - `pugixml`: XML Parsing (GDTF)
+    - `miniz`: ZIP Extraction (GDTF, via vcpkg)
+    - `tinygltf`: glTF/GLB Model Loading

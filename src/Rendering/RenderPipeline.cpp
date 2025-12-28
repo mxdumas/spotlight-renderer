@@ -2,12 +2,15 @@
 #include "../Geometry/GeometryGenerator.h"
 #include "../Resources/Mesh.h"
 #include "../Resources/Texture.h"
+#include "../Scene/MeshNode.h"
 
-RenderPipeline::~RenderPipeline() {
+RenderPipeline::~RenderPipeline()
+{
     Shutdown();
 }
 
-bool RenderPipeline::Initialize(ID3D11Device* device) {
+bool RenderPipeline::Initialize(ID3D11Device *device)
+{
     m_device = device;
 
     // Create render passes
@@ -19,65 +22,85 @@ bool RenderPipeline::Initialize(ID3D11Device* device) {
     m_fxaaPass = std::make_unique<FXAAPass>();
 
     // Initialize all passes
-    if (!m_shadowPass->Initialize(device)) return false;
-    if (!m_scenePass->Initialize(device)) return false;
-    if (!m_volumetricPass->Initialize(device)) return false;
-    if (!m_blurPass->Initialize(device)) return false;
-    if (!m_compositePass->Initialize(device)) return false;
-    if (!m_fxaaPass->Initialize(device)) return false;
+    if (!m_shadowPass->Initialize(device))
+        return false;
+    if (!m_scenePass->Initialize(device))
+        return false;
+    if (!m_volumetricPass->Initialize(device))
+        return false;
+    if (!m_blurPass->Initialize(device))
+        return false;
+    if (!m_compositePass->Initialize(device))
+        return false;
+    if (!m_fxaaPass->Initialize(device))
+        return false;
 
     // Create shared render targets
-    if (!m_sceneRT.Create(device, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT)) return false;
-    if (!m_volRT.Create(device, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT)) return false;
-    if (!m_blurTempRT.Create(device, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT)) return false;
+    if (!m_sceneRT.Create(device, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT))
+        return false;
+    if (!m_volRT.Create(device, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT))
+        return false;
+    if (!m_blurTempRT.Create(device, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT))
+        return false;
 
     // Create fullscreen quad
-    if (!GeometryGenerator::CreateFullScreenQuad(device, m_fullScreenVB)) return false;
+    if (!GeometryGenerator::CreateFullScreenQuad(device, m_fullScreenVB))
+        return false;
+
+    if (!GeometryGenerator::CreateSphere(device, m_debugSphereVB, m_debugSphereIB, m_debugSphereIndexCount))
+        return false;
 
     // Create linear sampler for general use
-    D3D11_SAMPLER_DESC sampDesc = {};
-    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-    sampDesc.BorderColor[0] = 0.0f;
-    sampDesc.BorderColor[1] = 0.0f;
-    sampDesc.BorderColor[2] = 0.0f;
-    sampDesc.BorderColor[3] = 0.0f;
-    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sampDesc.MinLOD = 0;
-    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    D3D11_SAMPLER_DESC samp_desc = {};
+    samp_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samp_desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    samp_desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    samp_desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    samp_desc.BorderColor[0] = 0.0f;
+    samp_desc.BorderColor[1] = 0.0f;
+    samp_desc.BorderColor[2] = 0.0f;
+    samp_desc.BorderColor[3] = 0.0f;
+    samp_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    samp_desc.MinLOD = 0;
+    samp_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    HRESULT hr = device->CreateSamplerState(&sampDesc, &m_linearSampler);
-    if (FAILED(hr)) return false;
+    HRESULT hr = device->CreateSamplerState(&samp_desc, &m_linearSampler);
+    if (FAILED(hr))
+        return false;
 
     // Initialize constant buffers
-    if (!m_matrixBuffer.Initialize(device)) return false;
-    if (!m_spotlightBuffer.Initialize(device)) return false;
-    if (!m_ceilingLightsBuffer.Initialize(device)) return false;
+    if (!m_matrixBuffer.Initialize(device))
+        return false;
+    // m_spotlightBuffer is now managed by individual passes (ScenePass, VolumetricPass)
+    if (!m_ceilingLightsBuffer.Initialize(device))
+        return false;
 
     // Set scene render target for scene pass
     m_scenePass->SetRenderTarget(&m_sceneRT);
 
     // Initialize volumetric params with defaults
-    m_volumetricPass->GetParams().params = {
-        Config::Volumetric::DEFAULT_STEP_COUNT,
-        Config::Volumetric::DEFAULT_DENSITY,
-        Config::Volumetric::DEFAULT_INTENSITY,
-        Config::Volumetric::DEFAULT_ANISOTROPY
-    };
-    m_volumetricPass->GetParams().jitter = { 0.0f, 0.0f, 0.0f, 0.0f };
+    m_volumetricPass->GetParams().params = {Config::Volumetric::DEFAULT_STEP_COUNT, Config::Volumetric::DEFAULT_DENSITY,
+                                            Config::Volumetric::DEFAULT_INTENSITY,
+                                            Config::Volumetric::DEFAULT_ANISOTROPY};
+    m_volumetricPass->GetParams().jitter = {0.0f, 0.0f, 0.0f, 0.0f};
 
     return true;
 }
 
-void RenderPipeline::Shutdown() {
-    if (m_shadowPass) m_shadowPass->Shutdown();
-    if (m_scenePass) m_scenePass->Shutdown();
-    if (m_volumetricPass) m_volumetricPass->Shutdown();
-    if (m_blurPass) m_blurPass->Shutdown();
-    if (m_compositePass) m_compositePass->Shutdown();
-    if (m_fxaaPass) m_fxaaPass->Shutdown();
+void RenderPipeline::Shutdown()
+{
+    if (m_shadowPass)
+        m_shadowPass->Shutdown();
+    if (m_scenePass)
+        m_scenePass->Shutdown();
+    if (m_volumetricPass)
+        m_volumetricPass->Shutdown();
+    if (m_blurPass)
+        m_blurPass->Shutdown();
+    if (m_compositePass)
+        m_compositePass->Shutdown();
+    if (m_fxaaPass)
+        m_fxaaPass->Shutdown();
 
     m_sceneRT.Shutdown();
     m_volRT.Shutdown();
@@ -86,7 +109,8 @@ void RenderPipeline::Shutdown() {
     m_linearSampler.Reset();
 }
 
-void RenderPipeline::SetupViewport(ID3D11DeviceContext* context, int width, int height) {
+void RenderPipeline::SetupViewport(ID3D11DeviceContext *context, int width, int height)
+{
     D3D11_VIEWPORT viewport = {};
     viewport.Width = static_cast<float>(width);
     viewport.Height = static_cast<float>(height);
@@ -95,18 +119,31 @@ void RenderPipeline::SetupViewport(ID3D11DeviceContext* context, int width, int 
     context->RSSetViewports(1, &viewport);
 }
 
-void RenderPipeline::ClearShaderResources(ID3D11DeviceContext* context) {
-    ID3D11ShaderResourceView* nullSRVs[8] = { nullptr };
-    context->PSSetShaderResources(0, 8, nullSRVs);
+void RenderPipeline::ClearShaderResources(ID3D11DeviceContext *context)
+{
+    ID3D11ShaderResourceView *null_srvs[8] = {nullptr};
+    context->PSSetShaderResources(0, 8, null_srvs);
 }
 
-void RenderPipeline::Render(ID3D11DeviceContext* context, const RenderContext& ctx) {
+void RenderPipeline::Render(ID3D11DeviceContext *context, const RenderContext &ctx)
+{
     // Clear all SRVs to prevent D3D warnings
     ClearShaderResources(context);
 
-    // Update spotlight data
-    ctx.spotlight->UpdateLightMatrix();
-    ctx.spotlight->UpdateGoboShake(ctx.time);
+    // Update all spotlights
+    if (ctx.spotlights)
+    {
+        for (auto &light : *ctx.spotlights)
+        {
+            // Matrices are already updated in Scene::Update
+            light.UpdateGoboShake(ctx.time);
+        }
+    }
+    // Fallback if vector is missing but single pointer exists
+    else if (ctx.spotlight)
+    {
+        ctx.spotlight->UpdateGoboShake(ctx.time);
+    }
 
     // 1. Shadow Pass
     RenderShadowPass(context, ctx);
@@ -118,7 +155,8 @@ void RenderPipeline::Render(ID3D11DeviceContext* context, const RenderContext& c
     RenderVolumetricPass(context, ctx);
 
     // 4. Blur Pass (blurs m_volRT using m_blurTempRT as temp)
-    if (m_enableVolBlur) {
+    if (m_enableVolBlur)
+    {
         RenderBlurPass(context);
     }
 
@@ -129,18 +167,28 @@ void RenderPipeline::Render(ID3D11DeviceContext* context, const RenderContext& c
     RenderFinalPass(context, ctx);
 }
 
-void RenderPipeline::RenderShadowPass(ID3D11DeviceContext* context, const RenderContext& ctx) {
-    m_shadowPass->Execute(context,
-                          ctx.spotlight->GetGPUData(),
-                          ctx.stageMesh,
-                          ctx.stageOffset);
+void RenderPipeline::RenderShadowPass(ID3D11DeviceContext *context, const RenderContext &ctx)
+{
+    if (ctx.spotlights && !ctx.spotlights->empty())
+    {
+        // Render shadow map for each spotlight (up to MAX_SPOTLIGHTS)
+        int num_lights = static_cast<int>(ctx.spotlights->size());
+        if (num_lights > Config::Spotlight::MAX_SPOTLIGHTS)
+            num_lights = Config::Spotlight::MAX_SPOTLIGHTS;
+
+        for (int i = 0; i < num_lights; ++i)
+        {
+            m_shadowPass->Execute(context, ctx.spotlights->at(i).GetGPUData(), i, ctx.stageMesh, ctx.stageOffset);
+        }
+    }
 }
 
-void RenderPipeline::RenderScenePass(ID3D11DeviceContext* context, const RenderContext& ctx) {
+void RenderPipeline::RenderScenePass(ID3D11DeviceContext *context, const RenderContext &ctx)
+{
     // Bind scene render target with depth
-    float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    float clear_color[] = {0.0f, 0.0f, 0.0f, 1.0f};
     m_sceneRT.Bind(context, ctx.depthStencilView);
-    m_sceneRT.Clear(context, clearColor);
+    m_sceneRT.Clear(context, clear_color);
     context->ClearDepthStencilView(ctx.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     SetupViewport(context, Config::Display::WINDOW_WIDTH, Config::Display::WINDOW_HEIGHT);
@@ -155,130 +203,159 @@ void RenderPipeline::RenderScenePass(ID3D11DeviceContext* context, const RenderC
     mb.view = DirectX::XMMatrixTranspose(view);
     mb.projection = DirectX::XMMatrixTranspose(proj);
 
-    DirectX::XMMATRIX invView = DirectX::XMMatrixInverse(nullptr, view);
-    DirectX::XMMATRIX invProj = DirectX::XMMatrixInverse(nullptr, proj);
-    mb.invViewProj = DirectX::XMMatrixTranspose(invProj * invView);
+    DirectX::XMMATRIX inv_view = DirectX::XMMatrixInverse(nullptr, view);
+    DirectX::XMMATRIX inv_proj = DirectX::XMMatrixInverse(nullptr, proj);
+    mb.invViewProj = DirectX::XMMatrixTranspose(inv_proj * inv_view);
 
-    mb.cameraPos = { ctx.cameraPos.x, ctx.cameraPos.y, ctx.cameraPos.z, 1.0f };
+    mb.cameraPos = {ctx.cameraPos.x, ctx.cameraPos.y, ctx.cameraPos.z, 1.0f};
 
     m_matrixBuffer.Update(context, mb);
-    m_spotlightBuffer.Update(context, ctx.spotlight->GetGPUData());
 
     // Update ceiling lights
     ctx.ceilingLights->Update();
     m_ceilingLightsBuffer.Update(context, ctx.ceilingLights->GetGPUData());
 
-    // Bind constant buffers
+    // Bind constant buffers (Matrix and Ceiling Lights)
     context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
     context->PSSetConstantBuffers(3, 1, m_ceilingLightsBuffer.GetAddressOf());
 
     // Bind textures
-    ID3D11ShaderResourceView* goboSRV = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
-    ID3D11ShaderResourceView* srvs[] = { goboSRV, m_shadowPass->GetShadowSRV() };
+    ID3D11ShaderResourceView *gobo_srv = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
+    ID3D11ShaderResourceView *srvs[] = {gobo_srv, m_shadowPass->GetShadowSRV()};
     context->PSSetShaderResources(0, 2, srvs);
 
-    ID3D11SamplerState* samplers[] = { m_linearSampler.Get(), m_shadowPass->GetShadowSampler() };
+    ID3D11SamplerState *samplers[] = {m_linearSampler.Get(), m_shadowPass->GetShadowSampler()};
     context->PSSetSamplers(0, 2, samplers);
 
+    // Prepare spotlight list
+    const std::vector<Spotlight> empty_lights;
+    const std::vector<Spotlight> &lights = ctx.spotlights ? *ctx.spotlights : empty_lights;
+
     // Execute scene pass (room with identity world)
-    m_scenePass->Execute(context,
-                         ctx.depthStencilView,
-                         ctx.roomVB,
-                         ctx.roomIB,
+    m_scenePass->Execute(context, lights, ctx.depthStencilView, ctx.roomVB, ctx.roomIB,
                          nullptr, // Skip stage in scene pass for now
-                         ctx.stageOffset,
-                         ctx.roomSpecular,
-                         ctx.roomShininess);
+                         ctx.stageOffset, ctx.roomSpecular, ctx.roomShininess);
 
     // Render stage with offset world matrix and per-shape materials from MTL
-    if (ctx.stageMesh) {
+    if (ctx.stageMesh)
+    {
         mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(0.0f, ctx.stageOffset, 0.0f));
         m_matrixBuffer.Update(context, mb);
         m_scenePass->GetShader().Bind(context);
 
-        const auto& shapes = ctx.stageMesh->GetShapes();
-        for (size_t i = 0; i < shapes.size(); ++i) {
-            const auto& shape = shapes[i];
+        const auto &shapes = ctx.stageMesh->GetShapes();
+        for (size_t i = 0; i < shapes.size(); ++i)
+        {
+            const auto &shape = shapes[i];
 
-            MaterialBuffer mbMat = {};
-            mbMat.color = { shape.material.diffuse.x, shape.material.diffuse.y,
-                            shape.material.diffuse.z, 1.0f };
-            float specIntensity = (shape.material.specular.x + shape.material.specular.y +
-                                   shape.material.specular.z) / 3.0f;
-            mbMat.specParams = { specIntensity, shape.material.shininess, 0.0f, 0.0f };
-            m_scenePass->GetMaterialBuffer().Update(context, mbMat);
+            MaterialBuffer mb_mat = {};
+            mb_mat.color =
+                DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
+            float spec_intensity =
+                (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
+            mb_mat.specParams = DirectX::XMFLOAT4(spec_intensity, shape.material.shininess, 0.0f, 0.0f);
+            m_scenePass->GetMaterialBuffer().Update(context, mb_mat);
             context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
 
             ctx.stageMesh->DrawShape(context, i);
         }
     }
 
-    // Restore identity matrix
-    mb.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
-    m_matrixBuffer.Update(context, mb);
+    // Render GDTF Fixtures
+    for (auto &node : ctx.fixtureNodes)
+    {
+        RenderNodeRecursive(context, node, mb);
+    }
 }
 
-void RenderPipeline::RenderVolumetricPass(ID3D11DeviceContext* context, const RenderContext& ctx) {
+void RenderPipeline::RenderNodeRecursive(ID3D11DeviceContext *context, std::shared_ptr<SceneGraph::Node> node,
+                                         PipelineMatrixBuffer &mb)
+{
+    if (!node)
+        return;
+
+    // Check if it's a mesh node
+    auto mesh_node = std::dynamic_pointer_cast<SceneGraph::MeshNode>(node);
+    if (mesh_node && mesh_node->GetMesh())
+    {
+        // Update world matrix
+        mb.world = DirectX::XMMatrixTranspose(node->GetWorldMatrix());
+        m_matrixBuffer.Update(context, mb);
+
+        auto mesh = mesh_node->GetMesh();
+        const auto &shapes = mesh->GetShapes();
+
+        for (size_t i = 0; i < shapes.size(); ++i)
+        {
+            const auto &shape = shapes[i];
+            MaterialBuffer mb_mat = {};
+            mb_mat.color =
+                DirectX::XMFLOAT4(shape.material.diffuse.x, shape.material.diffuse.y, shape.material.diffuse.z, 1.0f);
+            float spec_intensity =
+                (shape.material.specular.x + shape.material.specular.y + shape.material.specular.z) / 3.0f;
+            mb_mat.specParams = DirectX::XMFLOAT4(spec_intensity, shape.material.shininess, 0.0f, 0.0f);
+            m_scenePass->GetMaterialBuffer().Update(context, mb_mat);
+            context->PSSetConstantBuffers(2, 1, m_scenePass->GetMaterialBuffer().GetAddressOf());
+
+            mesh->DrawShape(context, i);
+        }
+    }
+
+    // Recurse to children
+    for (auto &child : node->GetChildren())
+    {
+        RenderNodeRecursive(context, child, mb);
+    }
+}
+
+void RenderPipeline::RenderVolumetricPass(ID3D11DeviceContext *context, const RenderContext &ctx)
+{
     // Update jitter time
     m_volumetricPass->GetParams().jitter.x = ctx.time * Config::Volumetric::JITTER_SCALE;
 
     // Bind matrix and spotlight buffers for volumetric pass
     context->VSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
     context->PSSetConstantBuffers(0, 1, m_matrixBuffer.GetAddressOf());
-    context->PSSetConstantBuffers(1, 1, m_spotlightBuffer.GetAddressOf());
 
-    ID3D11ShaderResourceView* goboSRV = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
+    // Note: Spotlight buffer (b1) is now handled internally by VolumetricPass::Execute
+    // using the provided spotlights vector.
 
-    m_volumetricPass->Execute(context,
-                              &m_volRT,
-                              m_fullScreenVB.Get(),
-                              ctx.depthSRV,
-                              goboSRV,
-                              m_shadowPass->GetShadowSRV(),
-                              m_linearSampler.Get(),
-                              m_shadowPass->GetShadowSampler(),
+    ID3D11ShaderResourceView *gobo_srv = ctx.goboTexture ? ctx.goboTexture->GetSRV() : nullptr;
+
+    const std::vector<Spotlight> empty_lights;
+    const std::vector<Spotlight> &lights = ctx.spotlights ? *ctx.spotlights : empty_lights;
+
+    m_volumetricPass->Execute(context, lights, &m_volRT, m_fullScreenVB.Get(), ctx.depthSRV, gobo_srv,
+                              m_shadowPass->GetShadowSRV(), m_linearSampler.Get(), m_shadowPass->GetShadowSampler(),
                               ctx.time);
 
     ClearShaderResources(context);
 }
 
-void RenderPipeline::RenderBlurPass(ID3D11DeviceContext* context) {
-    m_blurPass->Execute(context,
-                        &m_volRT,
-                        &m_blurTempRT,
-                        m_fullScreenVB.Get(),
-                        m_linearSampler.Get(),
-                        m_blurPasses);
+void RenderPipeline::RenderBlurPass(ID3D11DeviceContext *context)
+{
+    m_blurPass->Execute(context, &m_volRT, &m_blurTempRT, m_fullScreenVB.Get(), m_linearSampler.Get(), m_blurPasses);
 
     ClearShaderResources(context);
 }
 
-void RenderPipeline::RenderCompositePass(ID3D11DeviceContext* context) {
-    m_compositePass->ExecuteAdditive(context,
-                                     &m_sceneRT,
-                                     &m_volRT,
-                                     m_fullScreenVB.Get(),
-                                     m_linearSampler.Get());
+void RenderPipeline::RenderCompositePass(ID3D11DeviceContext *context)
+{
+    m_compositePass->ExecuteAdditive(context, &m_sceneRT, &m_volRT, m_fullScreenVB.Get(), m_linearSampler.Get());
 
     ClearShaderResources(context);
 }
 
-void RenderPipeline::RenderFinalPass(ID3D11DeviceContext* context, const RenderContext& ctx) {
-    float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-    if (m_enableFXAA) {
-        m_fxaaPass->Execute(context,
-                           ctx.backBufferRTV,
-                           &m_sceneRT,
-                           m_fullScreenVB.Get(),
-                           m_linearSampler.Get());
-    } else {
+void RenderPipeline::RenderFinalPass(ID3D11DeviceContext *context, const RenderContext &ctx)
+{
+    if (m_enableFXAA)
+    {
+        m_fxaaPass->Execute(context, ctx.backBufferRTV, &m_sceneRT, m_fullScreenVB.Get(), m_linearSampler.Get());
+    }
+    else
+    {
         // Direct copy
-        m_compositePass->ExecuteCopy(context,
-                                     ctx.backBufferRTV,
-                                     m_sceneRT.GetSRV(),
-                                     m_fullScreenVB.Get(),
+        m_compositePass->ExecuteCopy(context, ctx.backBufferRTV, m_sceneRT.GetSRV(), m_fullScreenVB.Get(),
                                      m_linearSampler.Get());
     }
 

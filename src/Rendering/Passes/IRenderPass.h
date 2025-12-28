@@ -14,11 +14,12 @@ struct CeilingLightsData;
 /**
  * @class IRenderPass
  * @brief Base interface for all render passes in the pipeline.
- * 
+ *
  * Each render pass encapsulates a specific stage of the rendering process,
  * such as shadow mapping, scene rendering, or post-processing.
  */
-class IRenderPass {
+class IRenderPass
+{
 public:
     /**
      * @brief Virtual destructor for the IRenderPass interface.
@@ -27,11 +28,11 @@ public:
 
     /**
      * @brief Initializes pass-specific resources like shaders, buffers, and state objects.
-     * 
+     *
      * @param device Pointer to the ID3D11Device used for resource creation.
      * @return true if initialization was successful, false otherwise.
      */
-    virtual bool Initialize(ID3D11Device* device) = 0;
+    virtual bool Initialize(ID3D11Device *device) = 0;
 
     /**
      * @brief Shuts down the render pass and releases all allocated resources.

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "IRenderPass.h"
-#include "../../Resources/Shader.h"
-#include "../../Core/Config.h"
 #include <wrl/client.h>
+#include "../../Core/Config.h"
+#include "../../Resources/Shader.h"
+#include "IRenderPass.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -12,11 +12,12 @@ class RenderTarget;
 /**
  * @class CompositePass
  * @brief Blends the volumetric lighting effect with the scene rendering.
- * 
+ *
  * This pass uses additive blending to combine the accumulated volumetric light
  * from the volumetric pass into the main scene render target.
  */
-class CompositePass : public IRenderPass {
+class CompositePass : public IRenderPass
+{
 public:
     /**
      * @brief Default constructor for the CompositePass class.
@@ -30,11 +31,11 @@ public:
 
     /**
      * @brief Initializes the composite shader and blend state objects.
-     * 
+     *
      * @param device Pointer to the ID3D11Device.
      * @return true if initialization succeeded, false otherwise.
      */
-    bool Initialize(ID3D11Device* device) override;
+    bool Initialize(ID3D11Device *device) override;
 
     /**
      * @brief Shuts down the pass and releases resources.
@@ -43,35 +44,29 @@ public:
 
     /**
      * @brief Executes an additive composite of the volumetric lighting onto the scene.
-     * 
+     *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param sceneRT The scene render target to composite onto.
-     * @param volumetricRT The volumetric texture containing the light effect.
-     * @param fullScreenVB Vertex buffer for a full-screen quad.
+     * @param scene_rt The scene render target to composite onto.
+     * @param volumetric_rt The volumetric texture containing the light effect.
+     * @param full_screen_vb Vertex buffer for a full-screen quad.
      * @param sampler Sampler state for texture sampling.
      */
-    void ExecuteAdditive(ID3D11DeviceContext* context,
-                         RenderTarget* sceneRT,
-                         RenderTarget* volumetricRT,
-                         ID3D11Buffer* fullScreenVB,
-                         ID3D11SamplerState* sampler);
+    void ExecuteAdditive(ID3D11DeviceContext *context, RenderTarget *scene_rt, RenderTarget *volumetric_rt,
+                         ID3D11Buffer *full_screen_vb, ID3D11SamplerState *sampler);
 
     /**
      * @brief Executes a simple copy from a source texture to a destination render target.
-     * 
+     *
      * Used typically as a fallback or when certain post-processing steps are disabled.
-     * 
+     *
      * @param context Pointer to the ID3D11DeviceContext.
-     * @param destRTV The destination render target view.
-     * @param sourceSRV The source texture's shader resource view.
-     * @param fullScreenVB Vertex buffer for a full-screen quad.
+     * @param dest_rtv The destination render target view.
+     * @param source_srv The source texture's shader resource view.
+     * @param full_screen_vb Vertex buffer for a full-screen quad.
      * @param sampler Sampler state for texture sampling.
      */
-    void ExecuteCopy(ID3D11DeviceContext* context,
-                     ID3D11RenderTargetView* destRTV,
-                     ID3D11ShaderResourceView* sourceSRV,
-                     ID3D11Buffer* fullScreenVB,
-                     ID3D11SamplerState* sampler);
+    void ExecuteCopy(ID3D11DeviceContext *context, ID3D11RenderTargetView *dest_rtv,
+                     ID3D11ShaderResourceView *source_srv, ID3D11Buffer *full_screen_vb, ID3D11SamplerState *sampler);
 
 private:
     Shader m_compositeShader;

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "spotlight-renderer",
+  "version": "1.0.0",
+  "dependencies": [
+    "miniz",
+    "assimp"
+  ]
+}

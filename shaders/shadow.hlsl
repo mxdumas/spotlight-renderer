@@ -1,8 +1,8 @@
 cbuffer MatrixBuffer : register(b0) {
     matrix world;
-    matrix view;
-    matrix projection;
-    matrix invViewProj;
+    matrix viewProj;   // Combined light view-projection matrix
+    matrix padding1;   // Kept for layout compatibility
+    matrix padding2;
     float4 cameraPos;
 };
 
@@ -19,8 +19,7 @@ struct PS_INPUT {
 PS_INPUT VS(VS_INPUT input) {
     PS_INPUT output;
     float4 worldPos = mul(float4(input.pos, 1.0f), world);
-    float4 viewPos = mul(worldPos, view);
-    output.pos = mul(viewPos, projection);
+    output.pos = mul(worldPos, viewProj);
     return output;
 }
 

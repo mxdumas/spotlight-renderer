@@ -32,3 +32,10 @@ Makefile
 # Temporary files
 *.tmp
 *.log
+
+# Conductor
+conductor/
+
+# vcpkg
+vcpkg/
+vcpkg_installed/
