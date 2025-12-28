@@ -13,7 +13,30 @@ goto parse_args
 
 :run
 if %DO_BUILD%==1 (
-    cmake --build build --config %CONFIG%
-    if errorlevel 1 exit /b 1
+    echo Building project...
+    call build.bat %*
+    if errorlevel 1 (
+        echo Build failed. Aborting run.
+        exit /b 1
+    )
 )
-.\build\%CONFIG%\SpotlightRenderer.exe
+
+:: Try to find the executable in different possible locations
+set EXE_PATH=
+
+:: 1. Ninja / Single-config location
+if exist "build\SpotlightRenderer.exe" (
+    set EXE_PATH=build\SpotlightRenderer.exe
+)
+:: 2. Visual Studio / Multi-config location
+if exist "build\%CONFIG%\SpotlightRenderer.exe" (
+    set EXE_PATH=build\%CONFIG%\SpotlightRenderer.exe
+)
+
+if "%EXE_PATH%"=="" (
+    echo Error: Could not find SpotlightRenderer.exe. Did you build the project?
+    exit /b 1
+)
+
+echo Running %EXE_PATH%...
+%EXE_PATH%

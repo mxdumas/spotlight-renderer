@@ -106,4 +106,4 @@ All constants are centralized in `src/Core/Config.h` with namespaces: `Config::D
 - **stb_image** (`external/stb_image.h`) - Texture loading
 - **pugixml** (`external/pugixml/`) - XML parsing for GDTF description.xml
 - **miniz** (via vcpkg) - ZIP extraction for .gdtf archives
-- **tinygltf** (`external/tinygltf/`) - glTF/GLB model loading
+- **assimp** (via vcpkg) - GLB, glTF, 3DS fixture model loading

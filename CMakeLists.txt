@@ -33,12 +33,23 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS OFF
 )
 
+# MSVC Specific Compilation Flags (Global)
+if (MSVC)
+    add_compile_options(/EHsc /W4)
+    add_compile_definitions(
+        WIN32_LEAN_AND_MEAN 
+        NOMINMAX
+        _CRT_SECURE_NO_WARNINGS
+    )
+endif()
+
 # Standard Libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
     d3d11
     d3dcompiler
     dxgi
     dxguid
+    winmm
     miniz::miniz
     assimp::assimp
 )
@@ -49,7 +60,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     external
     external/imgui
     external/pugixml
-    external/tinygltf
 )
 
 # Copy assets to output directory
