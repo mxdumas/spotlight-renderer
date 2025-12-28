@@ -32,7 +32,10 @@ public:
     RenderTarget &operator=(const RenderTarget &) = delete;
     /// @brief Move constructor (transfers ownership of GPU resources).
     RenderTarget(RenderTarget &&) noexcept = default;
-    /// @brief Move assignment operator (transfers ownership of GPU resources).
+    /**
+     * @brief Move assignment operator (transfers ownership of GPU resources).
+     * @return Reference to this object.
+     */
     RenderTarget &operator=(RenderTarget &&) noexcept = default;
     /// @}
 

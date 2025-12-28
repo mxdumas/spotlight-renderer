@@ -38,4 +38,4 @@ conductor/
 
 # vcpkg
 vcpkg/
-vcpkg_installed/
+vcpkg_installed/docs/

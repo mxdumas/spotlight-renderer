@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include <DirectXMath.h>
 #include <wrl/client.h>
 #include "../../Core/Config.h"
