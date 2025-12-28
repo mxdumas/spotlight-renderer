@@ -3,7 +3,7 @@
 A technical demonstration of a physically-based volumetric lighting engine utilizing DirectX 11 and HLSL. This project showcases real-time ray-marching, shadow mapping, and hierarchical fixture loading via the General Device Type Format (GDTF) standard, built from scratch without commercial game engines.
 
 [![Demo Video](https://img.youtube.com/vi/ap32ZcuJYaw/maxresdefault.jpg)](https://www.youtube.com/watch?v=ap32ZcuJYaw)
-*▶ Click to watch — Real-time volumetric lighting with Mie scattering and shadow mapping.*
+*[▶ Click for a preview of the renderer in action](https://www.youtube.com/watch?v=ap32ZcuJYaw)*
 
 ## Core Features
 
@@ -132,8 +132,8 @@ The application launches with an ImGui overlay window "Spotlight Renderer Contro
 
 ## References
 
-- Henyey, L.G. & Greenstein, J.L. (1941). *Diffuse radiation in the galaxy* — Phase function for Mie scattering
-- Williams, L. (1978). *Casting curved shadows on curved surfaces* — Shadow mapping
-- Blinn, J. (1977). *Models of light reflection for computer synthesized pictures* — Blinn-Phong shading
-- Lottes, T. (2009). *FXAA 3.11*, NVIDIA — Fast approximate anti-aliasing
-- Jimenez, J. (2014). *Interleaved Gradient Noise* — Temporal-stable dithering for ray marching
+- Henyey, L. G., & Greenstein, J. L. (1941). Diffuse radiation in the galaxy. *Astrophysical Journal*, 93, 70-83. [[ADS](https://ui.adsabs.harvard.edu/abs/1941ApJ....93...70H)]
+- Williams, L. (1978). Casting curved shadows on curved surfaces. *Proceedings of the 5th Annual Conference on Computer Graphics and Interactive Techniques (SIGGRAPH)*, 270-274. [[ACM](https://doi.org/10.1145/800248.807402)]
+- Blinn, J. F. (1977). Models of light reflection for computer synthesized pictures. *Proceedings of the 4th Annual Conference on Computer Graphics and Interactive Techniques (SIGGRAPH)*, 192-198. [[ACM](https://doi.org/10.1145/563858.563893)]
+- Lottes, T. (2011). *FXAA 3.11*. NVIDIA. [[PDF](https://developer.download.nvidia.com/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf)]
+- Jimenez, J. (2014). Next generation post processing in Call of Duty: Advanced Warfare. *SIGGRAPH Advances in Real-Time Rendering in Games*. [[Slides](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/)]
