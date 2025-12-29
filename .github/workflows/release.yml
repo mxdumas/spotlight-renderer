@@ -80,6 +80,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $releaseDir
 
           Copy-Item "build/SpotlightRenderer.exe" -Destination $releaseDir
+          Copy-Item "build/*.dll" -Destination $releaseDir
           Copy-Item -Recurse "build/shaders" -Destination "$releaseDir/shaders"
           Copy-Item -Recurse "build/data" -Destination "$releaseDir/data"
           Copy-Item "README.md" -Destination $releaseDir -ErrorAction SilentlyContinue
